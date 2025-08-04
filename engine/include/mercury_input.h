@@ -73,39 +73,56 @@ enum class MouseButton : u8 {
   X2,
 };
 
+enum class CursorType : u8 {
+  Arrow,
+  IBeam,
+  Hand,
+  Crosshair,
+  Wait,
+  Help,
+  ResizeHorizontal,
+  ResizeVertical,
+  ResizeDiagonal,
+};
+
 class Keyboard {
 public:
-  Keyboard();
-  ~Keyboard();
+  Keyboard() = default;
+  ~Keyboard() = default;
 
   void Initialize();
   void Shutdown();
 
-  bool IsKeyDown(Key key);
-  bool IsKeyUp(Key key);
-  bool IsKeyPressed(Key key);
-  bool IsKeyReleased(Key key);
+  bool IsKeyDown(Key key) const;
+  bool IsKeyUp(Key key) const;
+  bool IsKeyPressed(Key key) const;
+  bool IsKeyReleased(Key key) const;
+  c32 GetChar() const;
 };
 
 class Mouse {
 public:
-  Mouse();
+  Mouse() = default;
+  ~Mouse() = default;
 
   void Initialize();
   void Shutdown();
 
-  bool IsButtonDown(MouseButton button);
-  bool IsButtonUp(MouseButton button);
-  bool IsButtonPressed(MouseButton button);
-  bool IsButtonReleased(MouseButton button);
+  bool IsButtonDown(MouseButton button) const;
+  bool IsButtonUp(MouseButton button) const;
+  bool IsButtonPressed(MouseButton button) const;
+  bool IsButtonReleased(MouseButton button) const;
 
-  bool IsButtonDoubleClicked(MouseButton button);
+  bool IsButtonDoubleClicked(MouseButton button) const;
+
+  void SetCursorType(CursorType type) const;
+  CursorType GetCursorType() const;
 };
 
 class Gamepad {
 public:
-  Gamepad();
-  ~Gamepad();
+  Gamepad() = default;
+  ~Gamepad() = default;
 
   void Initialize();
   void Shutdown();
@@ -113,10 +130,32 @@ public:
   // bool IsButtonDown(GamepadButton button);
 };
 
+class Gyroscope {
+  public:
+  Gyroscope() = default;
+  ~Gyroscope() = default;
+
+  void Initialize();
+  void Shutdown();
+};
+
+class XRController {
+  public:
+  XRController() = default;
+  ~XRController() = default;
+
+  void Initialize();
+  void Shutdown();
+};
+
 extern Keyboard *gKeyboard;
 extern Mouse *gMouse;
+extern Gyroscope *gGyroscope;
 
 constexpr u8 MAX_GAMEPADS = 4;
 extern Gamepad *gGamepads[MAX_GAMEPADS];
+
+constexpr u8 MAX_XR_CONTROLLERS = 2;
+extern XRController *gXRControllers[MAX_XR_CONTROLLERS];
 } // namespace input
 } // namespace mercury

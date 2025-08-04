@@ -3,41 +3,59 @@ project(mercury_testbed)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable Link Time Optimization (LTO)
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
-if(ipo_supported)
-    message(STATUS "IPO/LTO is supported")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-else()
-    message(WARNING "IPO/LTO is not supported: ${ipo_output}")
-endif()
+# Enable Link Time Optimization (LTO) - but only for native builds
+if(NOT EMSCRIPTEN)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+    if(ipo_supported)
+        message(STATUS "IPO/LTO is supported")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO/LTO is not supported: ${ipo_output}")
+    endif()
 
-# Platform-specific LTO flags
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    # GCC and Clang LTO flags
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto")
-    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} -flto")
+    # Platform-specific LTO flags - only for native builds
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        # GCC and Clang LTO flags
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
+        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto")
+        set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} -flto")
+          
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        # MSVC LTO flags
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /GL")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+        set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+    endif()
+else()
+    message(STATUS "Configuring Emscripten build with WebGPU support")
     
-    # For thin LTO (faster compilation, slightly less optimization)
-    # set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto=thin")
-    # set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto=thin")
-    # set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto=thin")
-    # set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto=thin")
-    # set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} -flto=thin")
+    # Enable WebAssembly SIMD for Emscripten
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msimd128")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msimd128")
+    message(STATUS "Enabled WebAssembly SIMD support (-msimd128)")
     
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    # MSVC LTO flags
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /GL")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
-    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+    # WebGPU port configuration
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --use-port=emdawnwebgpu")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --use-port=emdawnwebgpu")
+    
+    # Emscripten-specific linker flags for WebGPU
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap']")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORT_ES6=1")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MODULARIZE=1")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ASYNCIFY=1")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s FETCH=1")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --use-port=emdawnwebgpu")
+
+    message(STATUS "Emscripten WebGPU configuration complete")
 endif()
 
 # Add subdirectories
@@ -49,7 +67,11 @@ add_executable(testbed
 )
 
 # Link against mercury engine
-target_link_libraries(testbed mercury_engine)
+if(EMSCRIPTEN)
+    target_link_libraries(testbed PRIVATE mercury_engine)
+else()
+    target_link_libraries(testbed mercury_engine)
+endif()
 
 # Include directories for test bed
 target_include_directories(testbed PRIVATE 
@@ -60,3 +82,17 @@ target_include_directories(testbed PRIVATE
 set_target_properties(testbed PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
+
+# Emscripten-specific target properties
+if(EMSCRIPTEN)
+    set_target_properties(testbed PROPERTIES
+        SUFFIX ".html"
+        OUTPUT_NAME "testbed"
+    )
+    
+    # Set HTML output name
+    set_target_properties(testbed PROPERTIES
+        OUTPUT_NAME_DEBUG "testbed"
+        OUTPUT_NAME_RELEASE "testbed"
+    )
+endif()

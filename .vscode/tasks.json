@@ -1,0 +1,52 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Emscripten Server",
+            "type": "shell",
+            "command": "D:\\SDKs\\emsdk\\upstream\\emscripten\\emrun.bat",
+            "args": [
+                "--port", "6931",
+                "${workspaceFolder}\\build-emsdk\\bin\\testbed.html"
+            ],
+            "group": "build",
+            "isBackground": true,
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^(.*)$",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Web server root directory:",
+                    "endsPattern": "^.*server listening.*$"
+                }
+            }
+        },
+        {
+            "label": "Build Emscripten",
+            "type": "shell",
+            "command": "build-emsdk.bat",
+            "group": "build",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

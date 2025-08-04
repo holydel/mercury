@@ -41,3 +41,7 @@
 *.dwo
 build
 build-linux
+build-emsdk
+build-default
+test-emsdk
+build-windows

@@ -1,9 +1,10 @@
-#include "ll/m_os.h"
+#include "ll/os.h"
 #include <mercury_utils.h>
 
 #ifdef MERCURY_LL_OS_WIN32
 #define NOMINMAX
 #include <Windows.h>
+#include <iostream>
 
 int mercury::utils::string::utf8_to_utf16(const char8_t *utf8_str,
                                           char16_t *utf16_str, int max_length) {
@@ -21,10 +22,15 @@ void mercury::utils::debug::output_debug_string_to_ide(const char8_t *str) {
   char16_t buff[1024] = {0};
   string::utf8_to_utf16(str, buff, 1024);
   OutputDebugStringW((const wchar_t *)buff);
-
+  
   // Also output to console with proper encoding
   // SetConsoleOutputCP(CP_UTF8);
   printf("Debug: %S\n", (const wchar_t *)buff);
+}
+
+void mercury::utils::debug::output_debug_string_to_console(const char8_t *str)
+{
+    std::cout << (const char*)str << std::endl;
 }
 
 #endif

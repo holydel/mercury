@@ -1,4 +1,4 @@
-#include "ll/m_os.h"
+#include "ll/os.h"
 #ifdef MERCURY_LL_OS_WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -11,15 +11,29 @@
 #pragma comment(lib, "xinput.lib")
 #pragma comment(lib, "Winmm.lib")
 
-namespace mercury {
-namespace ll {
-OSInfo getOSInfo() { return OSInfo{OSType::Windows}; }
+namespace mercury::ll::os
+{
+  const OSInfo &OS::GetInfo() { 
+    static OSInfo info{OSType::Windows, OSArchitecture::x64};
+    return info; 
+  }
 
-bool initializeOS() { return true; }
+  void OS::Initialize() { 
+    std::cout << "OS::Initialize (Emscripten)" << std::endl;
+  }
 
-void shutdownOS() { return; }
-} // namespace ll
-} // namespace mercury
+  void OS::Shutdown() {
+    std::cout << "OS::Shutdown (Emscripten)" << std::endl;
+  }
+
+  bool OS::IsFocused() { return true; }
+
+  void OS::Sleep(u32 milliseconds) {
+    Sleep(milliseconds);
+  }
+
+  OS* gOS = nullptr;
+} 
 
 // entry point for win32
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../mercury_api.h"
 
 namespace mercury {
@@ -159,16 +161,90 @@ enum class Format {
   WGPU_DEPTH24PLUS_STENCIL8,
 };
 
-class Device {
+class Buffer
+{
+  Handle<u32> handle;
 public:
-  Device();
-  ~Device();
+  Buffer(u32 handle) : handle(handle) {}
+  ~Buffer();
+
+  void* GetNativeHandle();
+};
+
+// Forward declarations
+class Instance;
+class Adapter;
+class Device;
+class Swapchain;
+
+struct AdapterSelectorInfo {
+  u8 adapter_index = 255;
+
+  bool prefer_high_performance = false;
+};
+
+class Instance {
+public:
+  Instance() = default;
+  ~Instance() = default;
+  void* GetNativeHandle();
 
   void Initialize();
   void Shutdown();
+
+  u8 GetAdapterCount();
+  Adapter *AcquireAdapter(const AdapterSelectorInfo &selector_info = AdapterSelectorInfo());
+
+
+};
+
+class Adapter {
+public:
+  Adapter() = default;
+  ~Adapter() = default;
+  void* GetNativeHandle();
+
+  void Initialize();
+  void Shutdown();
+
+  Device *CreateDevice();
+  
+};
+
+class Device {
+public:
+  Device() = default;
+  ~Device() = default;
+  void* GetNativeHandle();
+
+  void Initialize();
+  void Shutdown();
+
+  void Tick();  
+
+  void InitializeSwapchain(void *native_window_handle);
+  void ShutdownSwapchain();
+};
+
+class Swapchain {
+public:
+  Swapchain() = default;
+  ~Swapchain() = default;
+  void* GetNativeHandle();
+
+  void Initialize();
+  void Shutdown();
+
+  void AcquireNextImage();
+  void Present();
+
+  void SetFullscreen(bool fullscreen);
 };
 
 extern Device *gDevice;
+extern Instance *gInstance;
+extern Adapter *gAdapter;
+extern Swapchain *gSwapchain;
 } // namespace graphics
 } // namespace ll
 } // namespace mercury

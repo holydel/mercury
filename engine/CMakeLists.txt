@@ -3,15 +3,29 @@ project(mercury_engine)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 # Source files
 set(SOURCES
     src/application.cpp
+    src/mercury_log.cpp
+    src/graphics.cpp
+
+    #GRAPHICS
+    src/ll/graphics/null/null_graphics.cpp
+
+    #WEBGPU
+    src/ll/graphics/webgpu/webgpu_graphics.cpp
+    src/ll/graphics/webgpu/webgpu_utils.cpp
 )
 
 # OS specific source files
-if(WIN32)
+if(EMSCRIPTEN)
+    list(APPEND SOURCES src/ll/os/emscripten/emscripten_os.cpp
+    src/ll/os/emscripten/emscripten_utils.cpp)
+elseif(WIN32)
     list(APPEND SOURCES src/ll/os/win32/win32_os.cpp 
     src/ll/os/win32/win32_utils.cpp )
 elseif(APPLE)
@@ -19,8 +33,6 @@ elseif(APPLE)
 elseif(UNIX AND NOT APPLE)
     list(APPEND SOURCES src/ll/os/linux/linux_os.cpp
     src/ll/os/linux/linux_utils.cpp) 
-elseif(EMSCRIPTEN)
-    list(APPEND SOURCES src/ll/os/emscripten/emscripten_os.cpp)
 elseif(ANDROID)
     list(APPEND SOURCES src/ll/os/android/android_os.cpp)
 else()
@@ -72,6 +84,9 @@ configure_file(
 target_include_directories(mercury_engine PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/imgui
 )
 
 target_include_directories(mercury_engine PRIVATE 
@@ -83,3 +98,5 @@ set_target_properties(mercury_engine PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
+
+
