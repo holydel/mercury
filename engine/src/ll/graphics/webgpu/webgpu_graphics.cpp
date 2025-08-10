@@ -47,7 +47,8 @@ wgpu::BindGroup gPointCloudBindGroup;
 wgpu::Buffer gPointCloudVertexBuffer;
 uint32_t gPointCloudPointCount = 0;
 
-
+int gInitialCanvasWidth = 0;
+int gInitialCanvasHeight = 0;
 
 // Function to get canvas surface
 wgpu::Surface GetCanvasSurface()
@@ -55,7 +56,7 @@ wgpu::Surface GetCanvasSurface()
     MLOG_DEBUG(u8"Getting canvas surface...");
 
     // Get the canvas element
-    EMSCRIPTEN_RESULT result = emscripten_get_canvas_element_size("#canvas", nullptr, nullptr);
+    EMSCRIPTEN_RESULT result = emscripten_get_canvas_element_size("#canvas", &gInitialCanvasWidth, &gInitialCanvasHeight);
     if (result != EMSCRIPTEN_RESULT_SUCCESS)
     {
         MLOG_ERROR(u8"Failed to get canvas element");
@@ -723,8 +724,6 @@ void Device::ShutdownSwapchain()
 
 void Swapchain::Initialize()
 {
-    emscripten_request_fullscreen("canvas", 1);
-
     MLOG_DEBUG(u8"Initializing Swapchain (WEBGPU)");
 
     wgpu::SurfaceConfiguration surfaceConfig = {};

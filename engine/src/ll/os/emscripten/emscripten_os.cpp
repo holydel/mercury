@@ -5,6 +5,7 @@
 #include <emscripten.h>
 #include <iostream>
 
+#include "emscripten_input.h"
 // Export C functions for JavaScript access
 EMSCRIPTEN_KEEPALIVE
 extern "C" void onPageHidden();
@@ -14,38 +15,6 @@ extern "C" void onPageVisible();
 
 EMSCRIPTEN_KEEPALIVE
 extern "C" void requestApplicationShutdown();
-
-/*
- * Emscripten Main Loop Implementation
- * 
- * This implementation provides an optimal main loop for Emscripten with focus on:
- * 
- * 1. PERFORMANCE: Uses emscripten_set_main_loop with fps=0 for unlimited frame rate
- *    - Browser will automatically throttle to ~60fps for smooth rendering
- *    - No artificial frame rate limiting that could cause stuttering
- * 
- * 2. EFFICIENCY: Implements page visibility detection
- *    - Pauses application ticks when browser tab is not visible
- *    - Saves battery life and CPU usage when user switches tabs
- *    - Automatically resumes when tab becomes visible again
- * 
- * 3. PROPER LIFECYCLE: Complete initialization and shutdown handling
- *    - Calls InitializeCurrentApplication() before starting main loop
- *    - Checks application's IsRunning() state each frame
- *    - Calls ShutdownCurrentApplication() when application terminates
- *    - Provides JavaScript interface for external shutdown requests
- * 
- * 4. BROWSER INTEGRATION: Uses EM_JS for seamless JavaScript integration
- *    - Sets up visibility change event listeners
- *    - Provides C functions callable from JavaScript
- *    - Maintains proper C++/JavaScript boundary
- * 
- * Key Functions:
- * - emscriptenMainLoop(): Main loop callback that handles ticking and state checks
- * - requestApplicationShutdown(): External shutdown request (callable from JS)
- * - onPageHidden/onPageVisible(): Browser visibility state management
- * - setupVisibilityCallback(): Sets up browser event listeners
- */
 
  // Global state for main loop management
 static bool g_applicationRunning = true;
@@ -143,6 +112,8 @@ int main()
   
   // Set up browser visibility handling
   setupVisibilityCallback();
+  
+  RegisterEmscriptenInputCallbacks();
   
   // Set up the main loop with optimal parameters:
   // - fps: 0 (unlimited, browser will throttle appropriately)

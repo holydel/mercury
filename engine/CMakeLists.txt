@@ -10,33 +10,87 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Source files
 set(SOURCES
     src/application.cpp
-    src/mercury_log.cpp
-    src/graphics.cpp
-
+    src/mercury_log.cpp    
+    src/input.cpp
+    src/mercury_memory.cpp
     #GRAPHICS
+    src/ll/graphics/ll_graphics.cpp
     src/ll/graphics/null/null_graphics.cpp
-
-    #WEBGPU
-    src/ll/graphics/webgpu/webgpu_graphics.cpp
-    src/ll/graphics/webgpu/webgpu_utils.cpp
 )
 
 # OS specific source files
+
+set(VULKAN_AVAILABLE FALSE)
+set(D3D12_AVAILABLE FALSE)
+set(WEBGPU_AVAILABLE FALSE)
+set(METAL_AVAILABLE FALSE)
+
 if(EMSCRIPTEN)
+    message(STATUS "Autodetected Emscripten build")
+
+    set(WEBGPU_AVAILABLE TRUE)
+
     list(APPEND SOURCES src/ll/os/emscripten/emscripten_os.cpp
-    src/ll/os/emscripten/emscripten_utils.cpp)
+    src/ll/os/emscripten/emscripten_utils.cpp
+    src/ll/os/emscripten/emscripten_input.cpp)
 elseif(WIN32)
+    message(STATUS "Autodetected Windows build")
+
+    set(VULKAN_AVAILABLE TRUE)
+    set(D3D12_AVAILABLE TRUE)
+    set(WEBGPU_AVAILABLE TRUE)
+
     list(APPEND SOURCES src/ll/os/win32/win32_os.cpp 
-    src/ll/os/win32/win32_utils.cpp )
+    src/ll/os/win32/win32_utils.cpp
+    src/ll/os/win32/win32_input.cpp)
 elseif(APPLE)
+    message(STATUS "Autodetected macOS build")
+
+    set(VULKAN_AVAILABLE TRUE)
+    
     list(APPEND SOURCES src/ll/os/macos/macos_os.cpp)
 elseif(UNIX AND NOT APPLE)
+    message(STATUS "Autodetected Linux build")
+
+    set(VULKAN_AVAILABLE TRUE)
+
     list(APPEND SOURCES src/ll/os/linux/linux_os.cpp
     src/ll/os/linux/linux_utils.cpp) 
 elseif(ANDROID)
+    message(STATUS "Autodetected Android build")
+    set(VULKAN_AVAILABLE TRUE)
+
     list(APPEND SOURCES src/ll/os/android/android_os.cpp)
 else()
     message(FATAL_ERROR "Unsupported OS")
+endif()
+
+if(VULKAN_AVAILABLE)
+    message(STATUS "Vulkan support enabled")
+    list(APPEND SOURCES
+        src/ll/graphics/vulkan/mercury_vulkan.cpp
+        src/ll/graphics/vulkan/vk_utils.cpp
+        src/ll/graphics/vulkan/vk_graphics.cpp
+        src/ll/graphics/vulkan/vk_swapchain.cpp
+        src/ll/graphics/vulkan/vk_instance.cpp
+        src/ll/graphics/vulkan/vk_device.cpp
+        src/ll/graphics/vulkan/vk_adapter.cpp
+    )
+endif()
+
+
+#if(D3D12_AVAILABLE)
+#    list(APPEND SOURCES
+#        src/ll/graphics/d3d12/mercury_d3d12.cpp
+#        src/ll/graphics/d3d12/d3d12_utils.cpp
+#    )
+#endif()
+
+if(WEBGPU_AVAILABLE)
+    list(APPEND SOURCES
+        src/ll/graphics/webgpu/webgpu_graphics.cpp
+        src/ll/graphics/webgpu/webgpu_utils.cpp
+    )
 endif()
 
 # Create library
@@ -85,6 +139,10 @@ target_include_directories(mercury_engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Vulkan-Headers/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/VulkanMemoryAllocator/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/DirectX-Headers/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/imgui
 )

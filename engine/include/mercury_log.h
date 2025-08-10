@@ -3,7 +3,7 @@
 #include "mercury_api.h"
 
 namespace mercury {
-namespace log {
+namespace logging {
     enum class Severity : u8 {
         Debug,
         Info,
@@ -16,9 +16,9 @@ namespace log {
 }
 }
 
-#define MLOG_DEBUG(format, ...) mercury::log::write_message(mercury::log::Severity::Debug, format, ##__VA_ARGS__)
-#define MLOG_INFO(format, ...) mercury::log::write_message(mercury::log::Severity::Info, format, ##__VA_ARGS__)
-#define MLOG_WARNING(format, ...) mercury::log::write_message(mercury::log::Severity::Warning, format, ##__VA_ARGS__)
-#define MLOG_ERROR(format, ...) mercury::log::write_message(mercury::log::Severity::Error, format, ##__VA_ARGS__)
-#define MLOG_FATAL(format, ...) mercury::log::write_message(mercury::log::Severity::Fatal, format, ##__VA_ARGS__)
+#define MLOG_DEBUG(format, ...) mercury::logging::write_message(mercury::logging::Severity::Debug, format, ##__VA_ARGS__)
+#define MLOG_INFO(format, ...) mercury::logging::write_message(mercury::logging::Severity::Info, format, ##__VA_ARGS__)
+#define MLOG_WARNING(format, ...) mercury::logging::write_message(mercury::logging::Severity::Warning, format, ##__VA_ARGS__)
+#define MLOG_ERROR(format, ...) mercury::logging::write_message(mercury::logging::Severity::Error, format, ##__VA_ARGS__)
+#define MLOG_FATAL(format, ...) mercury::logging::write_message(mercury::logging::Severity::Fatal, format, ##__VA_ARGS__)
 

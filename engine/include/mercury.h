@@ -5,5 +5,7 @@
 #include "mercury_utils.h"
 #include "mercury_application.h"
 #include "mercury_input.h"
+#include "mercury_log.h"
+#include "mercury_memory.h"
 
 namespace mercury {};

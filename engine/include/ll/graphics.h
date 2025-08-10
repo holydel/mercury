@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../mercury_api.h"
-
+#include "mercury_application.h"
+#include <string>
 namespace mercury {
 namespace ll {
 namespace graphics {
@@ -180,7 +181,44 @@ class Swapchain;
 struct AdapterSelectorInfo {
   u8 adapter_index = 255;
 
-  bool prefer_high_performance = false;
+  Config::Graphics::AdapterTypePreference adapter_type_preference = Config::Graphics::AdapterTypePreference::Any;
+};
+
+/// @brief Cross GAPI physical device information.
+struct AdapterInfo
+{
+  enum class Type {
+    Integrated,
+    Discrete,
+    Virtual,
+    Software,
+    Unknown
+  } type = Type::Unknown;
+
+  enum class Vendor {
+    AMD,
+    NVIDIA,
+    Intel,
+    ARM,
+    Apple,
+    Qualcomm,
+    Imagination,
+    Unknown
+  } vendor = Vendor::Unknown;
+
+  u64 device_id = 0;
+  u64 vendor_id = 0;
+  u32 api_version = 0; // Vulkan API version, DirectX feature level, etc.
+  struct SupportedFeatures
+  {
+    u8 geometry_shader : 1;
+    u8 tessellation_shader : 1;
+    u8 barycentric_coords_in_fragment_shader : 1;
+  } supported_features = {};
+
+  std::u8string name; // Device name, e.g. "NVIDIA GeForce RTX 3080"
+  std::u8string driver_version; // Driver version, e.g. "460.
+  std::u8string vendor_name; // Vendor name, e.g. "NVIDIA Corporation"
 };
 
 class Instance {
@@ -193,8 +231,13 @@ public:
   void Shutdown();
 
   u8 GetAdapterCount();
-  Adapter *AcquireAdapter(const AdapterSelectorInfo &selector_info = AdapterSelectorInfo());
+  
+  /// @brief Get information about the adapter at the specified index. Use it for custom adapter selection.
+  const AdapterInfo& GetAdapterInfo(u8 index) const;
 
+  /// @brief Acquire an adapter based on the provided selector information.
+  /// Acquire the adapter and set it as global gAdapter value.
+  void AcquireAdapter(const AdapterSelectorInfo &selector_info = AdapterSelectorInfo());
 
 };
 
@@ -207,8 +250,10 @@ public:
   void Initialize();
   void Shutdown();
 
-  Device *CreateDevice();
-  
+  /// @brief Create a device for this adapter.
+  /// @note This will set the global gDevice value.
+  void CreateDevice();
+
 };
 
 class Device {
@@ -222,7 +267,11 @@ public:
 
   void Tick();  
 
-  void InitializeSwapchain(void *native_window_handle);
+  /// @brief Initialize the swapchain for rendering.
+  /// @param native_window_handle The handle to the native window where the swapchain will be created.
+  /// gSwapchain will be created if it does not exist.
+  void InitializeSwapchain(void *native_window_handle); 
+  
   void ShutdownSwapchain();
 };
 
@@ -232,7 +281,7 @@ public:
   ~Swapchain() = default;
   void* GetNativeHandle();
 
-  void Initialize();
+  void Initialize(void* native_window_handle = nullptr);
   void Shutdown();
 
   void AcquireNextImage();

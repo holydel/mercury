@@ -27,11 +27,11 @@
 #include <immintrin.h>
 #endif
 
-// #define MERCURY_LL_GRAPHICS_NULL
-//  #define MERCURY_LL_GRAPHICS_VULKAN
+//#define MERCURY_LL_GRAPHICS_NULL
+  #define MERCURY_LL_GRAPHICS_VULKAN
 //  #define MERCURY_LL_GRAPHICS_D3D12
 //  #define MERCURY_LL_GRAPHICS_METAL
-#define MERCURY_LL_GRAPHICS_WEBGPU
+//#define MERCURY_LL_GRAPHICS_WEBGPU
 
 #define MERCURY_LL_SOUND_NONE
 // #define MERCURY_LL_SOUND_MINIAUDIO
@@ -39,6 +39,12 @@
 // #define MERCURY_CPU_PROFILER_AVAILABLE
 // #define MERCURY_GPU_PROFILER_AVAILABLE
 
+//Chose one
+//#define MERCURY_RETAIL_BUILD
+#define MERCURY_DEBUG_BUILD
+//#define MERCURY_DEV_BUILD
+
+//#define MERCURY_USE_MEMORY_STAT
 namespace mercury
 {
     typedef int i32;
@@ -117,6 +123,10 @@ namespace mercury
 			handle = InvalidValue;
 		}
 	};
+
+    // Ensure N is an exact multiple of E (and E > 0)
+    template<std::size_t E, std::size_t N>
+    concept multiple_of = (E > 0) && (N % E == 0);
 } // namespace mercury
 
 #define IF_LIKELY(x) [[likely]] if (x)

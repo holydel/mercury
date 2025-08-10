@@ -4,7 +4,7 @@
 #include <cstdarg>
 
 namespace mercury {
-namespace log {
+namespace logging {
     void write_message(Severity severity, const c8* format, ...)
     {
         va_list args;

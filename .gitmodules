@@ -7,3 +7,15 @@
 [submodule "third_party/glm"]
 	path = third_party/glm
 	url = https://github.com/g-truc/glm
+[submodule "engine/third_party/Vulkan-Headers"]
+	path = engine/third_party/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers
+[submodule "engine/third_party/DirectX-Headers"]
+	path = engine/third_party/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers
+[submodule "engine/third_party/VulkanMemoryAllocator"]
+	path = engine/third_party/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "engine/third_party/D3D12MemoryAllocator"]
+	path = engine/third_party/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator

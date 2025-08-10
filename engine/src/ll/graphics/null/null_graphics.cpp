@@ -10,50 +10,123 @@ Instance *gInstance = nullptr;
 Adapter *gAdapter = nullptr;
 Swapchain *gSwapchain = nullptr;
 
-void Instance::Initialize() {
+void Instance::Initialize()
+{
     MLOG_DEBUG(u8"Initialize Graphics System (NULL)");
 }
 
-void Instance::Shutdown() {
+void Instance::Shutdown()
+{
     MLOG_DEBUG(u8"Shutdown Graphics System (NULL)");
 }
 
-u8 Instance::GetAdapterCount() {
-    return 1; //fake null adapter
+u8 Instance::GetAdapterCount()
+{
+    return 1; // fake null adapter
 }
 
-Adapter *Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info) {
+void *Instance::GetNativeHandle()
+{
+    return nullptr; // null instance has no native handle
+}
 
-    if(gAdapter == nullptr)
+Adapter *Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
+{
+
+    if (gAdapter == nullptr)
         gAdapter = new Adapter();
 
     return gAdapter;
 }
 
-Device *Adapter::CreateDevice() {
-    if(gDevice == nullptr)
+void *Adapter::GetNativeHandle()
+{
+    return nullptr; // null adapter has no native handle
+}
+
+Device *Adapter::CreateDevice()
+{
+    if (gDevice == nullptr)
         gDevice = new Device();
 
     return gDevice;
 }
 
-void Adapter::Initialize() {
+void Adapter::Initialize()
+{
     MLOG_DEBUG(u8"Initialize Adapter (NULL)");
 }
 
-void Adapter::Shutdown() {
+void Adapter::Shutdown()
+{
     MLOG_DEBUG(u8"Shutdown Adapter (NULL)");
 }
 
-void Device::Initialize() {
+void Device::Initialize()
+{
     MLOG_DEBUG(u8"Initialize Device (NULL)");
 }
 
-void Device::Shutdown() {
+void Device::Shutdown()
+{
     MLOG_DEBUG(u8"Shutdown Device (NULL)");
 }
 
-void Device::Tick() {
-    //MLOG_DEBUG(u8"Tick Device (NULL)");
+void Device::Tick()
+{
+    // MLOG_DEBUG(u8"Tick Device (NULL)");
 }
+
+void Device::InitializeSwapchain(void *native_window_handle)
+{
+    if (gSwapchain != nullptr)
+    {
+        MLOG_DEBUG(u8"Swapchain already initialized, skipping.");
+        return;
+    }
+
+    gSwapchain = new Swapchain();
+    gSwapchain->Initialize();
+}
+
+void Device::ShutdownSwapchain()
+{
+    if (gSwapchain)
+    {
+        gSwapchain->Shutdown();
+        delete gSwapchain;
+        gSwapchain = nullptr;
+    }
+}
+
+void* Device::GetNativeHandle()
+{
+    return nullptr; // null device has no native handle
+}
+
+void *Swapchain::GetNativeHandle()
+{
+    return nullptr;
+}
+
+void Swapchain::Initialize()
+{
+}
+
+void Swapchain::Shutdown()
+{
+}
+
+void Swapchain::AcquireNextImage()
+{
+}
+
+void Swapchain::Present()
+{
+}
+
+void Swapchain::SetFullscreen(bool fullscreen)
+{
+}
+
 #endif

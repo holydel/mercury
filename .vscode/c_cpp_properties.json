@@ -4,6 +4,10 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${workspaceFolder}/engine/include",
+                "${workspaceFolder}/engine/src",
+                "${workspaceFolder}/engine/third_party/Vulkan-Headers/include",
+                "${workspaceFolder}/third_party/glm",
                 "D:/SDKs/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu_pkg/webgpu_cpp/include"
             ],
             "defines": [
@@ -14,8 +18,9 @@
             "windowsSdkVersion": "10.0.22621.0",
             "compilerPath": "cl.exe",
             "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64"
+            "cppStandard": "c++20",
+            "intelliSenseMode": "windows-msvc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         },
         {
             "name": "Emscripten",

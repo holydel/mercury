@@ -1,0 +1,259 @@
+#include "mercury_memory.h"
+#include "ll/os.h"
+#include <iostream>
+
+using namespace mercury;
+using namespace mercury::memory;
+
+ReservedAllocator::ReservedAllocator(const ReservedAllocator::InitDesc& desc)
+{
+    numBuckets = (u8)desc.bucketsInfo.size();
+    buckets = (Bucket*)malloc(sizeof(Bucket) * numBuckets);
+
+    for (size_t i = 0; i < numBuckets; ++i)
+    {
+        new (&buckets[i]) Bucket(desc.bucketsInfo[i].elementSize, desc.bucketsInfo[i].maximumReservedSize, desc.bucketsInfo[i].initialCommittedSize);
+    }
+}
+
+ReservedAllocator::~ReservedAllocator()
+{
+    for(int i=0; i < numBuckets; ++i)
+    {
+       buckets[i].~Bucket();
+    }
+    free(buckets);
+}
+
+void* ReservedAllocator::Allocate(size_t size)
+{
+    int bucketIndex = -1;
+
+    for (size_t i = 0; i < numBuckets; ++i)
+    {
+        if(buckets[i].elementSize >= size)
+        {
+            bucketIndex = i;
+            break;
+        }
+    }
+
+    if(bucketIndex != -1)
+    {
+        return buckets[bucketIndex].Allocate(size);
+    }
+
+    return malloc(size);
+}
+
+void* ReservedAllocator::ReAllocate(void* ptr, u16 size)
+{
+    int bucketIndexNew = -1;
+    int bucketIndexOld = -1;
+
+    for (size_t i = 0; i < numBuckets; ++i)
+    {
+        if(buckets[i].IsPtrInBucketRange(ptr))
+        {
+            bucketIndexOld = i;
+        }
+
+        if(buckets[i].elementSize >= size)
+        {
+            bucketIndexNew = i;
+            break;
+        }
+    }
+
+    if(bucketIndexNew == bucketIndexOld) //do nothing
+        return ptr;
+        
+    if(bucketIndexNew ==-1 && bucketIndexOld == -1) //reallocate to system memory
+    {
+        return realloc(ptr, size);
+    }
+
+    void* newPtr = Allocate(size);
+    memcpy(newPtr, ptr, size);
+    Deallocate(ptr);
+
+    return newPtr;
+}
+
+void ReservedAllocator::Deallocate(void* ptr)
+{
+    if (ptr == nullptr)
+        return;
+
+    for (size_t i = 0; i < numBuckets; ++i)
+    {
+        if (buckets[i].IsPtrInBucketRange(ptr))
+        {
+            #ifdef MERCURY_USE_MEMORY_STAT
+            buckets[i].DeallocateAndReturnUserSize(ptr);
+            #else
+            buckets[i].Deallocate(ptr);
+            #endif
+            
+            return;
+        }
+    }
+
+    free(ptr);
+}
+
+ReservedAllocator::Bucket::Bucket(u16 elementSize, u32 maximumReservedSize, u32 initialCommitedSize)
+{
+    auto *os = ll::os::gOS;
+    this->elementSize = elementSize;
+    this->maximumReservedSize = maximumReservedSize;
+
+    beginRegion = os->ReserveMemory(maximumReservedSize);
+    os->CommitMemory(beginRegion, initialCommitedSize);
+
+    commitedElements = (u32)(initialCommitedSize / elementSize);
+    maximumReservedElements = (u32)(maximumReservedSize / elementSize);
+
+    #ifdef MERCURY_USE_MEMORY_STAT
+        totalCommittedMem = initialCommitedSize;
+        allocationUserSizes.reserve(std::min(4096u, initialCommitedSize / elementSize));
+    #endif
+}
+
+ReservedAllocator::Bucket::~Bucket()
+{
+    auto *os = ll::os::gOS;
+    os->DecommitMemory(beginRegion, commitedElements * elementSize);
+    os->ReleaseMemory(beginRegion, maximumReservedSize);
+}
+
+void* ReservedAllocator::Bucket::Allocate(u16 size)
+{
+    #ifdef MERCURY_USE_MEMORY_STAT
+    allocationsCount++;
+    allocatedMemUser += size;
+    allocatedMemSystem += elementSize;
+
+    totalAllocationsCount++;
+    totalAllocatedMemUser += size;
+    totalAllocatedMemSystem += elementSize;
+    #endif
+
+    if(freeList.empty())
+    {
+        if(lastAllocatedID >= maximumReservedElements)
+            return nullptr;
+
+        if(lastAllocatedID >= commitedElements)
+        {
+            //reserve next page
+            auto *os = ll::os::gOS;
+            os->CommitMemory((u8*)beginRegion + (commitedElements * elementSize), os->GetPageSize());
+            commitedElements += (u32)(os->GetPageSize() / elementSize);
+
+            #ifdef MERCURY_USE_MEMORY_STAT
+            totalCommittedMem += os->GetPageSize();
+            #endif
+        }
+
+        void* result = (u8*)beginRegion + (lastAllocatedID * elementSize);
+
+        #ifdef MERCURY_USE_MEMORY_STAT
+        allocationUserSizes.push_back(size);
+        #endif
+        
+        lastAllocatedID++;
+
+        return result;
+    }
+    else
+    {
+        u32 currentId = freeList.top();
+        freeList.pop();
+
+        void* result = (u8*)beginRegion + (currentId * elementSize);
+
+        #ifdef MERCURY_USE_MEMORY_STAT
+        allocationUserSizes[currentId] = size;
+        #endif
+
+        return result;
+    }
+    return nullptr;
+}
+
+void ReservedAllocator::Bucket::Deallocate(void* ptr)
+{
+    if(ptr == nullptr)
+        return;
+
+    u32 offset = (u32)((u8*)ptr - (u8*)beginRegion);
+    MERCURY_ASSERT(offset % elementSize == 0);
+
+    u32 id = offset / elementSize;
+    MERCURY_ASSERT(id < maximumReservedElements);
+
+    freeList.push(id);
+
+    #ifdef MERCURY_USE_MEMORY_STAT
+    allocationUserSizes[id] = 0;
+    #endif
+}
+
+#ifdef MERCURY_USE_MEMORY_STAT
+u16 ReservedAllocator::Bucket::DeallocateAndReturnUserSize(void* ptr)
+{
+    if(ptr == nullptr)
+        return 0;
+
+    u32 offset = (u32)((u8*)ptr - (u8*)beginRegion);
+    MERCURY_ASSERT(offset % elementSize == 0);
+
+    u32 id = offset / elementSize;
+    MERCURY_ASSERT(id < maximumReservedElements);
+
+    u16 result = allocationUserSizes[id];
+
+    #ifdef MERCURY_USE_MEMORY_STAT
+    allocationsCount--;
+    allocatedMemUser -= result;
+    allocatedMemSystem -= elementSize;
+    #endif
+
+    allocationUserSizes[id] = 0;
+    return result;
+}
+#endif
+
+bool ReservedAllocator::Bucket::IsPtrInBucketRange(void* ptr)
+{
+    if (ptr == nullptr)
+        return false;
+
+    u32 offset = (u32)((u8*)ptr - (u8*)beginRegion);
+    return offset >= 0 && offset < maximumReservedSize;
+}
+#ifdef MERCURY_USE_MEMORY_STAT
+void ReservedAllocator::DumpStatsPerBucketTotal()
+{
+    for (size_t i = 0; i < numBuckets; ++i)
+    {
+        std::cout << "Bucket " << buckets[i].elementSize << std::endl;
+        buckets[i].DumpStatsTotal();
+    }
+}
+
+void ReservedAllocator::Bucket::DumpStatsTotal()
+{
+    std::cout << "  Total Reserved Virtual Memory: " << maximumReservedSize << std::endl;
+    std::cout << "  Total Committed Memory: " << totalCommittedMem << std::endl;
+    std::cout << std::endl;
+    std::cout << "  Allocated Elements: " << allocationsCount << std::endl;
+    std::cout << "  Allocated Memory (User): " << allocatedMemUser << std::endl;
+    std::cout << "  Allocated Memory (System): " << allocatedMemSystem << std::endl;
+    std::cout << std::endl;
+    std::cout << "  Total allocations count: " << totalAllocationsCount << std::endl;
+    std::cout << "  Total Allocated Memory (User): " << totalAllocatedMemUser << std::endl;
+    std::cout << "  Total Allocated Memory (System): " << totalAllocatedMemSystem << std::endl;
+}
+#endif

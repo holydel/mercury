@@ -20,12 +20,10 @@ int mercury::utils::string::utf16_to_utf8(const char16_t *utf16_str,
 void mercury::utils::debug::output_debug_string_to_ide(const char8_t *str) {
   // Convert UTF-8 to UTF-16 for OutputDebugStringW
   char16_t buff[1024] = {0};
-  string::utf8_to_utf16(str, buff, 1024);
+  int lastChar = string::utf8_to_utf16(str, buff, 1024);
+  buff[lastChar - 1] = L'\n';  
+  buff[lastChar] = L'\0';
   OutputDebugStringW((const wchar_t *)buff);
-  
-  // Also output to console with proper encoding
-  // SetConsoleOutputCP(CP_UTF8);
-  printf("Debug: %S\n", (const wchar_t *)buff);
 }
 
 void mercury::utils::debug::output_debug_string_to_console(const char8_t *str)

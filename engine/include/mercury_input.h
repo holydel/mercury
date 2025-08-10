@@ -90,9 +90,6 @@ public:
   Keyboard() = default;
   ~Keyboard() = default;
 
-  void Initialize();
-  void Shutdown();
-
   bool IsKeyDown(Key key) const;
   bool IsKeyUp(Key key) const;
   bool IsKeyPressed(Key key) const;
@@ -104,9 +101,6 @@ class Mouse {
 public:
   Mouse() = default;
   ~Mouse() = default;
-
-  void Initialize();
-  void Shutdown();
 
   bool IsButtonDown(MouseButton button) const;
   bool IsButtonUp(MouseButton button) const;
@@ -123,10 +117,6 @@ class Gamepad {
 public:
   Gamepad() = default;
   ~Gamepad() = default;
-
-  void Initialize();
-  void Shutdown();
-
   // bool IsButtonDown(GamepadButton button);
 };
 
@@ -134,18 +124,12 @@ class Gyroscope {
   public:
   Gyroscope() = default;
   ~Gyroscope() = default;
-
-  void Initialize();
-  void Shutdown();
 };
 
 class XRController {
   public:
   XRController() = default;
   ~XRController() = default;
-
-  void Initialize();
-  void Shutdown();
 };
 
 extern Keyboard *gKeyboard;
