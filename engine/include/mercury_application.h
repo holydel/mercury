@@ -28,7 +28,7 @@ namespace mercury
     } window;
     struct Graphics
     {
-      u8 explicitAdapterIndex = 255; //if 255 - no explicit adapter index is set
+      u8 explicitAdapterIndex = 255; // if 255 - no explicit adapter index is set
 
       enum class AdapterTypePreference
       {
@@ -40,6 +40,49 @@ namespace mercury
       u8 enableValidationLayers : 1 = true; // Ignored in retail builds
     } graphics;
 
+    struct SwapchainConfig
+    {
+      enum class ColorWidth : u8
+      {
+        Prefer16bit,
+        Prefer32bit,
+        PreferHDR
+      };
+
+      enum class DepthMode : u8
+      {
+        None,
+        Depth16,
+        Depth24_Stencil8,
+        Depth32F,
+        Depth32F_Stencil8
+      };
+
+      enum class MSAAMode : u8
+      {
+        None = 1,
+        Samples2 = 2,
+        Samples4 = 4,
+        Samples8 = 8,
+        Samples16 = 16
+      };
+
+      ColorWidth colorWidth = ColorWidth::Prefer32bit;
+      DepthMode depthMode = DepthMode::None;
+      MSAAMode msaaMode = MSAAMode::None;
+
+      enum class VSyncMode : u8
+      {
+        NoVSync,
+        AdaptiveVSync,
+        AlwaysVSync
+      };
+
+      VSyncMode vsync = VSyncMode::AlwaysVSync;
+
+      bool useAlpha : 1 = false;
+      bool tripleBuffering : 1 = true; // for VR - use double buffering
+    } swapchain;
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
     struct VkConfig
     {

@@ -57,6 +57,7 @@ namespace memory {
             u64 totalAllocatedMemSystem = 0;
             u64 totalAllocatedMemUser = 0;
 
+            u64 totalSystemPagesCommitted = 0;
             std::vector<u16> allocationUserSizes;
             u16 DeallocateAndReturnUserSize(void* ptr);
 
@@ -67,6 +68,9 @@ namespace memory {
         };
 
         Bucket *buckets;
+
+        //dedicated sizes for improve cache locality while finding correct bucket
+        u16 *bucketSizes; 
         u8 numBuckets;
 
         ReservedAllocator(const InitDesc& desc);
@@ -90,14 +94,16 @@ namespace memory {
         u64 totalReallocsCount = 0;
         u64 totalReallocsSaveBySameBucket = 0;
         u64 totalSystemAllocationsCount = 0;
-        
+
+        u64 totalMallocAllocations = 0;
+        #endif
+
         void ResetFrame();
         void DumpStatsTotal();
         void DumpStateFrame();
 
         void DumpStatsPerBucketTotal();
         void DumpStatePerBucketFrame();
-        #endif
     };
 
     extern ReservedAllocator* gGraphicsMemoryAllocator;

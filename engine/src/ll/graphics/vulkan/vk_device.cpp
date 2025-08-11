@@ -6,7 +6,7 @@ using namespace mercury;
 using namespace mercury::ll::graphics;
 
 #include "vk_graphics.h"
-
+#include "vk_swapchain.h"
 VkDevice gVKDevice = VK_NULL_HANDLE;
 VkQueue gVKGraphicsQueue = VK_NULL_HANDLE;
 VkQueue gVKTransferQueue = VK_NULL_HANDLE;
@@ -103,6 +103,31 @@ void Device::Initialize()
 
 		MLOG_DEBUG((const char8_t*)desc.c_str());
 	}
+
+	float highPriors[8];
+	float midPriors[8];
+	float lowPriors[8];
+
+	for(int i=0;i<8;++i)
+	{
+		highPriors[i] = 1.0f;
+		midPriors[i] = 0.5f;
+		lowPriors[i] = 0.0f;
+	}
+
+	VkDeviceQueueCreateInfo queueCreateInfoGraphics;
+	queueCreateInfoGraphics.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfoGraphics.pNext = 0;
+	queueCreateInfoGraphics.pQueuePriorities = highPriors;
+	queueCreateInfoGraphics.queueCount = 1;
+	queueCreateInfoGraphics.queueFamilyIndex = 0;
+	queueCreateInfoGraphics.flags = 0;
+
+	std::vector< VkDeviceQueueCreateInfo> requestedQueues;
+	requestedQueues.push_back(queueCreateInfoGraphics);
+
+	vkSwapchainRequestDeviceExtensions(device_extender);
+	int a = 42;
 }
 
 void Device::Shutdown()

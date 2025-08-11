@@ -44,7 +44,7 @@
 #define MERCURY_DEBUG_BUILD
 //#define MERCURY_DEV_BUILD
 
-//#define MERCURY_USE_MEMORY_STAT
+#define MERCURY_USE_MEMORY_STAT
 namespace mercury
 {
     typedef int i32;

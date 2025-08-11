@@ -469,7 +469,7 @@ struct VKDeviceExtender
 
 		for (auto& ex : all_extensions)
 		{
-			//MLOG_INFO(u8"%s", ex.extensionName);
+			MLOG_INFO(u8"%s", ex.extensionName);
 
 			all_extensions_str += ex.extensionName;
 			all_extensions_str += "\n";

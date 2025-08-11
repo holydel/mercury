@@ -6,10 +6,16 @@
 
 namespace mercury {
 namespace utils {
-namespace math {}
+namespace math {
+    inline u64 alignUp(u64 value, u64 alignment) {
+        return (value + alignment - 1) & ~(alignment - 1);
+    }
+}
 namespace string {
 int utf8_to_utf16(const c8 *utf8_str, c16 *utf16_str, int max_length);
 int utf16_to_utf8(const c16 *utf16_str, c8 *utf8_str, int max_length);
+
+std::string format_size(u64 size);
 } // namespace string
 namespace debug {
 void output_debug_string_to_ide(const c8 *str);

@@ -13,9 +13,12 @@ set(SOURCES
     src/mercury_log.cpp    
     src/input.cpp
     src/mercury_memory.cpp
+    src/mercury_string_utils.cpp
+    
     #GRAPHICS
     src/ll/graphics/ll_graphics.cpp
     src/ll/graphics/null/null_graphics.cpp
+    src/ll/graphics/mercury_swapchain.cpp
 )
 
 # OS specific source files
@@ -75,6 +78,7 @@ if(VULKAN_AVAILABLE)
         src/ll/graphics/vulkan/vk_instance.cpp
         src/ll/graphics/vulkan/vk_device.cpp
         src/ll/graphics/vulkan/vk_adapter.cpp
+        src/ll/graphics/vulkan/vk_swapchain.cpp
     )
 endif()
 

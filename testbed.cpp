@@ -227,7 +227,7 @@ void TestBedApplication::Initialize() {
        //test_simd();
        //test_memory();
 
-       //memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
+       memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
 }
 
 void TestBedApplication::Tick() {

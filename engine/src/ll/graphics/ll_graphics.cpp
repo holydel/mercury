@@ -2,6 +2,7 @@
 #include "ll/os.h"
 #include <algorithm>
 #include "mercury_log.h"
+#include "mercury_swapchain.h"
 
 using namespace mercury;
 using namespace ll::graphics;
@@ -14,7 +15,10 @@ Swapchain *mercury::ll::graphics::gSwapchain = nullptr;
 
 void MercuryGraphicsInitialize()
 {
-    auto &graphicsCfg = Application::GetCurrentApplication()->GetConfig().graphics;
+    auto &appCfg = Application::GetCurrentApplication()->GetConfig();
+    auto &graphicsCfg = appCfg.graphics;
+
+    mercurySwapchainConfigure(appCfg.swapchain);
     gInstance = new Instance();
     gInstance->Initialize();
 
@@ -168,4 +172,6 @@ mercury::u8 SelectAdapterByHeuristic(
 
         return rankedAdapters.front().index;
     }
+
+    return 0;
 }

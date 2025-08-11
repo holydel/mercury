@@ -7,6 +7,8 @@
 #include "mercury_application.h"
 #include <sstream>
 #include "../ll_graphics.h"
+#include "vk_swapchain.h"
+
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
@@ -271,6 +273,8 @@ void Instance::Initialize()
     initDesc.bucketsInfo.push_back({1024, 16_MB, 1_MB});
     initDesc.bucketsInfo.push_back({2048, 16_MB, 1_MB});
     initDesc.bucketsInfo.push_back({4096, 16_MB, 1_MB});
+    initDesc.bucketsInfo.push_back({8192, 16_MB, 1_MB});
+    initDesc.bucketsInfo.push_back({16384, 16_MB, 1_MB});
 
     memory::gGraphicsMemoryAllocator = new mercury::memory::ReservedAllocator(initDesc);
 
@@ -329,6 +333,8 @@ void Instance::Initialize()
     vkAppInfo.applicationVersion = config.appVersion.packed;
     vkAppInfo.apiVersion = installedVersion ? installedVersion : VK_MAKE_API_VERSION(0, 1, 1, 0);
 
+    vkSwapchainRequestInstanceExtensions(instance_extender);
+
     VkInstanceCreateInfo createInfo = {};
 
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -350,6 +356,7 @@ void Instance::Initialize()
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
+   
     VK_CALL(vkCreateInstance(&createInfo, gVKGlobalAllocationsCallbacks, &gVKInstance));
 
     LoadVkInstanceLevelFuncs(gVKInstance);
