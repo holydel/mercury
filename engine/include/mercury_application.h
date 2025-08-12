@@ -26,8 +26,45 @@ namespace mercury
       u8 borderless : 1 = false;
       u8 alwaysOnTop : 1 = false;
     } window;
+
+    struct EngineConfig
+    {
+      bool EnableIMGUI = false;
+      bool EnableSound = false;
+      bool EnableBulletPhysics = false;
+      bool EnableXR = false;
+      bool EnableXRMirroring = false;
+    };
+
+    struct D3D12Config
+    {
+      bool useWorkGraphs = false;
+    };
+
+    struct VKConfig
+    {
+      bool useDynamicRendering = false;
+    };
+
+    struct XRConfig
+    {
+      bool useDebugLayers = true;
+    };
+
+    struct InputConfig
+    {
+      u16 checkGamepadIntervalMS = 250; // for one gamepad per tick
+    };
+
     struct Graphics
     {
+      #ifdef MERCURY_LL_GRAPHICS_VULKAN
+        VKConfig vkConfig;
+      #endif
+      #ifdef MERCURY_LL_GRAPHICS_D3D12
+              D3D12Config d3d12Config;
+      #endif
+
       u8 explicitAdapterIndex = 255; // if 255 - no explicit adapter index is set
 
       enum class AdapterTypePreference
@@ -38,6 +75,17 @@ namespace mercury
       } adapterPreference = AdapterTypePreference::Any;
 
       u8 enableValidationLayers : 1 = true; // Ignored in retail builds
+
+      bool enableRaytracing : 1 = false;	
+      bool enableBarycentricFS : 1 = false;
+      bool enableMeshShader : 1 = false;
+      bool enableSamplerFeedback : 1 = false;
+      bool enableVariableRateShading : 1 = false;
+      bool enableGeometryShader : 1 = false;
+      bool enableTessellation : 1 = false;
+      bool enableSamplerYCbCr : 1 = false;
+      bool enablePartialResidencyTextures : 1 = false;
+      bool enablePartialResidencyBuffers : 1 = false;
     } graphics;
 
     struct SwapchainConfig
@@ -83,12 +131,7 @@ namespace mercury
       bool useAlpha : 1 = false;
       bool tripleBuffering : 1 = true; // for VR - use double buffering
     } swapchain;
-#ifdef MERCURY_LL_GRAPHICS_VULKAN
-    struct VkConfig
-    {
 
-    } vkConfig;
-#endif
     const c8 *appName = u8"Mercury Application";
 
     struct Version
@@ -123,7 +166,7 @@ namespace mercury
 
     virtual bool IsRunning() { return true; }
 
-    const Config &GetConfig() const { return config; }
+    Config &GetConfig() { return config; }
     static Application *GetCurrentApplication();
 
     virtual void OnClose() {};

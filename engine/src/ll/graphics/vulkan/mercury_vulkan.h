@@ -82,20 +82,20 @@ VK_DECLARE_FUNCTION(vkResetCommandBuffer);
 VK_DECLARE_FUNCTION(vkCmdBeginDebugUtilsLabelEXT);
 VK_DECLARE_FUNCTION(vkCmdEndDebugUtilsLabelEXT);
 VK_DECLARE_FUNCTION(vkCmdInsertDebugUtilsLabelEXT);
-#ifdef ERMY_OS_WINDOWS
+#ifdef MERCURY_LL_OS_WIN32
 VK_DECLARE_FUNCTION(vkCreateWin32SurfaceKHR);
 VK_DECLARE_FUNCTION(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 #endif
 
-#ifdef ERMY_OS_ANDROID
+#ifdef MERCURY_LL_OS_ANDROID
 VK_DECLARE_FUNCTION(vkCreateAndroidSurfaceKHR);
 #endif
 
-#ifdef ERMY_OS_LINUX
+#ifdef MERCURY_LL_OS_LINUX
 VK_DECLARE_FUNCTION(vkCreateXcbSurfaceKHR);
 #endif
 
-#ifdef ERMY_OS_MACOS
+#ifdef MERCURY_LL_OS_MACOS
 VK_DECLARE_FUNCTION(vkCreateMetalSurfaceEXT);
 #endif
 
@@ -221,7 +221,7 @@ VK_DECLARE_FUNCTION(vkCmdNextSubpass2);
 VK_DECLARE_FUNCTION(vkCreateRenderPass2);
 
 VK_DECLARE_FUNCTION(vkCmdUpdateBuffer);
-#ifdef ERMY_OS_WINDOWS
+#ifdef MERCURY_LL_OS_WIN32
 VK_DECLARE_FUNCTION(vkGetWinrtDisplayNV);
 VK_DECLARE_FUNCTION(vkAcquireWinrtDisplayNV);
 #endif

@@ -14,7 +14,7 @@ set(SOURCES
     src/input.cpp
     src/mercury_memory.cpp
     src/mercury_string_utils.cpp
-    
+    src/framegraph.cpp
     #GRAPHICS
     src/ll/graphics/ll_graphics.cpp
     src/ll/graphics/null/null_graphics.cpp
@@ -46,6 +46,10 @@ elseif(WIN32)
     list(APPEND SOURCES src/ll/os/win32/win32_os.cpp 
     src/ll/os/win32/win32_utils.cpp
     src/ll/os/win32/win32_input.cpp)
+
+
+    add_definitions(-DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+
 elseif(APPLE)
     message(STATUS "Autodetected macOS build")
 

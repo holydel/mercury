@@ -2,7 +2,6 @@
 #include <mercury_utils.h>
 
 #ifdef MERCURY_LL_OS_WIN32
-#define NOMINMAX
 #include <Windows.h>
 #include <iostream>
 

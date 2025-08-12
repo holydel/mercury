@@ -162,14 +162,40 @@ enum class Format {
   WGPU_DEPTH24PLUS_STENCIL8,
 };
 
-class Buffer
+struct TimelineSemaphore
 {
-  Handle<u32> handle;
-public:
-  Buffer(u32 handle) : handle(handle) {}
-  ~Buffer();
+  void* nativePtr;
 
-  void* GetNativeHandle();
+  void WaitUntil(mercury::u64 value, mercury::u64 timeout = 0);
+  void SetDebugName(const char* utf8_name);
+  void Destroy();
+};
+
+struct RenderPass
+{
+  void* nativePtr;
+
+  void SetDebugName(const char* utf8_name);
+  void Destroy();
+};
+
+struct CommandList
+{
+  void* nativePtr;  
+
+  bool IsExecuted();
+  void SetDebugName(const char* utf8_name);
+  void Destroy();
+};
+
+struct CommandPool
+{
+  void* nativePtr;
+
+  CommandList AllocateCommandList();
+  void SetDebugName(const char* utf8_name);
+  void Destroy();
+  void Reset();
 };
 
 // Forward declarations
@@ -238,7 +264,19 @@ public:
   /// @brief Acquire an adapter based on the provided selector information.
   /// Acquire the adapter and set it as global gAdapter value.
   void AcquireAdapter(const AdapterSelectorInfo &selector_info = AdapterSelectorInfo());
+  void SetDebugName(const char* utf8_name);
+};
 
+enum class QueueType : u8
+{
+  Graphics,
+  Compute,
+  Transfer,
+  VideoEncode,
+  VideoDecode,
+  OpticalFlow,
+  DedicatedSparseManagement,
+  DedicatedReadback
 };
 
 class Adapter {
@@ -253,7 +291,7 @@ public:
   /// @brief Create a device for this adapter.
   /// @note This will set the global gDevice value.
   void CreateDevice();
-
+  void SetDebugName(const char* utf8_name);
 };
 
 class Device {
@@ -273,6 +311,12 @@ public:
   void InitializeSwapchain(void *native_window_handle); 
   
   void ShutdownSwapchain();
+
+  CommandPool CreateCommandPool(QueueType queue_type);
+  TimelineSemaphore CreateTimelineSemaphore(mercury::u64 initial_value);
+  void WaitIdle();
+  void WaitQueueIdle(QueueType queue_type);
+  void SetDebugName(const char* utf8_name);
 };
 
 class Swapchain {
@@ -282,18 +326,26 @@ public:
   void* GetNativeHandle();
 
   void Initialize(void* native_window_handle = nullptr);
+  void ReInitIfNeeded();
+
   void Shutdown();
 
   void AcquireNextImage();
   void Present();
 
   void SetFullscreen(bool fullscreen);
+  u8 GetNumberOfFrames();
+
+  void SetDebugName(const char* utf8_name);
+
+  void Resize(u16 width, u16 height);
 };
 
 extern Device *gDevice;
 extern Instance *gInstance;
 extern Adapter *gAdapter;
 extern Swapchain *gSwapchain;
+
 } // namespace graphics
 } // namespace ll
 } // namespace mercury

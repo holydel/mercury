@@ -288,6 +288,10 @@ void Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
     u8 adapterIndex = SelectAdapterByHeuristic(selector_info);
     gVKPhysicalDevice = gAllPhysicalDevices[adapterIndex];
 
+    VkPhysicalDeviceProperties2 properties2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, nullptr};
+    vkGetPhysicalDeviceProperties2(gVKPhysicalDevice, &properties2);
+    gPhysicalDeviceAPIVersion = properties2.properties.apiVersion;
+    
     gAdapter = new Adapter();
 }
 

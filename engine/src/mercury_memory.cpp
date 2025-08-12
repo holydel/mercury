@@ -74,7 +74,7 @@ void *ReservedAllocator::ReAllocate(void *ptr, u16 size)
         }
     }
 
-    if (bucketIndexNew == bucketIndexOld) // do nothing
+    if (bucketIndexNew <= bucketIndexOld) // do nothing
         return ptr;
 
     if (bucketIndexNew == -1 && bucketIndexOld == -1) // reallocate to system memory

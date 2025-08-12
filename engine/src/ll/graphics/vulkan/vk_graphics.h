@@ -27,4 +27,9 @@ extern VkQueue gVKGraphicsQueue;
 extern VkQueue gVKTransferQueue;
 extern VkQueue gVKComputeQueue;
 
+extern mercury::Config::VKConfig gVKConfig;
+
+extern VkRenderPass gVKFinalRenderPass;
+
+extern VmaAllocator gVMA_Allocator;
 #endif

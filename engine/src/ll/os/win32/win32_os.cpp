@@ -1,7 +1,6 @@
 #include "ll/os.h"
 #ifdef MERCURY_LL_OS_WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+
 #include "application.h"
 #include <Windows.h>
 #include <iostream>

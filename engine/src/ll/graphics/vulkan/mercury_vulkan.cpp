@@ -61,20 +61,20 @@ VK_DEFINE_FUNCTION(vkGetPhysicalDeviceImageFormatProperties);
 VK_DEFINE_FUNCTION(vkEnumeratePhysicalDeviceGroups);
 
 
-#ifdef ERMY_OS_WINDOWS
+#ifdef MERCURY_LL_OS_WIN32
 VK_DEFINE_FUNCTION(vkCreateWin32SurfaceKHR);
 VK_DEFINE_FUNCTION(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 #endif
 
-#ifdef ERMY_OS_ANDROID
+#ifdef MERCURY_LL_OS_ANDROID
 VK_DEFINE_FUNCTION(vkCreateAndroidSurfaceKHR);
 #endif
 
-#ifdef ERMY_OS_LINUX
+#ifdef MERCURY_LL_OS_LINUX
 VK_DEFINE_FUNCTION(vkCreateXcbSurfaceKHR);
 #endif
 
-#ifdef ERMY_OS_MACOS
+#ifdef MERCURY_LL_OS_MACOS
 VK_DEFINE_FUNCTION(vkCreateMetalSurfaceEXT);
 #endif
 //GLOBAL LEVEL
@@ -198,7 +198,7 @@ VK_DEFINE_FUNCTION(vkCmdEndRenderPass2);
 VK_DEFINE_FUNCTION(vkCmdNextSubpass2);
 VK_DEFINE_FUNCTION(vkCreateRenderPass2);
 
-#ifdef ERMY_OS_WINDOWS
+#ifdef MERCURY_LL_OS_WIN32
 VK_DEFINE_FUNCTION(vkGetWinrtDisplayNV);
 VK_DEFINE_FUNCTION(vkAcquireWinrtDisplayNV);
 #endif
@@ -275,22 +275,22 @@ void LoadVkInstanceLevelFuncs(VkInstance instance)
 	VK_LOAD_INSTANCE_FUNC(vkGetPhysicalDeviceImageFormatProperties);
 	VK_LOAD_INSTANCE_FUNC(vkEnumeratePhysicalDeviceGroups);
 
-#ifdef ERMY_OS_WINDOWS
+#ifdef MERCURY_LL_OS_WIN32
 	VK_LOAD_INSTANCE_FUNC(vkCreateWin32SurfaceKHR);
 	VK_LOAD_INSTANCE_FUNC(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 	VK_LOAD_INSTANCE_FUNC(vkGetWinrtDisplayNV);
 	VK_LOAD_INSTANCE_FUNC(vkAcquireWinrtDisplayNV);
 #endif
 
-#ifdef ERMY_OS_ANDROID
+#ifdef MERCURY_LL_OS_ANDROID
 	VK_LOAD_INSTANCE_FUNC(vkCreateAndroidSurfaceKHR);
 #endif
 
-#ifdef ERMY_OS_LINUX
+#ifdef MERCURY_LL_OS_LINUX
 	VK_LOAD_INSTANCE_FUNC(vkCreateXcbSurfaceKHR);
 #endif
 
-#ifdef ERMY_OS_MACOS
+#ifdef MERCURY_LL_OS_MACOS
 	VK_LOAD_INSTANCE_FUNC(vkCreateMetalSurfaceEXT);
 #endif
 }

@@ -259,8 +259,9 @@ void Instance::Initialize()
     MLOG_DEBUG(u8"Initialize Graphics System (Vulkan)");
 
     auto &config = mercury::Application::GetCurrentApplication()->GetConfig();
-    auto &vkCfg = config.vkConfig;
+   
     auto &graphicsCfg = config.graphics;
+    gVKConfig = graphicsCfg.vkConfig;
 
     mercury::memory::ReservedAllocator::InitDesc initDesc;
 
@@ -278,7 +279,7 @@ void Instance::Initialize()
 
     memory::gGraphicsMemoryAllocator = new mercury::memory::ReservedAllocator(initDesc);
 
-    gVKGlobalAllocationsCallbacks = new AllocationsCallbacks();
+    //gVKGlobalAllocationsCallbacks = new AllocationsCallbacks();
     LoadVK_Library();
 
     u32 installedVersion = 0;
