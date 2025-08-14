@@ -81,6 +81,8 @@ public:
   void ReleaseMemory(void* ptr, size_t size);
   void CommitMemory(void* ptr, size_t size);
   void DecommitMemory(void* ptr, size_t size);
+
+  const char* GetName();
 };
 
 extern OS *gOS;

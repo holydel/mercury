@@ -10,6 +10,11 @@ mercury::ll::graphics::AdapterInfo::Vendor GetVendorFromVkVendorID(mercury::u64 
 
 namespace vk_utils
 {
+    void ImageTransition(VkCommandBuffer cbuff, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask, int numMips = 1, int numLayers = 1);
+	void BufferMemoryBarrier(VkCommandBuffer cbuff, VkBuffer buffer, VkAccessFlags srcAccess, VkAccessFlags dstAccess, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage);
+	VkBufferImageCopy MakeBufferImageCopy(VkExtent3D extent, VkImageAspectFlags aspectMask, int numMips = 1, int numLayers = 1);
+
+
     namespace debug
     {
         void _setObjectName(mercury::u64 objHandle, VkObjectType objType, const char *name);

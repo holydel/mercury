@@ -14,11 +14,18 @@ set(SOURCES
     src/input.cpp
     src/mercury_memory.cpp
     src/mercury_string_utils.cpp
-    src/framegraph.cpp
     #GRAPHICS
-    src/ll/graphics/ll_graphics.cpp
+    src/graphics.cpp
     src/ll/graphics/null/null_graphics.cpp
     src/ll/graphics/mercury_swapchain.cpp
+    #IMGUI
+    src/imgui/mercury_imgui.cpp
+    src/imgui/imgui_impl.cpp
+    ../third_party/imgui/imgui.cpp
+    ../third_party/imgui/imgui_draw.cpp
+    ../third_party/imgui/imgui_widgets.cpp
+    ../third_party/imgui/imgui_tables.cpp
+    ../third_party/imgui/imgui_demo.cpp
 )
 
 # OS specific source files

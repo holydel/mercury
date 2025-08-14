@@ -8,6 +8,7 @@ using namespace mercury::ll::graphics;
 #include "vk_graphics.h"
 #include "vk_swapchain.h"
 #include "vk_device.h"
+#include "vk_utils.h"
 
 VkDevice gVKDevice = VK_NULL_HANDLE;
 VkQueue gVKGraphicsQueue = VK_NULL_HANDLE;
@@ -402,6 +403,58 @@ void Adapter::CreateDevice()
 	MERCURY_ASSERT(gDevice == nullptr);
 
 	gDevice = new Device();
+}
+
+CommandPool Device::CreateCommandPool(QueueType queue_type)
+{
+	CommandPool command_pool;
+
+	VkCommandPoolCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	create_info.queueFamilyIndex = 0; //todo
+	create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+	vkCreateCommandPool(gVKDevice, &create_info, nullptr, reinterpret_cast<VkCommandPool*>(&command_pool.nativePtr));
+	return command_pool;
+}
+
+TimelineSemaphore Device::CreateTimelineSemaphore(mercury::u64 initial_value)
+{
+	TimelineSemaphore result;
+
+	VkSemaphoreTypeCreateInfo timelineCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+		.pNext = nullptr,
+		.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+		.initialValue = initial_value,
+	};
+
+	const VkSemaphoreCreateInfo semaphoreCreateInfo{ .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = &timelineCreateInfo };
+	VK_CALL(vkCreateSemaphore(gVKDevice, &semaphoreCreateInfo, nullptr, reinterpret_cast<VkSemaphore*>(&result.nativePtr)));
+
+	return result;
+}
+
+void Device::WaitIdle()
+{
+	vkDeviceWaitIdle(gVKDevice);
+}
+
+void Device::WaitQueueIdle(QueueType queue_type)
+{
+	vkQueueWaitIdle(gVKGraphicsQueue);
+}
+
+void Device::SetDebugName(const char* utf8_name)
+{
+	if (gVKDevice != VK_NULL_HANDLE)
+	{
+		vk_utils::debug::SetName(gVKDevice, utf8_name);
+	}
+	else
+	{
+		MLOG_WARNING(u8"Cannot set debug name for device, gVKDevice is null.");
+	}
 }
 
 #endif

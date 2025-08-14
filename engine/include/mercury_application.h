@@ -56,14 +56,19 @@ namespace mercury
       u16 checkGamepadIntervalMS = 250; // for one gamepad per tick
     };
 
+    struct ImguiConfig
+    {
+      bool enable = true;
+      bool enableDocking = false;
+    } imgui;
     struct Graphics
     {
-      #ifdef MERCURY_LL_GRAPHICS_VULKAN
-        VKConfig vkConfig;
-      #endif
-      #ifdef MERCURY_LL_GRAPHICS_D3D12
-              D3D12Config d3d12Config;
-      #endif
+#ifdef MERCURY_LL_GRAPHICS_VULKAN
+      VKConfig vkConfig;
+#endif
+#ifdef MERCURY_LL_GRAPHICS_D3D12
+      D3D12Config d3d12Config;
+#endif
 
       u8 explicitAdapterIndex = 255; // if 255 - no explicit adapter index is set
 
@@ -76,7 +81,7 @@ namespace mercury
 
       u8 enableValidationLayers : 1 = true; // Ignored in retail builds
 
-      bool enableRaytracing : 1 = false;	
+      bool enableRaytracing : 1 = false;
       bool enableBarycentricFS : 1 = false;
       bool enableMeshShader : 1 = false;
       bool enableSamplerFeedback : 1 = false;

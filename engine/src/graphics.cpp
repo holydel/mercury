@@ -1,8 +1,9 @@
-#include "ll_graphics.h"
+#include "graphics.h"
 #include "ll/os.h"
 #include <algorithm>
 #include "mercury_log.h"
-#include "mercury_swapchain.h"
+#include "ll/graphics/mercury_swapchain.h"
+#include "imgui/mercury_imgui.h"
 
 using namespace mercury;
 using namespace ll::graphics;
@@ -31,10 +32,25 @@ void MercuryGraphicsInitialize()
 
     gAdapter->CreateDevice();
     gDevice->Initialize();
+
+    //TODO: think about waiting the surface to ready
+    if (gSwapchain == nullptr )
+    {
+        while (ll::os::gOS->GetCurrentNativeWindowHandle() == nullptr)
+        {
+            ll::os::gOS->Sleep(1);
+        }
+
+        gDevice->InitializeSwapchain(ll::os::gOS->GetCurrentNativeWindowHandle());
+    }                
+
+    mercury_imgui::Initialize();
 }
 
 void MercuryGraphicsShutdown()
 {
+    mercury_imgui::Shutdown();
+    
     gDevice->Shutdown();
     delete gDevice;
     gDevice = nullptr;
@@ -65,10 +81,16 @@ void MercuryGraphicsTick()
                 gDevice->InitializeSwapchain(ll::os::gOS->GetCurrentNativeWindowHandle());
         }
 
+ 
+
         IF_LIKELY(gSwapchain)
         {
-            gSwapchain->AcquireNextImage();
+            auto finalCmdList = gSwapchain->AcquireNextImage();
 
+
+            mercury_imgui::BeginFrame(finalCmdList.nativePtr);
+
+            mercury_imgui::EndFrame(finalCmdList.nativePtr);
             // do all graphics job here
             gSwapchain->Present();
         }

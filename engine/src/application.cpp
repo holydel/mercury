@@ -6,9 +6,10 @@
 #include "ll/sound.h"
 #include "ll/xr.h"
 #include "input.h"
-#include "ll/graphics/ll_graphics.h"
+#include "graphics.h"
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 using namespace mercury;
 
@@ -20,7 +21,7 @@ Application::~Application() { g_currentApplication = nullptr; }
 
 void TickCurrentApplication() {
 
-  mercury::ll::os::gOS->Update();
+ // mercury::ll::os::gOS->Update();
 
   MercuryInputPreTick();
 
@@ -79,14 +80,26 @@ void ShutdownCurrentApplication() {
 
 Application *Application::GetCurrentApplication() { return g_currentApplication; }
 
+void ProcessApplication()
+{
+  while (g_currentApplication->IsRunning()) {
+    TickCurrentApplication();
+  }
+}
+
 void RunCurrentApplication() {
   InitializeCurrentApplication();
 
   // initialize os
   // initialize graphics
   // initialize sound
+  std::thread mainThread(ProcessApplication);
+
   while (g_currentApplication->IsRunning()) {
-    TickCurrentApplication();
+    ll::os::gOS->Update();
   }
+
+  mainThread.join();
+
   ShutdownCurrentApplication();
 }

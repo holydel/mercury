@@ -8,6 +8,7 @@
 #include "mercury_utils.h"
 #include "win32_input.h"
 #include "mercury_log.h"
+#include <thread>
 
 #pragma comment(lib, "xinput.lib")
 #pragma comment(lib, "Winmm.lib")
@@ -19,9 +20,9 @@ constexpr const wchar_t* winClassName = L"MercuryWindow";
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	// extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-	// if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
-	// 	return true;
+	 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	 if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam))
+	 	return true;
 
 	switch (message)
 	{
@@ -114,7 +115,7 @@ namespace mercury::ll::os
   bool OS::IsFocused() { return true; }
 
   void OS::Sleep(u32 milliseconds) {
-    Sleep(milliseconds);
+    ::Sleep(milliseconds);
   }
 
   void* OS::GetCurrentNativeWindowHandle() {
@@ -324,6 +325,12 @@ namespace mercury::ll::os
   void OS::ReleaseMemory(void* ptr, size_t size)
   {
     VirtualFree(ptr, size, MEM_RELEASE);
+  }
+
+  const char* OS::GetName()
+  {
+    static const char* osName = "Windows";
+    return osName;
   }
 
   OS* gOS = nullptr;

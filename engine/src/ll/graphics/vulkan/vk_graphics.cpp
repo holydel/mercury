@@ -12,6 +12,12 @@ mercury::Config::VKConfig gVKConfig;
 
 VkRenderPass gVKFinalRenderPass = VK_NULL_HANDLE;
 
+const char* ll::graphics::GetBackendName()
+{
+    static const char* backendName = "Vulkan";
+    return backendName;
+}
+
 void TimelineSemaphore::WaitUntil(mercury::u64 value, mercury::u64 timeout)
 {
     VkSemaphoreWaitInfo waitInfo = {
@@ -93,4 +99,6 @@ void CommandPool::Reset()
 {
     VK_CALL(vkResetCommandPool(gVKDevice, static_cast<VkCommandPool>(nativePtr), 0));
 }
+
+
 #endif

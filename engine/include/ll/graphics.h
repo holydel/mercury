@@ -3,6 +3,7 @@
 #include "../mercury_api.h"
 #include "mercury_application.h"
 #include <string>
+#include <glm/glm.hpp>
 namespace mercury {
 namespace ll {
 namespace graphics {
@@ -321,6 +322,10 @@ public:
 
 class Swapchain {
 public:
+  glm::vec4 clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+  float clearDepth = 1.0f;
+  u8 clearStencil = 0;
+
   Swapchain() = default;
   ~Swapchain() = default;
   void* GetNativeHandle();
@@ -330,7 +335,8 @@ public:
 
   void Shutdown();
 
-  void AcquireNextImage();
+  /// @returns final pass command list
+  CommandList AcquireNextImage();
   void Present();
 
   void SetFullscreen(bool fullscreen);
@@ -346,6 +352,7 @@ extern Instance *gInstance;
 extern Adapter *gAdapter;
 extern Swapchain *gSwapchain;
 
+const char* GetBackendName();
 } // namespace graphics
 } // namespace ll
 } // namespace mercury

@@ -3,7 +3,7 @@
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
 #include "mercury_log.h"
 #include "mercury_application.h"
-#include "../ll_graphics.h"
+#include "../../../graphics.h"
 #include "vk_swapchain.h"
 #include "vk_utils.h"
 #include <array>
@@ -109,6 +109,18 @@ int gNumberOfSwapchainFrames = 2;
 bool gSwapchainNeedRebuild = false;
 std::vector<FrameInFlight> gFramesInFlight;
 
+VkSemaphore gFrameGraphSemaphore = VK_NULL_HANDLE;
+u32 gFrameRingCurrent{0};
+
+struct FrameData
+{
+	VkCommandPool cmdPool = VK_NULL_HANDLE;
+	VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
+	u64 frameIndex = 0;
+};
+
+std::vector<FrameData> gFrames;
+
 void InitVkSwapchainResources()
 {
 	u32 imageCount = 0;
@@ -191,6 +203,7 @@ void InitVkSwapchainResources()
 		}
 
 		gFramesInFlight[i].image = images[i];
+		gFramesInFlight[i].imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // track initial layout
 		vk_utils::debug::SetName(gFramesInFlight[i].image, "Swapchain Target (%d)", i);
 
 		VkImageViewCreateInfo imageViewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -242,6 +255,8 @@ void InitVkSwapchainResources()
 			vk_utils::debug::SetName(gFramesInFlight[i].framebuffer, "Swapchain Target Framebuffer (%d)", i);
 		}
 	}
+
+	gSwapchainCurrentFrame = 0;
 }
 
 void ShutdownVkSwapchainResources()
@@ -564,7 +579,7 @@ void Swapchain::Initialize(void *native_window_handle)
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 			finalAttachmentIndex = (i32)attachments.size();
@@ -636,6 +651,46 @@ void Swapchain::Initialize(void *native_window_handle)
 
 		InitVkSwapchain();
 		InitVkSwapchainResources();
+
+		const uint64_t initialValue = (gNumberOfSwapchainFrames - 1);
+
+		VkSemaphoreTypeCreateInfo timelineCreateInfo = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+			.pNext = nullptr,
+			.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+			.initialValue = initialValue,
+		};
+
+		const VkSemaphoreCreateInfo semaphoreCreateInfo{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = &timelineCreateInfo};
+		VK_CALL(vkCreateSemaphore(gVKDevice, &semaphoreCreateInfo, nullptr, &gFrameGraphSemaphore));
+
+		vk_utils::debug::SetName(gFrameGraphSemaphore, "FrameGraph semaphore");
+
+		gFrames.resize(gNumberOfSwapchainFrames);
+
+		const VkCommandPoolCreateInfo cmdPoolCreateInfo{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.queueFamilyIndex = 0, // TODO: get from device
+		};
+
+		for (u8 i = 0; i < gNumberOfSwapchainFrames; ++i)
+		{
+			auto &f = gFrames[i];
+			f.frameIndex = i; // Track frame index for synchronization
+			VK_CALL(vkCreateCommandPool(gVKDevice, &cmdPoolCreateInfo, nullptr, &f.cmdPool));
+
+			vk_utils::debug::SetName(f.cmdPool, "Frame Command Pool (%d)", i);
+
+			const VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+				.commandPool = f.cmdPool,
+				.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+				.commandBufferCount = 1,
+			};
+			VK_CALL(vkAllocateCommandBuffers(gVKDevice, &commandBufferAllocateInfo, &f.cmdBuffer));
+
+			vk_utils::debug::SetName(f.cmdBuffer, "Frame Command Buffer (%d)", i);
+		}
 	}
 }
 
@@ -651,7 +706,7 @@ void Swapchain::ReInitIfNeeded()
 
 	if (gSwapchainNeedRebuild)
 	{
-		vkQueueWaitIdle(gVKGraphicsQueue);
+		vkDeviceWaitIdle(gVKDevice);
 		VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gVKPhysicalDevice, gVKSurface, &gVKSurfaceCaps));
 
 		ShutdownVkSwapchainResources();
@@ -670,22 +725,113 @@ void Swapchain::Shutdown()
 	ShutdownVkSwapchainResources();
 	ShutdownVkSwapchain();
 	ShutdownOldVkSwapchain();
+
+	vkDestroySemaphore(gVKDevice, gFrameGraphSemaphore, nullptr);
+	gFrameGraphSemaphore = VK_NULL_HANDLE;
+	for (auto &frame : gFrames)
+	{
+		vkDestroyCommandPool(gVKDevice, frame.cmdPool, nullptr);
+		frame.cmdPool = VK_NULL_HANDLE;
+		frame.cmdBuffer = VK_NULL_HANDLE;
+	}
+	gFrames.clear();
 }
 
-void Swapchain::AcquireNextImage()
+CommandList Swapchain::AcquireNextImage()
 {
-	if (gFramesInFlight.empty())
-		return;
+	ReInitIfNeeded();
 
 	auto &frame = gFramesInFlight[gSwapchainCurrentFrame];
+	auto &frameCPU = gFrames[gFrameRingCurrent];
+	CommandList outCbuff = CommandList(frameCPU.cmdBuffer);
+	if (gFramesInFlight.empty())
+		return outCbuff;
+
+	const uint64_t waitValue = frameCPU.frameIndex;
+	const VkSemaphoreWaitInfo waitInfo = {
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+		.semaphoreCount = 1,
+		.pSemaphores = &gFrameGraphSemaphore,
+		.pValues = &waitValue,
+	};
+
+	vkWaitSemaphores(gVKDevice, &waitInfo, std::numeric_limits<uint64_t>::max());
 
 	auto result = vkAcquireNextImageKHR(gVKDevice, gVKSwapchain, UINT64_MAX, frame.imageAvailableSemaphore, VK_NULL_HANDLE, &gAcquiredNextImageIndex);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
-		gSwapchainNeedRebuild = true;
-		return;
+		ReInitIfNeeded();
+		vkAcquireNextImageKHR(gVKDevice, gVKSwapchain, UINT64_MAX, frame.imageAvailableSemaphore, VK_NULL_HANDLE, &gAcquiredNextImageIndex);
 	}
+
+	VK_CALL(vkResetCommandPool(gVKDevice, frameCPU.cmdPool, 0));
+
+	VkCommandBuffer cmd = frameCPU.cmdBuffer;
+	// Begin the command buffer recording for the frame
+	const VkCommandBufferBeginInfo beginInfo{.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+											 .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
+	VK_CALL(vkBeginCommandBuffer(cmd, &beginInfo));
+
+	// IMPORTANT: operate on the acquired image/resources
+	auto &imageFrame = gFramesInFlight[gAcquiredNextImageIndex];
+
+	if (imageFrame.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+	{
+		vk_utils::ImageTransition(cmd, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_ASPECT_COLOR_BIT);
+		imageFrame.imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	}
+
+	if (gVKConfig.useDynamicRendering)
+	{
+		VkClearValue clearValue;
+		clearValue.color = {clearColor.x, clearColor.y, clearColor.z, clearColor.w};
+
+		vk_utils::ImageTransition(frameCPU.cmdBuffer, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+		VkRenderingAttachmentInfo colorAttachment{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+		colorAttachment.imageView = imageFrame.imageView;
+		colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.clearValue = clearValue;
+
+		VkRenderingInfo renderInfo{VK_STRUCTURE_TYPE_RENDERING_INFO};
+		renderInfo.renderArea = {{0, 0}, {gVKSurfaceCaps.currentExtent.width, gVKSurfaceCaps.currentExtent.height}};
+		renderInfo.layerCount = 1;
+		renderInfo.colorAttachmentCount = 1;
+		renderInfo.pColorAttachments = &colorAttachment;
+
+		vkCmdBeginRendering(frameCPU.cmdBuffer, &renderInfo);
+	}
+	else
+	{
+		VkClearValue clearValues[3] = {};
+		int colorAttachmentIndex = 0;
+
+		if (gVKSurfaceDepthFormat != VK_FORMAT_UNDEFINED)
+		{
+			clearValues[0].depthStencil.depth = clearDepth;
+			clearValues[0].depthStencil.stencil = clearStencil;
+			colorAttachmentIndex++;
+		}
+
+		for (int i = 0; i < 4; ++i)
+			clearValues[colorAttachmentIndex].color.float32[i] = clearColor[i];
+
+		colorAttachmentIndex++;
+
+		VkRenderPassBeginInfo rpass{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+		rpass.clearValueCount = colorAttachmentIndex;
+		rpass.pClearValues = clearValues;
+		rpass.framebuffer = imageFrame.framebuffer;
+		rpass.renderArea = {0, 0, gVKSurfaceCaps.currentExtent.width, gVKSurfaceCaps.currentExtent.height};
+		rpass.renderPass = gVKFinalRenderPass;
+
+		vkCmdBeginRenderPass(frameCPU.cmdBuffer, &rpass, VK_SUBPASS_CONTENTS_INLINE);
+	}
+
+	return outCbuff;
 }
 
 void Swapchain::Present()
@@ -694,6 +840,79 @@ void Swapchain::Present()
 		return;
 
 	auto &frame = gFramesInFlight[gSwapchainCurrentFrame];
+	auto &frameCPU = gFrames[gFrameRingCurrent];
+
+	VkCommandBuffer cmd = frameCPU.cmdBuffer;
+
+	// Use acquired image for image ops
+    auto &imageFrame = gFramesInFlight[gAcquiredNextImageIndex];
+
+	if (gVKConfig.useDynamicRendering)
+	{
+		vkCmdEndRendering(cmd);
+		vk_utils::ImageTransition(cmd, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+	}
+	else
+	{
+		vkCmdEndRenderPass(cmd);
+	}
+
+	VK_CALL(vkEndCommandBuffer(cmd));
+
+	std::vector<VkSemaphoreSubmitInfo> waitSemaphores;
+	std::vector<VkSemaphoreSubmitInfo> signalSemaphores;
+
+	waitSemaphores.push_back({
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+		.semaphore = frame.imageAvailableSemaphore,
+		.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+	});
+	signalSemaphores.push_back({
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+		.semaphore = frame.renderFinishedSemaphore,
+		.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+	});
+
+	/*--
+	* Calculate the signal value for when this frame completes
+	* Signal value = current frame number + numFramesInFlight
+	* Example with 3 frames in flight:
+	*   Frame 0 signals value 3 (allowing Frame 3 to start when complete)
+	*   Frame 1 signals value 4 (allowing Frame 4 to start when complete)
+	-*/
+	const uint64_t signalFrameValue = frameCPU.frameIndex + gNumberOfSwapchainFrames;
+	frameCPU.frameIndex = signalFrameValue; // Store for next time this frame buffer is used
+
+	/*--
+	* Add timeline semaphore to signal when GPU completes this frame
+	* The color attachment output stage is used since that's when the frame is fully rendered
+	-*/
+	signalSemaphores.push_back({
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+		.semaphore = gFrameGraphSemaphore,
+		.value = signalFrameValue,
+		.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+	});
+
+	// Note : in this sample, we only have one command buffer per frame.
+	const std::array<VkCommandBufferSubmitInfo, 1> cmdBufferInfo{{{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+		.commandBuffer = cmd,
+	}}};
+
+	// Populate the submit info to synchronize rendering and send the command buffer
+	const std::array<VkSubmitInfo2, 1> submitInfo{{{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+		.waitSemaphoreInfoCount = uint32_t(waitSemaphores.size()),	   //
+		.pWaitSemaphoreInfos = waitSemaphores.data(),				   // Wait for the image to be available
+		.commandBufferInfoCount = uint32_t(cmdBufferInfo.size()),	   //
+		.pCommandBufferInfos = cmdBufferInfo.data(),				   // Command buffer to submit
+		.signalSemaphoreInfoCount = uint32_t(signalSemaphores.size()), //
+		.pSignalSemaphoreInfos = signalSemaphores.data(),			   // Signal when rendering is finished
+	}}};
+
+	// Submit the command buffer to the GPU and signal when it's done
+	VK_CALL(vkQueueSubmit2(gVKGraphicsQueue, uint32_t(submitInfo.size()), submitInfo.data(), nullptr));
 
 	// Setup the presentation info, linking the swapchain and the image index
 	const VkPresentInfoKHR presentInfo{
@@ -711,11 +930,12 @@ void Swapchain::Present()
 	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 	{
 		gSwapchainNeedRebuild = true;
-		return;
 	}
 
 	gFramesInFlight[gAcquiredNextImageIndex].imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	gSwapchainCurrentFrame = (gSwapchainCurrentFrame + 1) % GetNumberOfFrames();
+
+	gFrameRingCurrent = (gFrameRingCurrent + 1) % gNumberOfSwapchainFrames;
 }
 
 u8 Swapchain::GetNumberOfFrames()

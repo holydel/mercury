@@ -244,3 +244,13 @@ void Mouse::SetCursorType(CursorType type) const {
 CursorType Mouse::GetCursorType() const {
     return g_currentCursorType;
 }
+
+  float Gamepad::GetBatteryLevel() const
+  {
+    return 1.0f;
+  }
+
+  bool Gamepad::IsConnected() const
+  {
+    return false;
+  }

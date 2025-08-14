@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "ll/os.h"
+#include "ll/graphics.h"
 
 using namespace mercury;
 
@@ -201,6 +202,7 @@ void test_memory()
 class TestBedApplication : public Application {
        bool m_running = true;
        int frameCount = 0;
+       float t = 0;
 public:
        void Configure() override
        {
@@ -231,7 +233,13 @@ void TestBedApplication::Initialize() {
 }
 
 void TestBedApplication::Tick() {
-      //utils::debug::output_debug_string_to_console(u8"TestBedApplication::Tick");
+      t += 0.1f;
+
+      if(ll::graphics::gSwapchain)
+      {
+       ll::graphics::gSwapchain->clearColor = glm::vec4(sin(t)*0.5f + 0.5f,cos(t)*0.5f + 0.5f,0.33f,1.0f);
+      }      
+
       frameCount++;
 
       if(input::gKeyboard->IsKeyPressed(input::Key::Escape)) {
