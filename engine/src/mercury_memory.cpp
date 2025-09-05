@@ -250,6 +250,9 @@ bool ReservedAllocator::Bucket::IsPtrInBucketRange(void *ptr)
 
 void ReservedAllocator::DumpStatsPerBucketTotal()
 {
+    if(!this)
+        return;
+        
 #ifdef MERCURY_USE_MEMORY_STAT
     std::cout << "Total Allocations: " << totalAllocationsCount << std::endl;
     std::cout << "Total Mallocs: " << totalMallocAllocations << std::endl;

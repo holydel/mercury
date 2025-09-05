@@ -94,12 +94,14 @@ if(VULKAN_AVAILABLE)
 endif()
 
 
-#if(D3D12_AVAILABLE)
-#    list(APPEND SOURCES
-#        src/ll/graphics/d3d12/mercury_d3d12.cpp
-#        src/ll/graphics/d3d12/d3d12_utils.cpp
-#    )
-#endif()
+if(D3D12_AVAILABLE)
+    list(APPEND SOURCES
+        third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp
+
+        src/ll/graphics/d3d12/d3d12_graphics.cpp
+        src/ll/graphics/d3d12/d3d12_utils.cpp
+    )
+endif()
 
 if(WEBGPU_AVAILABLE)
     list(APPEND SOURCES

@@ -1,4 +1,6 @@
 #include "ll/graphics.h"
+#include "mercury_memory.h"
+
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
@@ -10,6 +12,14 @@ Instance *gInstance = nullptr;
 Adapter *gAdapter = nullptr;
 Swapchain *gSwapchain = nullptr;
 
+mercury::memory::ReservedAllocator* memory::gGraphicsMemoryAllocator = nullptr;
+
+const char* ll::graphics::GetBackendName()
+{
+    static const char* backendName = "NULL";
+    return backendName;
+}
+
 void Instance::Initialize()
 {
     MLOG_DEBUG(u8"Initialize Graphics System (NULL)");
@@ -20,23 +30,15 @@ void Instance::Shutdown()
     MLOG_DEBUG(u8"Shutdown Graphics System (NULL)");
 }
 
-u8 Instance::GetAdapterCount()
-{
-    return 1; // fake null adapter
-}
-
 void *Instance::GetNativeHandle()
 {
     return nullptr; // null instance has no native handle
 }
 
-Adapter *Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
+void Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
 {
-
     if (gAdapter == nullptr)
         gAdapter = new Adapter();
-
-    return gAdapter;
 }
 
 void *Adapter::GetNativeHandle()
@@ -44,12 +46,10 @@ void *Adapter::GetNativeHandle()
     return nullptr; // null adapter has no native handle
 }
 
-Device *Adapter::CreateDevice()
+void Adapter::CreateDevice()
 {
     if (gDevice == nullptr)
         gDevice = new Device();
-
-    return gDevice;
 }
 
 void Adapter::Initialize()
@@ -109,7 +109,7 @@ void *Swapchain::GetNativeHandle()
     return nullptr;
 }
 
-void Swapchain::Initialize()
+void Swapchain::Initialize(void* native_window_handle)
 {
 }
 
@@ -117,8 +117,9 @@ void Swapchain::Shutdown()
 {
 }
 
-void Swapchain::AcquireNextImage()
+CommandList Swapchain::AcquireNextImage()
 {
+    return CommandList();
 }
 
 void Swapchain::Present()
@@ -127,6 +128,61 @@ void Swapchain::Present()
 
 void Swapchain::SetFullscreen(bool fullscreen)
 {
+}
+
+void TimelineSemaphore::WaitUntil(mercury::u64 value, mercury::u64 timeout)
+{
+}
+
+void TimelineSemaphore::SetDebugName(const char *utf8_name)
+{
+}
+
+void TimelineSemaphore::Destroy()
+{
+     nativePtr = nullptr;
+}
+
+void RenderPass::SetDebugName(const char *utf8_name)
+{
+}
+
+void RenderPass::Destroy()
+{
+    nativePtr = nullptr;
+}
+
+bool CommandList::IsExecuted()
+{
+    return false;
+}
+
+void CommandList::SetDebugName(const char *utf8_name)
+{
+}
+
+void CommandList::Destroy()
+{
+    nativePtr = nullptr;
+}
+
+CommandList CommandPool::AllocateCommandList()
+{
+    CommandList result;
+    return result;
+}
+
+void CommandPool::SetDebugName(const char *utf8_name)
+{    
+}
+
+void CommandPool::Destroy()
+{    
+    nativePtr = nullptr;
+}
+
+void CommandPool::Reset()
+{    
 }
 
 #endif

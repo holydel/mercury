@@ -1,7 +1,8 @@
 #include "mercury_imgui.h"
 #include "imgui_impl.h"
 #include <mercury_input.h>
-
+#include <ll/os.h>
+#include <ll/graphics.h>
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
 #include "../ll/graphics/vulkan/mercury_vulkan.h"
 #include "../ll/graphics/vulkan/vk_swapchain.h"
@@ -11,7 +12,7 @@ static void ermy_check_vk_result(VkResult err)
 #endif
 
 #ifdef MERCURY_LL_GRAPHICS_D3D12
-#include "../rendering/d3d12/d3d12_interface.h"
+#include "../ll/graphics/d3d12/d3d12_graphics.h"
 static ID3D12DescriptorHeap* gImgui_pd3dSrvDescHeap = nullptr;
 #endif
 
