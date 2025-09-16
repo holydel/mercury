@@ -77,7 +77,7 @@ void Device::Tick()
     // MLOG_DEBUG(u8"Tick Device (NULL)");
 }
 
-void Device::InitializeSwapchain(void *native_window_handle)
+void Device::InitializeSwapchain()
 {
     if (gSwapchain != nullptr)
     {

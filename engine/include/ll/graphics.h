@@ -309,7 +309,7 @@ public:
   /// @brief Initialize the swapchain for rendering.
   /// @param native_window_handle The handle to the native window where the swapchain will be created.
   /// gSwapchain will be created if it does not exist.
-  void InitializeSwapchain(void *native_window_handle); 
+  void InitializeSwapchain(); 
   
   void ShutdownSwapchain();
 
@@ -330,7 +330,7 @@ public:
   ~Swapchain() = default;
   void* GetNativeHandle();
 
-  void Initialize(void* native_window_handle = nullptr);
+  void Initialize();
   void ReInitIfNeeded();
 
   void Shutdown();

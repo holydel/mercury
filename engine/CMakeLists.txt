@@ -64,12 +64,23 @@ elseif(APPLE)
     
     list(APPEND SOURCES src/ll/os/macos/macos_os.cpp)
 elseif(UNIX AND NOT APPLE)
+
+    option(ALLOW_XCB_SURFACE "Allow uisng XCB surfaces" ON)
+    option(ALLOW_WAYLAND_SURFACE "Allow uisng Wayland surfaces" ON)
+    #TODO:
+    option(ALLOW_XLIB_SURFACE "Allow uisng XLIB_XRANDR surfaces" OFF)
+    option(ALLOW_XLIB_XRANDR_SURFACE "Allow uisng XLIB surfaces" OFF)
+    option(ALLOW_DIRECTFB_SURFACE "Allow uisng DirectFB surfaces" OFF)
+
     message(STATUS "Autodetected Linux build")
 
     set(VULKAN_AVAILABLE TRUE)
 
     list(APPEND SOURCES src/ll/os/linux/linux_os.cpp
-    src/ll/os/linux/linux_utils.cpp) 
+    src/ll/os/linux/linux_utils.cpp
+    src/ll/os/linux/linux_input.cpp
+    src/ll/os/linux/linux_wayland.cpp
+    src/ll/os/linux/xdg-shell-protocol.c) 
 elseif(ANDROID)
     message(STATUS "Autodetected Android build")
     set(VULKAN_AVAILABLE TRUE)
@@ -112,6 +123,55 @@ endif()
 
 # Create library
 add_library(mercury_engine STATIC ${SOURCES})
+
+if(EMSCRIPTEN)
+
+elseif(WIN32)
+
+elseif(APPLE)
+
+elseif(UNIX AND NOT APPLE)
+find_package(PkgConfig REQUIRED)
+    pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
+    # Also, if you need wayland-egl and wayland-cursor, you can add them:
+    pkg_check_modules(WAYLAND_EGL REQUIRED wayland-egl)
+    pkg_check_modules(WAYLAND_CURSOR REQUIRED wayland-cursor)
+
+    target_include_directories(mercury_engine PRIVATE
+        ${WAYLAND_CLIENT_INCLUDE_DIRS}
+        ${WAYLAND_EGL_INCLUDE_DIRS}
+        ${WAYLAND_CURSOR_INCLUDE_DIRS}
+    )
+    target_link_libraries(mercury_engine PRIVATE
+        ${WAYLAND_CLIENT_LIBRARIES}
+        ${WAYLAND_EGL_LIBRARIES}
+        ${WAYLAND_CURSOR_LIBRARIES}
+    )
+
+    if(ALLOW_XCB_SURFACE)
+        target_compile_definitions(mercury_engine PUBLIC ALLOW_XCB_SURFACE)
+    endif()
+ 
+    if(ALLOW_WAYLAND_SURFACE)
+        target_compile_definitions(mercury_engine PUBLIC ALLOW_WAYLAND_SURFACE)
+    endif()
+
+    if(ALLOW_XLIB_SURFACE)
+        target_compile_definitions(mercury_engine PUBLIC ALLOW_XLIB_SURFACE)
+    endif()
+
+    if(ALLOW_XLIB_XRANDR_SURFACE)
+        target_compile_definitions(mercury_engine PUBLIC ALLOW_XLIB_XRANDR_SURFACE)
+    endif()
+
+    if(ALLOW_DIRECTFB_SURFACE)
+        target_compile_definitions(mercury_engine PUBLIC ALLOW_DIRECTFB_SURFACE)
+    endif()
+elseif(ANDROID)
+
+else()
+    message(FATAL_ERROR "Unsupported OS")
+endif()
 
 message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")

@@ -61,7 +61,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         break;
     }
 
-    logging::write_message(severity, u8"VULKAN", (const char8_t *)pCallbackData->pMessage);
+    logging::write_message(severity, u8"VULKAN: %s", (const char8_t *)pCallbackData->pMessage);
 
     return VK_FALSE;
 }

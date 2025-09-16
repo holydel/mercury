@@ -36,12 +36,13 @@ void MercuryGraphicsInitialize()
     //TODO: think about waiting the surface to ready
     if (gSwapchain == nullptr )
     {
-        while (ll::os::gOS->GetCurrentNativeWindowHandle() == nullptr)
+        while (!ll::os::gOS->GetCurrentNativeWindowHandle())
         {
+            ll::os::gOS->Update();
             ll::os::gOS->Sleep(1);
         }
 
-        gDevice->InitializeSwapchain(ll::os::gOS->GetCurrentNativeWindowHandle());
+        gDevice->InitializeSwapchain();
     }                
 
     mercury_imgui::Initialize();
@@ -78,19 +79,17 @@ void MercuryGraphicsTick()
         else
         {
             if (gSwapchain == nullptr)
-                gDevice->InitializeSwapchain(ll::os::gOS->GetCurrentNativeWindowHandle());
+                gDevice->InitializeSwapchain();
         }
-
- 
 
         IF_LIKELY(gSwapchain)
         {
             auto finalCmdList = gSwapchain->AcquireNextImage();
 
 
-            mercury_imgui::BeginFrame(finalCmdList.nativePtr);
+            //mercury_imgui::BeginFrame(finalCmdList.nativePtr);
 
-            mercury_imgui::EndFrame(finalCmdList.nativePtr);
+            //mercury_imgui::EndFrame(finalCmdList.nativePtr);
             // do all graphics job here
             gSwapchain->Present();
         }

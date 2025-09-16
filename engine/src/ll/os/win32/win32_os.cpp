@@ -10,6 +10,10 @@
 #include "mercury_log.h"
 #include <thread>
 
+#ifdef MERCURY_LL_GRAPHICS_VULKAN
+#include "ll/graphics/vulkan/mercury_vulkan.h"
+#endif
+
 #pragma comment(lib, "xinput.lib")
 #pragma comment(lib, "Winmm.lib")
 
@@ -331,6 +335,22 @@ namespace mercury::ll::os
   {
     static const char* osName = "Windows";
     return osName;
+  }
+
+  void* CreateVkSurface(void* vk_instance)
+  {
+	VkWin32SurfaceCreateInfoKHR createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	createInfo.hwnd = static_cast<HWND>(native_window_handle);
+	createInfo.hinstance = static_cast<HINSTANCE>(GetModuleHandleA(nullptr));
+
+	VK_CALL(vkCreateWin32SurfaceKHR(gVKInstance, &createInfo, nullptr, &gVKSurface));
+  }
+ 
+  bool IsQueueSupportPresent(void* vk_physical_device, u32 queueIndex)
+  {
+    bool supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr ? vkGetPhysicalDeviceWin32PresentationSupportKHR(vk_physical_device, queueIndex) : false;
+    return supportPresent;
   }
 
   OS* gOS = nullptr;

@@ -13,7 +13,21 @@
 #define VK_USE_PLATFORM_ANDROID_KHR 1
 #endif
 #ifdef MERCURY_LL_OS_LINUX
+#ifdef ALLOW_XCB_SURFACE
 #define VK_USE_PLATFORM_XCB_KHR 1
+#endif
+#ifdef ALLOW_WAYLAND_SURFACE
+#define VK_USE_PLATFORM_WAYLAND_KHR 1
+#endif
+#ifdef ALLOW_XLIB_SURFACE
+#define VK_USE_PLATFORM_XLIB_KHR 1
+#endif
+#ifdef ALLOW_XLIB_XRANDR_SURFACE
+#define VK_USE_PLATFORM_XLIB_XRANDR_EXT 1
+#endif
+#ifdef ALLOW_DIRECTFB_SURFACE
+#define VK_USE_PLATFORM_DIRECTFB_KHR 1
+#endif
 #endif
 #ifdef MERCURY_LL_OS_MACOS
 #define VK_USE_PLATFORM_METAL_EXT 1
@@ -31,6 +45,7 @@
 #include <vk_mem_alloc.h>
 #include <vector>
 #include <string>
+#include <cstring>
 #include "ll/os.h"
 
 void LoadVK_Library();
@@ -91,8 +106,13 @@ VK_DECLARE_FUNCTION(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 VK_DECLARE_FUNCTION(vkCreateAndroidSurfaceKHR);
 #endif
 
-#ifdef MERCURY_LL_OS_LINUX
+#ifdef ALLOW_XCB_SURFACE
 VK_DECLARE_FUNCTION(vkCreateXcbSurfaceKHR);
+#endif
+
+#ifdef ALLOW_WAYLAND_SURFACE
+VK_DECLARE_FUNCTION(vkCreateWaylandSurfaceKHR);
+VK_DECLARE_FUNCTION(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif
 
 #ifdef MERCURY_LL_OS_MACOS

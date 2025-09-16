@@ -34,6 +34,12 @@ if(NOT EMSCRIPTEN)
         set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
         set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
     endif()
+
+    if(MSVC)
+        add_compile_options(/arch:SSE4.1)
+    else()
+        add_compile_options(-msse4.1)
+    endif()
 else()
     message(STATUS "Configuring Emscripten build with WebGPU support")
     

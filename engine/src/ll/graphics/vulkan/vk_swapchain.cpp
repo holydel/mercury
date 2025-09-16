@@ -7,6 +7,8 @@
 #include "vk_swapchain.h"
 #include "vk_utils.h"
 #include <array>
+#include <algorithm>
+
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
@@ -39,9 +41,16 @@ void vkSwapchainRequestInstanceExtensions(VKInstanceExtender &instanceExtender)
 #ifdef MERCURY_LL_OS_ANDROID
 	instanceExtender.TryAddExtension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #endif
+#ifdef ALLOW_XCB_SURFACE
+	instanceExtender.TryAddExtension(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#endif
+#ifdef ALLOW_WAYLAND_SURFACE
+	instanceExtender.TryAddExtension(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+#endif
+
 #ifdef MERCURY_LL_OS_LINUX
 	// VK_KHR_xcb_surface
-	instanceExtender.TryAddExtension("VK_KHR_xcb_surface");
+	
 #endif
 #ifdef MERCURY_LL_OS_MACOS
 	instanceExtender.TryAddExtension(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
@@ -323,7 +332,7 @@ void InitVkSwapchain()
 		createInfo.pNext = &presentationModesEnabled;
 	}
 
-	vkCreateSwapchainKHR(gVKDevice, &createInfo, nullptr, &gVKSwapchain);
+	VK_CALL(vkCreateSwapchainKHR(gVKDevice, &createInfo, nullptr, &gVKSwapchain));
 	vk_utils::debug::SetName(gVKSwapchain, "Main Window Swapchain");
 }
 
@@ -475,8 +484,12 @@ void CalculateSwapChainHeuristics(const std::vector<VkSurfaceFormatKHR> &support
 	}
 }
 
-void Swapchain::Initialize(void *native_window_handle)
+void Swapchain::Initialize()
 {
+	auto os = mercury::ll::os::gOS;
+
+	gVKSurface = (VkSurfaceKHR)os->CreateVkSurface(gVKInstance,gVKGlobalAllocationsCallbacks);
+/*
 #ifdef MERCURY_LL_OS_WIN32
 	VkWin32SurfaceCreateInfoKHR createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -496,11 +509,17 @@ void Swapchain::Initialize(void *native_window_handle)
 #endif
 
 #ifdef MERCURY_LL_OS_LINUX
-	VkXcbSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
-	createInfo.window = *((xcb_window_t *)nativeWindowHandle);
-	createInfo.connection = (xcb_connection_t *)mercury::platform::getAppInstanceHandle();
+	
+	#ifdef ALLOW_WAYLAND_SURFACE
+	VkWaylandSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
+	createInfo.surface = (wl_surface*)native_window_handle;
+	createInfo.display 
+	#endif
+	//VkXcbSurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
+	//createInfo.window = *((xcb_window_t *)native_window_handle);
+	//createInfo.connection = (xcb_connection_t *)mercury::platform::getAppInstanceHandle();
 
-	vkCreateXcbSurfaceKHR(gInstance, &createInfo, gGlobalAllocationsCallbacks, &gSurface);
+	//vkCreateXcbSurfaceKHR(gInstance, &createInfo, gGlobalAllocationsCallbacks, &gSurface);
 #endif
 
 #ifdef MERCURY_LL_OS_MACOS
@@ -509,7 +528,7 @@ void Swapchain::Initialize(void *native_window_handle)
 
 	vkCreateMetalSurfaceEXT(gInstance, &createInfo, gGlobalAllocationsCallbacks, &gSurface);
 #endif
-
+*/
 	VkBool32 is_supported = false;
 
 	vkGetPhysicalDeviceSurfaceSupportKHR(gVKPhysicalDevice, 0, gVKSurface, &is_supported);
@@ -525,6 +544,11 @@ void Swapchain::Initialize(void *native_window_handle)
 
 	VK_CALL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gVKPhysicalDevice, gVKSurface, &gVKSurfaceCaps));
 
+	if(gVKSurfaceCaps.currentExtent.width == 0xFFFFFFFFu)
+	{
+		os->GetActualWindowSize(gVKSurfaceCaps.currentExtent.width, gVKSurfaceCaps.currentExtent.height);
+	}
+	
 	MLOG_INFO(u8"Supported surface alpha modes: %s %s %s %s", (gVKSurfaceCaps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) ? " Opaque |" : "", (gVKSurfaceCaps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) ? " Inherit |" : "", (gVKSurfaceCaps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR) ? " Post Multiplied |" : "", (gVKSurfaceCaps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) ? " Pre Multiplied |" : "");
 
 	CalculateSwapChainHeuristics(support_formats, support_present_modes);

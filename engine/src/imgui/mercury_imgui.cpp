@@ -128,9 +128,9 @@ void mercury_imgui::Initialize()
 	ImGui_ImplWin32_Init(mainWinHandle);
 #endif
 #ifdef MERCURY_LL_OS_LINUX
-	auto win = static_cast<xcb_window_t*>(mercury::platform::getMainWindowHandle());
-	auto connection = static_cast<xcb_connection_t*>(mercury::platform::getAppInstanceHandle());
-	ImGui_ImplX11_Init(connection, win);
+	//auto win = static_cast<xcb_window_t*>(mercury::platform::getMainWindowHandle());
+	//auto connection = static_cast<xcb_connection_t*>(mercury::platform::getAppInstanceHandle());
+	//ImGui_ImplX11_Init(connection, win);
 #endif
 #ifdef MERCURY_LL_OS_ANDROID
 	ImGui_ImplAndroid_Init(static_cast<ANativeWindow*>(os::GetNativeWindowHandle()));
@@ -185,7 +185,7 @@ void mercury_imgui::BeginFrame(void* cmdList)
 #endif
 #ifdef MERCURY_LL_OS_LINUX
 
-	ImGui_ImplX11_NewFrame();
+	//ImGui_ImplX11_NewFrame();
 #endif
 #ifdef MERCURY_LL_OS_ANDROID
 	ImGui_ImplAndroid_NewFrame();

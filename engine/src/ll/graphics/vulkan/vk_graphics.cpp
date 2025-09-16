@@ -24,7 +24,7 @@ void TimelineSemaphore::WaitUntil(mercury::u64 value, mercury::u64 timeout)
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
         .semaphoreCount = 1,
         .pSemaphores = reinterpret_cast<VkSemaphore*>(&nativePtr),
-        .pValues = &value,
+        .pValues = (const uint64_t*)&value,
     };
 
     vkWaitSemaphores(gVKDevice, &waitInfo, timeout);

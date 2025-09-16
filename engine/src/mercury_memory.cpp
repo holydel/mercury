@@ -2,6 +2,7 @@
 #include "mercury_utils.h"
 #include "ll/os.h"
 #include <iostream>
+#include <cstring>
 
 using namespace mercury;
 using namespace mercury::memory;
@@ -76,7 +77,7 @@ void *ReservedAllocator::ReAllocate(void *ptr, u16 size)
 
     if (bucketIndexNew <= bucketIndexOld) // do nothing
         return ptr;
-
+ 
     if (bucketIndexNew == -1 && bucketIndexOld == -1) // reallocate to system memory
     {
         return realloc(ptr, size);
@@ -114,7 +115,7 @@ void ReservedAllocator::Deallocate(void *ptr)
 ReservedAllocator::Bucket::Bucket(u16 elementSize, u32 maximumReservedSize, u32 initialCommitedSize)
 {
     auto *os = ll::os::gOS;
-    this->elementSize = elementSize;
+    this->elementSize = elementSize; 
     this->maximumReservedSize = maximumReservedSize;
 
     beginRegion = os->ReserveMemory(maximumReservedSize);
@@ -122,7 +123,7 @@ ReservedAllocator::Bucket::Bucket(u16 elementSize, u32 maximumReservedSize, u32 
 
     commitedElements = (u32)(initialCommitedSize / elementSize);
     maximumReservedElements = (u32)(maximumReservedSize / elementSize);
-
+ 
 #ifdef MERCURY_USE_MEMORY_STAT
     totalCommittedMem = initialCommitedSize;
     allocationUserSizes.reserve(std::min(4096u, initialCommitedSize / elementSize));

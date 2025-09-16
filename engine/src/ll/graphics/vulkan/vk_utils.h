@@ -3,6 +3,7 @@
 #include "mercury_vulkan.h"
 #include "ll/graphics.h"
 #include <array>
+#include <cstdarg>
 
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
 

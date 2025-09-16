@@ -23,6 +23,10 @@ using namespace mercury;
 constexpr const c8* gVulkanRuntimeLibraryName = u8"vulkan-1.dll";
 #endif
 
+#if defined(MERCURY_LL_OS_LINUX) || defined(MERCURY_LL_OS_ANDROID)
+constexpr const c8* gVulkanRuntimeLibraryName = u8"libvulkan.so.1";
+#endif
+
 #define VK_DEFINE_FUNCTION( fun ) PFN_##fun fun = nullptr;
 
 //GLOBAL
@@ -70,8 +74,13 @@ VK_DEFINE_FUNCTION(vkGetPhysicalDeviceWin32PresentationSupportKHR);
 VK_DEFINE_FUNCTION(vkCreateAndroidSurfaceKHR);
 #endif
 
-#ifdef MERCURY_LL_OS_LINUX
+#ifdef ALLOW_XCB_SURFACE
 VK_DEFINE_FUNCTION(vkCreateXcbSurfaceKHR);
+#endif
+
+#ifdef ALLOW_WAYLAND_SURFACE
+VK_DEFINE_FUNCTION(vkCreateWaylandSurfaceKHR);
+VK_DEFINE_FUNCTION(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif
 
 #ifdef MERCURY_LL_OS_MACOS
@@ -286,8 +295,13 @@ void LoadVkInstanceLevelFuncs(VkInstance instance)
 	VK_LOAD_INSTANCE_FUNC(vkCreateAndroidSurfaceKHR);
 #endif
 
-#ifdef MERCURY_LL_OS_LINUX
+#ifdef ALLOW_XCB_SURFACE
 	VK_LOAD_INSTANCE_FUNC(vkCreateXcbSurfaceKHR);
+#endif
+
+#ifdef ALLOW_WAYLAND_SURFACE
+	VK_LOAD_INSTANCE_FUNC(vkCreateWaylandSurfaceKHR);
+	VK_LOAD_INSTANCE_FUNC(vkGetPhysicalDeviceWaylandPresentationSupportKHR);
 #endif
 
 #ifdef MERCURY_LL_OS_MACOS

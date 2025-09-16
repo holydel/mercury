@@ -32,13 +32,35 @@
             ],
             "defines": [
                 "__EMSCRIPTEN__",
-                "MERCURY_LL_GRAPHICS_WEBGPU",
                 "_GNU_SOURCE"
             ],
             "compilerPath": "D:/SDKs/emsdk/upstream/emscripten/emcc.bat",
             "cStandard": "c17",
             "cppStandard": "c++20",
             "intelliSenseMode": "gcc-x64"
+        },
+        {
+            "name": "Ubuntu x64 Clang",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/engine/include",
+                "${workspaceFolder}/engine/src",
+                "${workspaceFolder}/engine/third_party/Vulkan-Headers/include",
+                "${workspaceFolder}/third_party/glm",
+                "/usr/include",
+                "/usr/local/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "_GNU_SOURCE",
+                "ALLOW_XCB_SURFACE",
+                "ALLOW_WAYLAND_SURFACE"
+            ],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-clang-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

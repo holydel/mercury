@@ -132,11 +132,7 @@ void Device::Initialize()
 
 		bool isProtectedQueue = queueFamily.queueFlags & VK_QUEUE_PROTECTED_BIT;
 
-#ifdef MERCURY_LL_OS_WIN32
-		bool supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr ? vkGetPhysicalDeviceWin32PresentationSupportKHR(gVKPhysicalDevice, i) : false;
-#else
-		bool supportPresent = false;
-#endif
+		bool supportPresent = ll::os::gOS->IsQueueSupportPresent(gVKPhysicalDevice,i);
 
 		MLOG_DEBUG(u8"queueID: %d (%d) image gran (%d x %d x %d) %s%s%s%s%s%s%s%s",
 				   i, queueFamily.queueCount,
@@ -371,7 +367,7 @@ void Device::Tick()
 	// MLOG_DEBUG(u8"Tick Device (NULL)");
 }
 
-void Device::InitializeSwapchain(void *native_window_handle)
+void Device::InitializeSwapchain()
 {
 	if (gSwapchain != nullptr)
 	{
@@ -380,7 +376,7 @@ void Device::InitializeSwapchain(void *native_window_handle)
 	}
 
 	gSwapchain = new Swapchain();
-	gSwapchain->Initialize(native_window_handle);
+	gSwapchain->Initialize();
 }
 
 void Device::ShutdownSwapchain()

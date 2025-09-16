@@ -1,43 +1,55 @@
 {
-  "version": 3,
-  "configurePresets": [
-    {
-      "name": "default",
-      "displayName": "Default",
-      "description": "Default configuration",
-      "binaryDir": "${sourceDir}/build-default",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "windows-vs2022",
-      "displayName": "Windows Visual Studio 2022",
-      "description": "Build for Windows using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build-windows",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "wsl-linux",
-      "displayName": "WSL Linux",
-      "description": "Build for Linux using WSL",
-      "binaryDir": "${sourceDir}/build-linux",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "emscripten",
-      "displayName": "Emscripten WebAssembly",
-      "description": "Build for WebAssembly using Emscripten",
-      "binaryDir": "${sourceDir}/build-emsdk",
-      "generator": "Ninja",
-      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    }
-  ]
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default",
+            "description": "Default configuration",
+            "binaryDir": "${sourceDir}/build-default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "windows-vs2022",
+            "displayName": "Windows Visual Studio 2022",
+            "description": "Build for Windows using Visual Studio 2022",
+            "binaryDir": "${sourceDir}/build-windows",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "wsl-linux",
+            "displayName": "WSL Linux",
+            "description": "Build for Linux using WSL",
+            "binaryDir": "${sourceDir}/build-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "emscripten",
+            "displayName": "Emscripten WebAssembly",
+            "description": "Build for WebAssembly using Emscripten",
+            "binaryDir": "${sourceDir}/build-emsdk",
+            "generator": "Ninja",
+            "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "Ubuntu",
+            "displayName": "Clang 18.1.3 x86_64-pc-linux-gnu",
+            "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        }
+    ]
 }

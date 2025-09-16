@@ -1,7 +1,6 @@
 #pragma once
 #include "mercury_input.h"
 
-void MercuryInputInitialize();
-void MercuryInputShutdown();
+void RegisterLinuxInputCallbacks();
 void MercuryInputPreTick();
 void MercuryInputPostTick();

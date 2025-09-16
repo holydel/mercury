@@ -147,15 +147,11 @@ void HandleMouseMove(WPARAM wParam, LPARAM lParam) {
     g_mousePosition.y = GET_Y_LPARAM(lParam);
 }
 
-// Pre-tick function - called before application tick
-// This ensures the most current input state is available during app tick
+
 void MercuryInputPreTick() {
-    // Nothing to do here for Windows - input events are processed immediately
-    // during the OS::Update() call via Windows message handling
+
 }
 
-// Post-tick function - called after application tick
-// This handles the state copying for pressed/released detection
 void MercuryInputPostTick() {
     // Copy current states to previous for next frame's pressed/released detection
     memcpy(g_previousKeyStates, g_currentKeyStates, sizeof(g_currentKeyStates));
