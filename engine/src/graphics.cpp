@@ -87,9 +87,9 @@ void MercuryGraphicsTick()
             auto finalCmdList = gSwapchain->AcquireNextImage();
 
 
-            //mercury_imgui::BeginFrame(finalCmdList.nativePtr);
+            mercury_imgui::BeginFrame(finalCmdList);
 
-            //mercury_imgui::EndFrame(finalCmdList.nativePtr);
+            mercury_imgui::EndFrame(finalCmdList);
             // do all graphics job here
             gSwapchain->Present();
         }

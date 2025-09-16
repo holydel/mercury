@@ -97,6 +97,24 @@ namespace mercury::ll::os
     return false;
   }
 
+  void OS::ImguiInitialize()
+  {
+    IF_LIKELY(gDisplayServer)
+      gDisplayServer->ImguiInitialize();
+  }
+
+  void OS::ImguiNewFrame()
+  {
+    IF_LIKELY(gDisplayServer)
+      gDisplayServer->ImguiNewFrame();
+  }
+
+  void OS::ImguiShutdown()
+  {
+    IF_LIKELY(gDisplayServer)
+      gDisplayServer->ImguiShutdown();
+  }
+
   void OS::Update()
   {
     gDisplayServer->ProcessEvents();

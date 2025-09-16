@@ -187,6 +187,8 @@ struct CommandList
   bool IsExecuted();
   void SetDebugName(const char* utf8_name);
   void Destroy();
+
+  void RenderImgui();
 };
 
 struct CommandPool
@@ -318,6 +320,10 @@ public:
   void WaitIdle();
   void WaitQueueIdle(QueueType queue_type);
   void SetDebugName(const char* utf8_name);
+
+  void ImguiInitialize();
+  void ImguiNewFrame();
+  void ImguiShutdown();
 };
 
 class Swapchain {

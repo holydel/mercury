@@ -13,6 +13,8 @@
 // We need to include the XDG shell header
 #include "xdg-shell-client-protocol.h"
 
+#include "backends/imgui_impl_wayland.h"
+
 // Global objects for Wayland protocols
 static wl_display* gDisplay = nullptr;
 static wl_compositor* gCompositor = nullptr;
@@ -20,8 +22,9 @@ static wl_surface* gSurface = nullptr;
 static xdg_wm_base* gXdgWmBase = nullptr;
 static xdg_surface* gXdgSurface = nullptr;
 static xdg_toplevel* gXdgToplevel = nullptr;
-static wl_buffer* gBuffer = nullptr;
-static wl_shm* gShm = nullptr;
+static wl_seat* gSeat = nullptr;
+static wl_pointer* gPointer = nullptr;
+static wl_keyboard* gKeyboard = nullptr;
 static bool gIsWindowReady = false;
 static int width = 800;
 static int height = 600;
@@ -71,6 +74,10 @@ public:
     }
     virtual VkSurfaceKHR CreateSurface(void* vk_instance, void* allocations_callback) override;
     virtual bool CheckIfPresentSupportedOnQueue(void* vk_physical_device, mercury::u32 queueIndex) override;
+
+    virtual void ImguiInitialize() override;
+    virtual void ImguiNewFrame() override;
+    virtual void ImguiShutdown() override;
 private:
 };
 
@@ -101,7 +108,6 @@ WaylandDisplayServer::~WaylandDisplayServer()
     if (gXdgSurface) xdg_surface_destroy(gXdgSurface);
     if (gXdgWmBase) xdg_wm_base_destroy(gXdgWmBase);
     if (gCompositor) wl_compositor_destroy(gCompositor);
-    if (gShm) wl_shm_destroy(gShm);
     if (gDisplay) wl_display_disconnect(gDisplay);
     
     gDisplay = nullptr;
@@ -110,8 +116,117 @@ WaylandDisplayServer::~WaylandDisplayServer()
     gXdgWmBase = nullptr;
     gXdgSurface = nullptr;
     gXdgToplevel = nullptr;
-    gShm = nullptr;
 }
+
+static void HandlePointerEnter(void* data, wl_pointer* pointer, uint32_t serial,
+                              wl_surface* surface, wl_fixed_t x, wl_fixed_t y) {
+    // Notify ImGui about mouse enter
+}
+
+static void HandlePointerLeave(void* data, wl_pointer* pointer, uint32_t serial,
+                              wl_surface* surface) {
+    // Notify ImGui about mouse leave
+}
+
+static void HandlePointerMotion(void* data, wl_pointer* pointer, uint32_t time,
+                               wl_fixed_t x, wl_fixed_t y) {
+    // Convert fixed-point to integer coordinates
+    float mouseX = wl_fixed_to_double(x);
+    float mouseY = wl_fixed_to_double(y);
+
+    printf("mouse pos: %f %f\n",(float)mouseX,(float)mouseY);
+    // Forward to ImGui IO
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMousePosEvent(mouseX, mouseY);
+}
+
+static void HandlePointerButton(void* data, wl_pointer* pointer, uint32_t serial,
+                               uint32_t time, uint32_t button, uint32_t state) {
+    // Map Wayland button to ImGui button
+    // ImGuiMouseButton imguiButton;
+    // if (button == BTN_LEFT) imguiButton = ImGuiMouseButton_Left;
+    // else if (button == BTN_RIGHT) imguiButton = ImGuiMouseButton_Right;
+    // else if (button == BTN_MIDDLE) imguiButton = ImGuiMouseButton_Middle;
+    // else return;
+
+    // bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
+    // io.AddMouseButtonEvent(imguiButton, pressed);
+}
+
+static void HandlePointerAxis(void* data, wl_pointer* pointer, uint32_t time,
+                             uint32_t axis, wl_fixed_t value) {
+    // Handle mouse wheel
+    // if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+    //     float scrollY = wl_fixed_to_double(value);
+    //     io.AddMouseWheelEvent(0, scrollY);
+    // }
+}
+
+const wl_pointer_listener sPointerListener = {
+    HandlePointerEnter,
+    HandlePointerLeave,
+    HandlePointerMotion,
+    HandlePointerButton,
+    HandlePointerAxis
+};
+
+static void HandleKeyboardKeymap(void* data, wl_keyboard* keyboard, uint32_t format,
+                                int fd, uint32_t size) {
+    // Handle keymap (e.g., XKB keymap)
+}
+
+static void HandleKeyboardEnter(void* data, wl_keyboard* keyboard, uint32_t serial,
+                               wl_surface* surface, wl_array* keys) {
+    // Keyboard focus entered the surface
+}
+
+static void HandleKeyboardLeave(void* data, wl_keyboard* keyboard, uint32_t serial,
+                               wl_surface* surface) {
+    // Keyboard focus left the surface
+}
+
+static void HandleKeyboardKey(void* data, wl_keyboard* keyboard, uint32_t serial,
+                             uint32_t time, uint32_t key, uint32_t state) {
+    bool pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+    // Map Wayland key to ImGui key (may require keymap translation)
+   // io.AddKeyEvent(ImGuiKey_Space, pressed); // Example; need proper mapping
+}
+
+static void HandleKeyboardModifiers(void* data, wl_keyboard* keyboard, uint32_t serial,
+                                   uint32_t mods_depressed, uint32_t mods_latched,
+                                   uint32_t mods_locked, uint32_t group) {
+    // Handle modifiers (Shift, Ctrl, etc.)
+}
+
+const wl_keyboard_listener sKeyboardListener = {
+    HandleKeyboardKeymap,
+    HandleKeyboardEnter,
+    HandleKeyboardLeave,
+    HandleKeyboardKey,
+    HandleKeyboardModifiers
+};
+
+static void HandleSeatCapabilities(void* data, wl_seat* seat, uint32_t capabilities) {
+    // Check for pointer capability
+    if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
+        gPointer = wl_seat_get_pointer(seat);
+        wl_pointer_add_listener(gPointer, &sPointerListener, nullptr);
+    }
+    // Check for keyboard capability
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
+       gKeyboard = wl_seat_get_keyboard(seat);
+       wl_keyboard_add_listener(gKeyboard, &sKeyboardListener, nullptr);
+   }
+}
+
+static void HandleSeatName(void* data, wl_seat* seat, const char* name) {
+    // Optional: Handle seat name
+}
+
+const wl_seat_listener sSeatListener = {
+    HandleSeatCapabilities,
+    HandleSeatName
+};
 
 LinuxDisplayServer* LinuxDisplayServer::CreateWayland()
 {
@@ -145,14 +260,9 @@ bool WaylandDisplayServer::Initialize()
         return false;
     }
     
-    if (!gShm) {
-        std::cerr << "No shared memory available." << std::endl;
-        return false;
-    }
-    
     // Add listener to XDG WM base
     xdg_wm_base_add_listener(gXdgWmBase, &sXdgWmBaseListener, nullptr);
-    
+
     return true;
 }
 
@@ -201,15 +311,7 @@ void WaylandDisplayServer::CreateWindow(const mercury::ll::os::OS::NativeWindowD
         wl_display_dispatch(gDisplay);
     }
     
-    // Now create the buffer with the configured size
-    //gBuffer = CreateBuffer(width, height);
-    //if (!gBuffer) {
-    //    std::cerr << "Failed to create buffer." << std::endl;
-    //    return;
-    //}
-    
-    //wl_surface_attach(gSurface, gBuffer, 0, 0);
-    //wl_surface_commit(gSurface);
+    wl_seat_add_listener(gSeat, &sSeatListener, nullptr);
 }
 
 void WaylandDisplayServer::DestroyWindow()
@@ -222,11 +324,6 @@ void WaylandDisplayServer::DestroyWindow()
     if (gXdgSurface) {
         xdg_surface_destroy(gXdgSurface);
         gXdgSurface = nullptr;
-    }
-    
-    if (gBuffer) {
-        wl_buffer_destroy(gBuffer);
-        gBuffer = nullptr;
     }
     
     if (gSurface) {
@@ -248,10 +345,11 @@ void HandleRegistryGlobal(void* data, wl_registry* registry, uint32_t name,
     } else if (std::strcmp(interface, "xdg_wm_base") == 0) {
         gXdgWmBase = static_cast<xdg_wm_base*>(
             wl_registry_bind(registry, name, &xdg_wm_base_interface, 1));
-    } else if (std::strcmp(interface, "wl_shm") == 0) {
-        gShm = static_cast<wl_shm*>(
-            wl_registry_bind(registry, name, &wl_shm_interface, 1));
+    } else if (std::strcmp(interface, "wl_seat") == 0) {
+        gSeat = static_cast<wl_seat*>(
+            wl_registry_bind(registry, name, &wl_seat_interface, 7)); // Use version 7
     }
+    
 }
 
 // Registry global remove handler
@@ -301,56 +399,6 @@ void HandleXdgToplevelClose(void* data, xdg_toplevel* xdg_toplevel)
     std::cout << "Window close requested by compositor." << std::endl;
 }
 
-// Buffer creation helper
-wl_buffer* CreateBuffer(int width, int height)
-{
-    int stride = width * 4;
-    int size = stride * height;
-    
-    // Create a shared memory file descriptor
-    std::string name = "/wayland-shm-" + std::to_string(rand());
-    int fd = memfd_create(name.c_str(), MFD_CLOEXEC | MFD_ALLOW_SEALING);
-    if (fd < 0) {
-        fd = open("/tmp", O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
-        if (fd < 0) {
-            std::cerr << "Failed to create shared memory file" << std::endl;
-            return nullptr;
-        }
-    }
-    
-    // Set size
-    if (ftruncate(fd, size) < 0) {
-        std::cerr << "Failed to set shared memory size" << std::endl;
-        close(fd);
-        return nullptr;
-    }
-    
-    // Map memory
-    uint32_t* data = static_cast<uint32_t*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-    if (data == MAP_FAILED) {
-        std::cerr << "Failed to map shared memory" << std::endl;
-        close(fd);
-        return nullptr;
-    }
-    
-    // Fill with a pattern (red gradient for visibility)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            data[y * width + x] = (0xFF << 24) | ((x * 255 / width) << 16) | (y * 255 / height << 8);
-        }
-    }
-    
-    munmap(data, size);
-    
-    // Create wl_buffer from the shared memory
-    wl_shm_pool* pool = wl_shm_create_pool(gShm, fd, size);
-    wl_buffer* buffer = wl_shm_pool_create_buffer(pool, 0, width, height, stride, WL_SHM_FORMAT_XRGB8888);
-    wl_shm_pool_destroy(pool);
-    close(fd);
-    
-    return buffer;
-}
-
 bool WaylandDisplayServer::ProcessEvents()
 {
     if (gDisplay) {
@@ -389,4 +437,19 @@ bool WaylandDisplayServer::CheckIfPresentSupportedOnQueue(void* vk_physical_devi
     return false;
     #endif
 }
+
+    void WaylandDisplayServer::ImguiInitialize()
+    {
+        ImGui_ImplWayland_Init(gDisplay, gSurface);
+    }
+
+    void WaylandDisplayServer::ImguiNewFrame()
+    {
+        ImGui_ImplWayland_NewFrame();
+    }
+
+    void WaylandDisplayServer::ImguiShutdown()
+    {
+        ImGui_ImplWayland_Shutdown();
+    }
 #endif

@@ -86,6 +86,9 @@ public:
 
   bool IsNativeWindowReady(); //the window may be created and GetCurrentNativeWindowHandle return not null, but some surfaces can be not ready yet. so we need to wait
   void GetActualWindowSize(unsigned int& widthOut, unsigned int& heightOut);
+  void ImguiInitialize();
+  void ImguiNewFrame();
+  void ImguiShutdown();
   #ifdef MERCURY_LL_GRAPHICS_VULKAN
   void* CreateVkSurface(void* vk_instance,void* allocations_callback); //return VkSurface
   bool IsQueueSupportPresent(void* vk_physical_device, u32 queueIndex);

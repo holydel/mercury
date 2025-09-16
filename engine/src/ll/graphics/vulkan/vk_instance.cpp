@@ -59,6 +59,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
         severity = logging::Severity::Error;
         break;
+        default:
+        severity = logging::Severity::Info;
     }
 
     logging::write_message(severity, u8"VULKAN: %s", (const char8_t *)pCallbackData->pMessage);

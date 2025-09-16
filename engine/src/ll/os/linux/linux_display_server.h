@@ -11,6 +11,7 @@ class LinuxDisplayServer
     public:
     LinuxDisplayServer() = default;
     virtual ~LinuxDisplayServer() = default;
+    static LinuxDisplayServer* CreateWayland();
 
     virtual bool Initialize() = 0;
     virtual void CreateWindow(const mercury::ll::os::OS::NativeWindowDescriptor &desc)=0;
@@ -21,9 +22,10 @@ class LinuxDisplayServer
     virtual bool CheckIfPresentSupportedOnQueue(void* vk_physical_device, mercury::u32 queueIndex) = 0;
     virtual bool IsNativeWindowReady() = 0; 
     virtual void GetActualWindowSize(unsigned int& widthOut, unsigned int& heightOut) = 0;
-    static LinuxDisplayServer* CreateWayland();
 
-
+    virtual void ImguiInitialize() {}
+    virtual void ImguiNewFrame() {}
+    virtual void ImguiShutdown() {}
 };
 
 #endif

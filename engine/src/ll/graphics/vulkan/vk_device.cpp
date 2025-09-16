@@ -10,6 +10,8 @@ using namespace mercury::ll::graphics;
 #include "vk_device.h"
 #include "vk_utils.h"
 
+#include "../../../imgui/imgui_impl.h"
+
 VkDevice gVKDevice = VK_NULL_HANDLE;
 VkQueue gVKGraphicsQueue = VK_NULL_HANDLE;
 VkQueue gVKTransferQueue = VK_NULL_HANDLE;
@@ -453,4 +455,74 @@ void Device::SetDebugName(const char* utf8_name)
 	}
 }
 
+static void mercury_imgui_check_vk_result(VkResult err)
+{
+}
+
+void Device::ImguiInitialize()
+{
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = gVKInstance;
+	init_info.PhysicalDevice = gVKPhysicalDevice;
+	init_info.Device = gVKDevice;
+	init_info.QueueFamily = 0;
+	init_info.Queue = gVKGraphicsQueue;
+	init_info.PipelineCache = VK_NULL_HANDLE; //TODO: implement pipeline cache
+	init_info.Allocator = nullptr;
+	init_info.MinImageCount = 3;
+	init_info.ImageCount = 3;
+	init_info.CheckVkResultFn = mercury_imgui_check_vk_result;
+	init_info.MSAASamples = gVKSurfaceSamples;
+	init_info.RenderPass = gVKFinalRenderPass;
+	init_info.MinAllocationSize = 1024 * 1024;
+
+	init_info.UseDynamicRendering = gVKConfig.useDynamicRendering;
+	if (gVKConfig.useDynamicRendering)
+	{
+		VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
+		pipeline_rendering_create_info.colorAttachmentCount = 1;
+		pipeline_rendering_create_info.pColorAttachmentFormats = &gVKSurfaceFormat;
+		init_info.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
+	}
+	VkDescriptorPoolSize pool_sizes[] =
+	{
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+	};
+
+	VkDescriptorPoolCreateInfo dp_create_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,nullptr };
+	dp_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	dp_create_info.maxSets = 1000;
+	dp_create_info.pPoolSizes = pool_sizes;
+	dp_create_info.poolSizeCount = sizeof(pool_sizes) / sizeof(pool_sizes[0]);
+
+	vkCreateDescriptorPool(gVKDevice, &dp_create_info, nullptr, &init_info.DescriptorPool);
+
+	ImGui_ImplVulkan_Init(&init_info);
+	ImGui_ImplVulkan_CreateFontsTexture();
+}
+
+void Device::ImguiNewFrame()
+{
+	ImGui_ImplVulkan_NewFrame();
+}
+
+void Device::ImguiShutdown()
+{
+	ImGui_ImplVulkan_Shutdown();
+}
+
+void CommandList::RenderImgui()
+{	
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(nativePtr));
+}
 #endif
