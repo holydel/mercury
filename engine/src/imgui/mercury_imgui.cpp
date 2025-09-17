@@ -362,8 +362,15 @@ void DrawStatisticsWindow()
 
 void mercury_imgui::EndFrame(mercury::ll::graphics::CommandList cmdList)
 {
+	auto &io = ImGui::GetIO();
+
 	ImGui::ShowDemoWindow(); // Show demo window! :)
 	DrawStatisticsWindow();
+
+	   // Optional: Draw a marker at the reported position for visual verification
+    // You can add this to your ImGui rendering code
+    ImGui::GetForegroundDrawList()->AddCircle(io.MousePos, 3, IM_COL32(255, 0, 0, 255));
+
 	ImGui::Render();
 
 	cmdList.RenderImgui();

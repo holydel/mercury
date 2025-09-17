@@ -137,15 +137,20 @@ find_package(PkgConfig REQUIRED)
     pkg_check_modules(WAYLAND_EGL REQUIRED wayland-egl)
     pkg_check_modules(WAYLAND_CURSOR REQUIRED wayland-cursor)
 
+        find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBXKBCOMMON REQUIRED xkbcommon)
+
     target_include_directories(mercury_engine PRIVATE
         ${WAYLAND_CLIENT_INCLUDE_DIRS}
         ${WAYLAND_EGL_INCLUDE_DIRS}
         ${WAYLAND_CURSOR_INCLUDE_DIRS}
+        ${LIBXKBCOMMON_INCLUDE_DIRS}
     )
     target_link_libraries(mercury_engine PRIVATE
         ${WAYLAND_CLIENT_LIBRARIES}
         ${WAYLAND_EGL_LIBRARIES}
         ${WAYLAND_CURSOR_LIBRARIES}
+        ${LIBXKBCOMMON_LIBRARIES}
     )
 
     if(ALLOW_XCB_SURFACE)

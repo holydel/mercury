@@ -209,8 +209,8 @@ public:
               MLOG_DEBUG(u8"TestBedApplication::Configure");
               config.appName = u8"TestBed Application";
               config.appVersion = Config::Version{{{0, 1, 0}}};
-              config.window.width = 1280;
-              config.window.height = 720;
+              config.window.width = 1600;
+              config.window.height = 900;
               config.window.resizable = true;
               config.graphics.enableValidationLayers = true; // Enable validation layers for testing
               config.graphics.adapterPreference = Config::Graphics::AdapterTypePreference::HighPerformance;
@@ -238,6 +238,7 @@ void TestBedApplication::Tick() {
       if(ll::graphics::gSwapchain)
       {
        ll::graphics::gSwapchain->clearColor = glm::vec4(sin(t)*0.5f + 0.5f,cos(t)*0.5f + 0.5f,0.33f,1.0f);
+        ll::graphics::gSwapchain->clearColor = glm::vec4(0.02f,0.03f,0.05f,1.0f);
       }      
 
       frameCount++;

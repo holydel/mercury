@@ -14,6 +14,9 @@
 #include "xdg-shell-client-protocol.h"
 
 #include "backends/imgui_impl_wayland.h"
+#include <linux/input-event-codes.h>
+#include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 
 // Global objects for Wayland protocols
 static wl_display* gDisplay = nullptr;
@@ -30,6 +33,13 @@ static int width = 800;
 static int height = 600;
 static bool running = true;
 static bool gConfigured = false;
+static struct xkb_context* xkb_context = nullptr;
+static struct xkb_keymap* xkb_keymap = nullptr;
+static struct xkb_state* xkb_state = nullptr;
+static xkb_mod_mask_t shift_mask;
+static xkb_mod_mask_t ctrl_mask;
+static xkb_mod_mask_t alt_mask;
+static xkb_mod_mask_t super_mask;
 
     // Registry listener
     static void HandleRegistryGlobal(void* data, wl_registry* registry, uint32_t name, 
@@ -128,13 +138,15 @@ static void HandlePointerLeave(void* data, wl_pointer* pointer, uint32_t serial,
     // Notify ImGui about mouse leave
 }
 
+float gMouseX = 0;
+float gMouseY = 0;
+
 static void HandlePointerMotion(void* data, wl_pointer* pointer, uint32_t time,
                                wl_fixed_t x, wl_fixed_t y) {
     // Convert fixed-point to integer coordinates
     float mouseX = wl_fixed_to_double(x);
     float mouseY = wl_fixed_to_double(y);
 
-    printf("mouse pos: %f %f\n",(float)mouseX,(float)mouseY);
     // Forward to ImGui IO
     ImGuiIO& io = ImGui::GetIO();
     io.AddMousePosEvent(mouseX, mouseY);
@@ -151,6 +163,14 @@ static void HandlePointerButton(void* data, wl_pointer* pointer, uint32_t serial
 
     // bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
     // io.AddMouseButtonEvent(imguiButton, pressed);
+
+    int btnIndex = button - BTN_MOUSE;
+    static ImGuiMouseButton mappedButtons[] = {ImGuiMouseButton_Left,ImGuiMouseButton_Right,ImGuiMouseButton_Middle};
+
+    auto &io = ImGui::GetIO();
+    bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
+    io.AddMouseButtonEvent(mappedButtons[btnIndex], pressed);
+
 }
 
 static void HandlePointerAxis(void* data, wl_pointer* pointer, uint32_t time,
@@ -162,17 +182,165 @@ static void HandlePointerAxis(void* data, wl_pointer* pointer, uint32_t time,
     // }
 }
 
+// Add these stub functions for missing pointer events
+static void HandlePointerFrame(void* data, wl_pointer* pointer) {
+    // Marks the end of a pointer event sequence
+}
+
+static void HandlePointerAxisSource(void* data, wl_pointer* pointer, uint32_t axis_source) {
+    // Indicates the source of axis events (e.g., wheel, finger, continuous)
+}
+
+static void HandlePointerAxisStop(void* data, wl_pointer* pointer, uint32_t time, uint32_t axis) {
+    // Signals the end of an axis motion
+}
+
+static void HandlePointerAxisDiscrete(void* data, wl_pointer* pointer, uint32_t axis, int32_t discrete) {
+    // Provides discrete step information for scroll events
+}
+
+// Update your pointer listener to include ALL required events
 const wl_pointer_listener sPointerListener = {
     HandlePointerEnter,
     HandlePointerLeave,
     HandlePointerMotion,
     HandlePointerButton,
-    HandlePointerAxis
+    HandlePointerAxis,
+    HandlePointerFrame,           // Opcode 5 - REQUIRED
+    HandlePointerAxisSource,      // Since version 5
+    HandlePointerAxisStop,        // Since version 5
+    HandlePointerAxisDiscrete     // Since version 5 (deprecated in v8)
 };
+
+static ImGuiKey XkbKeysymToImGuiKey(xkb_keysym_t keysym) {
+    switch (keysym) {
+        case XKB_KEY_Tab: return ImGuiKey_Tab;
+        case XKB_KEY_Left: return ImGuiKey_LeftArrow;
+        case XKB_KEY_Right: return ImGuiKey_RightArrow;
+        case XKB_KEY_Up: return ImGuiKey_UpArrow;
+        case XKB_KEY_Down: return ImGuiKey_DownArrow;
+        case XKB_KEY_Page_Up: return ImGuiKey_PageUp;
+        case XKB_KEY_Page_Down: return ImGuiKey_PageDown;
+        case XKB_KEY_Home: return ImGuiKey_Home;
+        case XKB_KEY_End: return ImGuiKey_End;
+        case XKB_KEY_Insert: return ImGuiKey_Insert;
+        case XKB_KEY_Delete: return ImGuiKey_Delete;
+        case XKB_KEY_BackSpace: return ImGuiKey_Backspace;
+        case XKB_KEY_space: return ImGuiKey_Space;
+        case XKB_KEY_Return: return ImGuiKey_Enter;
+        case XKB_KEY_Escape: return ImGuiKey_Escape;
+        case XKB_KEY_apostrophe: return ImGuiKey_Apostrophe;
+        case XKB_KEY_comma: return ImGuiKey_Comma;
+        case XKB_KEY_minus: return ImGuiKey_Minus;
+        case XKB_KEY_period: return ImGuiKey_Period;
+        case XKB_KEY_slash: return ImGuiKey_Slash;
+        case XKB_KEY_semicolon: return ImGuiKey_Semicolon;
+        case XKB_KEY_equal: return ImGuiKey_Equal;
+        case XKB_KEY_bracketleft: return ImGuiKey_LeftBracket;
+        case XKB_KEY_backslash: return ImGuiKey_Backslash;
+        case XKB_KEY_bracketright: return ImGuiKey_RightBracket;
+        case XKB_KEY_grave: return ImGuiKey_GraveAccent;
+        case XKB_KEY_Caps_Lock: return ImGuiKey_CapsLock;
+        case XKB_KEY_Scroll_Lock: return ImGuiKey_ScrollLock;
+        case XKB_KEY_Num_Lock: return ImGuiKey_NumLock;
+        case XKB_KEY_Print: return ImGuiKey_PrintScreen;
+        case XKB_KEY_Pause: return ImGuiKey_Pause;
+        case XKB_KEY_KP_Enter: return ImGuiKey_KeypadEnter;
+        case XKB_KEY_KP_Equal: return ImGuiKey_KeypadEqual;
+        case XKB_KEY_KP_Multiply: return ImGuiKey_KeypadMultiply;
+        case XKB_KEY_KP_Add: return ImGuiKey_KeypadAdd;
+        case XKB_KEY_KP_Subtract: return ImGuiKey_KeypadSubtract;
+        case XKB_KEY_KP_Decimal: return ImGuiKey_KeypadDecimal;
+        case XKB_KEY_KP_Divide: return ImGuiKey_KeypadDivide;
+        case XKB_KEY_KP_0: return ImGuiKey_Keypad0;
+        case XKB_KEY_KP_1: return ImGuiKey_Keypad1;
+        case XKB_KEY_KP_2: return ImGuiKey_Keypad2;
+        case XKB_KEY_KP_3: return ImGuiKey_Keypad3;
+        case XKB_KEY_KP_4: return ImGuiKey_Keypad4;
+        case XKB_KEY_KP_5: return ImGuiKey_Keypad5;
+        case XKB_KEY_KP_6: return ImGuiKey_Keypad6;
+        case XKB_KEY_KP_7: return ImGuiKey_Keypad7;
+        case XKB_KEY_KP_8: return ImGuiKey_Keypad8;
+        case XKB_KEY_KP_9: return ImGuiKey_Keypad9;
+        case XKB_KEY_0: return ImGuiKey_0;
+        case XKB_KEY_1: return ImGuiKey_1;
+        case XKB_KEY_2: return ImGuiKey_2;
+        case XKB_KEY_3: return ImGuiKey_3;
+        case XKB_KEY_4: return ImGuiKey_4;
+        case XKB_KEY_5: return ImGuiKey_5;
+        case XKB_KEY_6: return ImGuiKey_6;
+        case XKB_KEY_7: return ImGuiKey_7;
+        case XKB_KEY_8: return ImGuiKey_8;
+        case XKB_KEY_9: return ImGuiKey_9;
+        case XKB_KEY_a: return ImGuiKey_A;
+        case XKB_KEY_b: return ImGuiKey_B;
+        case XKB_KEY_c: return ImGuiKey_C;
+        case XKB_KEY_d: return ImGuiKey_D;
+        case XKB_KEY_e: return ImGuiKey_E;
+        case XKB_KEY_f: return ImGuiKey_F;
+        case XKB_KEY_g: return ImGuiKey_G;
+        case XKB_KEY_h: return ImGuiKey_H;
+        case XKB_KEY_i: return ImGuiKey_I;
+        case XKB_KEY_j: return ImGuiKey_J;
+        case XKB_KEY_k: return ImGuiKey_K;
+        case XKB_KEY_l: return ImGuiKey_L;
+        case XKB_KEY_m: return ImGuiKey_M;
+        case XKB_KEY_n: return ImGuiKey_N;
+        case XKB_KEY_o: return ImGuiKey_O;
+        case XKB_KEY_p: return ImGuiKey_P;
+        case XKB_KEY_q: return ImGuiKey_Q;
+        case XKB_KEY_r: return ImGuiKey_R;
+        case XKB_KEY_s: return ImGuiKey_S;
+        case XKB_KEY_t: return ImGuiKey_T;
+        case XKB_KEY_u: return ImGuiKey_U;
+        case XKB_KEY_v: return ImGuiKey_V;
+        case XKB_KEY_w: return ImGuiKey_W;
+        case XKB_KEY_x: return ImGuiKey_X;
+        case XKB_KEY_y: return ImGuiKey_Y;
+        case XKB_KEY_z: return ImGuiKey_Z;
+        case XKB_KEY_F1: return ImGuiKey_F1;
+        case XKB_KEY_F2: return ImGuiKey_F2;
+        case XKB_KEY_F3: return ImGuiKey_F3;
+        case XKB_KEY_F4: return ImGuiKey_F4;
+        case XKB_KEY_F5: return ImGuiKey_F5;
+        case XKB_KEY_F6: return ImGuiKey_F6;
+        case XKB_KEY_F7: return ImGuiKey_F7;
+        case XKB_KEY_F8: return ImGuiKey_F8;
+        case XKB_KEY_F9: return ImGuiKey_F9;
+        case XKB_KEY_F10: return ImGuiKey_F10;
+        case XKB_KEY_F11: return ImGuiKey_F11;
+        case XKB_KEY_F12: return ImGuiKey_F12;
+        default: return ImGuiKey_None;
+    }
+}
 
 static void HandleKeyboardKeymap(void* data, wl_keyboard* keyboard, uint32_t format,
                                 int fd, uint32_t size) {
-    // Handle keymap (e.g., XKB keymap)
+    if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+        close(fd);
+        return;
+    }
+
+    char* map_str = static_cast<char*>(mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0));
+    if (map_str == MAP_FAILED) {
+        close(fd);
+        return;
+    }
+
+    xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    xkb_keymap = xkb_keymap_new_from_string(xkb_context, map_str, 
+                                           XKB_KEYMAP_FORMAT_TEXT_V1,
+                                           XKB_KEYMAP_COMPILE_NO_FLAGS);
+    munmap(map_str, size);
+    close(fd);
+
+    xkb_state = xkb_state_new(xkb_keymap);
+    
+    // Get modifier masks
+    shift_mask = 1 << xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_SHIFT);
+    ctrl_mask = 1 << xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_CTRL);
+    alt_mask = 1 << xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_ALT);
+    super_mask = 1 << xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_LOGO);
 }
 
 static void HandleKeyboardEnter(void* data, wl_keyboard* keyboard, uint32_t serial,
@@ -187,15 +355,58 @@ static void HandleKeyboardLeave(void* data, wl_keyboard* keyboard, uint32_t seri
 
 static void HandleKeyboardKey(void* data, wl_keyboard* keyboard, uint32_t serial,
                              uint32_t time, uint32_t key, uint32_t state) {
+    ImGuiIO& io = ImGui::GetIO();
     bool pressed = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
-    // Map Wayland key to ImGui key (may require keymap translation)
-   // io.AddKeyEvent(ImGuiKey_Space, pressed); // Example; need proper mapping
+    
+    // Convert Linux keycode to XKB keycode
+    uint32_t keycode = key + 8;
+    
+    // Update XKB state
+    xkb_state_update_key(xkb_state, keycode, 
+                        pressed ? XKB_KEY_DOWN : XKB_KEY_UP);
+    
+    // Get keysym and ImGui key
+    xkb_keysym_t keysym = xkb_state_key_get_one_sym(xkb_state, keycode);
+    ImGuiKey imgui_key = XkbKeysymToImGuiKey(keysym);
+    
+    if (imgui_key != ImGuiKey_None) {
+        io.AddKeyEvent(imgui_key, pressed);
+    }
+    
+    // Handle text input (only on press events)
+    if (pressed) {
+        char buf[128];
+        int size = xkb_state_key_get_utf8(xkb_state, keycode, buf, sizeof(buf));
+        if (size > 0) {
+            io.AddInputCharactersUTF8(buf);
+        }
+    }
 }
 
 static void HandleKeyboardModifiers(void* data, wl_keyboard* keyboard, uint32_t serial,
                                    uint32_t mods_depressed, uint32_t mods_latched,
                                    uint32_t mods_locked, uint32_t group) {
-    // Handle modifiers (Shift, Ctrl, etc.)
+    xkb_state_update_mask(xkb_state, mods_depressed, mods_latched, 
+                         mods_locked, 0, 0, group);
+    
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(ImGuiKey_ModShift,   xkb_state_mod_index_is_active(xkb_state, 
+                        xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_SHIFT), 
+                        XKB_STATE_MODS_EFFECTIVE) > 0);
+    io.AddKeyEvent(ImGuiKey_ModCtrl,    xkb_state_mod_index_is_active(xkb_state, 
+                        xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_CTRL), 
+                        XKB_STATE_MODS_EFFECTIVE) > 0);
+    io.AddKeyEvent(ImGuiKey_ModAlt,     xkb_state_mod_index_is_active(xkb_state, 
+                        xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_ALT), 
+                        XKB_STATE_MODS_EFFECTIVE) > 0);
+    io.AddKeyEvent(ImGuiKey_ModSuper,   xkb_state_mod_index_is_active(xkb_state, 
+                        xkb_keymap_mod_get_index(xkb_keymap, XKB_MOD_NAME_LOGO), 
+                        XKB_STATE_MODS_EFFECTIVE) > 0);
+}
+
+static void HandleKeyboardRepeatInfo(void* data, wl_keyboard* keyboard, 
+                                   int32_t rate, int32_t delay) {
+    // Handle key repeat information (required for protocol version 4+)
 }
 
 const wl_keyboard_listener sKeyboardListener = {
@@ -203,20 +414,35 @@ const wl_keyboard_listener sKeyboardListener = {
     HandleKeyboardEnter,
     HandleKeyboardLeave,
     HandleKeyboardKey,
-    HandleKeyboardModifiers
+    HandleKeyboardModifiers,
+    HandleKeyboardRepeatInfo
 };
 
 static void HandleSeatCapabilities(void* data, wl_seat* seat, uint32_t capabilities) {
     // Check for pointer capability
     if (capabilities & WL_SEAT_CAPABILITY_POINTER) {
-        gPointer = wl_seat_get_pointer(seat);
-        wl_pointer_add_listener(gPointer, &sPointerListener, nullptr);
+        if (!gPointer) {
+            gPointer = wl_seat_get_pointer(seat);
+            wl_pointer_add_listener(gPointer, &sPointerListener, nullptr);
+        }
+    } else {
+        if (gPointer) {
+            wl_pointer_destroy(gPointer);
+            gPointer = nullptr;
+        }
     }
-    // Check for keyboard capability
+    // Similarly for keyboard
     if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
-       gKeyboard = wl_seat_get_keyboard(seat);
-       wl_keyboard_add_listener(gKeyboard, &sKeyboardListener, nullptr);
-   }
+        if (!gKeyboard) {
+            gKeyboard = wl_seat_get_keyboard(seat);
+            wl_keyboard_add_listener(gKeyboard, &sKeyboardListener, nullptr);
+        }
+    } else {
+        if (gKeyboard) {
+            wl_keyboard_destroy(gKeyboard);
+            gKeyboard = nullptr;
+        }
+    }
 }
 
 static void HandleSeatName(void* data, wl_seat* seat, const char* name) {
@@ -263,7 +489,23 @@ bool WaylandDisplayServer::Initialize()
     // Add listener to XDG WM base
     xdg_wm_base_add_listener(gXdgWmBase, &sXdgWmBaseListener, nullptr);
 
+    wl_display_roundtrip(gDisplay); 
     return true;
+}
+
+static void SetInputRegionToWholeWindow() {
+    wl_compositor* compositor = gCompositor; // Your global compositor
+    wl_surface* surface = gSurface; // Your global surface
+    
+    // Create a region that covers the entire window
+    wl_region* region = wl_compositor_create_region(compositor);
+    wl_region_add(region, 0, 0, width, height);
+    
+    // Set this region as the input region for your surface
+    wl_surface_set_input_region(surface, region);
+    
+    // Destroy the region as it's been copied by the compositor
+    wl_region_destroy(region);
 }
 
 void WaylandDisplayServer::CreateWindow(const mercury::ll::os::OS::NativeWindowDescriptor &desc)
@@ -285,6 +527,8 @@ void WaylandDisplayServer::CreateWindow(const mercury::ll::os::OS::NativeWindowD
         return;
     }
     
+    SetInputRegionToWholeWindow();
+
     xdg_surface_add_listener(gXdgSurface, &sXdgSurfaceListener, nullptr);
 
     // Create XDG toplevel
@@ -311,7 +555,7 @@ void WaylandDisplayServer::CreateWindow(const mercury::ll::os::OS::NativeWindowD
         wl_display_dispatch(gDisplay);
     }
     
-    wl_seat_add_listener(gSeat, &sSeatListener, nullptr);
+    //wl_seat_add_listener(gSeat, &sSeatListener, nullptr);
 }
 
 void WaylandDisplayServer::DestroyWindow()
@@ -348,6 +592,8 @@ void HandleRegistryGlobal(void* data, wl_registry* registry, uint32_t name,
     } else if (std::strcmp(interface, "wl_seat") == 0) {
         gSeat = static_cast<wl_seat*>(
             wl_registry_bind(registry, name, &wl_seat_interface, 7)); // Use version 7
+
+         wl_seat_add_listener(gSeat, &sSeatListener, nullptr);            
     }
     
 }
