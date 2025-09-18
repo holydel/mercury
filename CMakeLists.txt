@@ -67,6 +67,7 @@ endif()
 # Add subdirectories
 add_subdirectory(engine)
 
+add_subdirectory(editor)
 # Test bed executable
 add_executable(testbed 
     testbed.cpp

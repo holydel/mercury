@@ -138,7 +138,7 @@ namespace mercury
     } swapchain;
 
     const c8 *appName = u8"Mercury Application";
-
+    const c8 *appID = u8"com.company-name.test-mercury-app-name";
     struct Version
     {
       union
@@ -168,7 +168,7 @@ namespace mercury
     virtual void Initialize() {};
     virtual void Tick() {};
     virtual void Shutdown() {};
-
+    virtual void OnImgui() {};
     virtual bool IsRunning() { return true; }
 
     Config &GetConfig() { return config; }

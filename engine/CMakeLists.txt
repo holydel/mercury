@@ -80,7 +80,8 @@ elseif(UNIX AND NOT APPLE)
     src/ll/os/linux/linux_utils.cpp
     src/ll/os/linux/linux_input.cpp
     src/ll/os/linux/linux_wayland.cpp
-    src/ll/os/linux/xdg-shell-protocol.c) 
+    src/ll/os/linux/xdg-shell-protocol.c
+    src/ll/os/linux/xdg-decoration.c) 
 elseif(ANDROID)
     message(STATUS "Autodetected Android build")
     set(VULKAN_AVAILABLE TRUE)

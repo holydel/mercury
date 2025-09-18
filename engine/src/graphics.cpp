@@ -89,6 +89,7 @@ void MercuryGraphicsTick()
 
             mercury_imgui::BeginFrame(finalCmdList);
 
+            mercury::Application::GetCurrentApplication()->OnImgui();
             mercury_imgui::EndFrame(finalCmdList);
             // do all graphics job here
             gSwapchain->Present();

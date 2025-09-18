@@ -3,6 +3,7 @@
 #ifdef MERCURY_LL_OS_LINUX
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
+
 #include <iostream>
 #include <cstring>
 #include <cstdlib>
@@ -12,11 +13,12 @@
 
 // We need to include the XDG shell header
 #include "xdg-shell-client-protocol.h"
-
+#include "xdg-decoration.h"
 #include "backends/imgui_impl_wayland.h"
 #include <linux/input-event-codes.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
+#include <mercury_application.h>
 
 // Global objects for Wayland protocols
 static wl_display* gDisplay = nullptr;
@@ -29,8 +31,8 @@ static wl_seat* gSeat = nullptr;
 static wl_pointer* gPointer = nullptr;
 static wl_keyboard* gKeyboard = nullptr;
 static bool gIsWindowReady = false;
-static int width = 800;
-static int height = 600;
+static int gWidth = 800;
+static int gHeight = 600;
 static bool running = true;
 static bool gConfigured = false;
 static struct xkb_context* xkb_context = nullptr;
@@ -40,6 +42,9 @@ static xkb_mod_mask_t shift_mask;
 static xkb_mod_mask_t ctrl_mask;
 static xkb_mod_mask_t alt_mask;
 static xkb_mod_mask_t super_mask;
+// Add these with your other global Wayland protocol objects
+static zxdg_decoration_manager_v1* gDecorationManager = nullptr;
+static zxdg_toplevel_decoration_v1* gToplevelDecoration = nullptr;
 
     // Registry listener
     static void HandleRegistryGlobal(void* data, wl_registry* registry, uint32_t name, 
@@ -79,8 +84,8 @@ public:
     }
     virtual void GetActualWindowSize(unsigned int& widthOut, unsigned int& heightOut) override
     {
-        widthOut = width;
-        heightOut = height;
+        widthOut = gWidth;
+        heightOut = gHeight;
     }
     virtual VkSurfaceKHR CreateSurface(void* vk_instance, void* allocations_callback) override;
     virtual bool CheckIfPresentSupportedOnQueue(void* vk_physical_device, mercury::u32 queueIndex) override;
@@ -165,7 +170,7 @@ static void HandlePointerButton(void* data, wl_pointer* pointer, uint32_t serial
     // io.AddMouseButtonEvent(imguiButton, pressed);
 
     int btnIndex = button - BTN_MOUSE;
-    static ImGuiMouseButton mappedButtons[] = {ImGuiMouseButton_Left,ImGuiMouseButton_Right,ImGuiMouseButton_Middle};
+    static ImGuiMouseButton mappedButtons[] = {ImGuiMouseButton_Left,ImGuiMouseButton_Right,ImGuiMouseButton_Middle,ImGuiMouseButton_Middle+1,ImGuiMouseButton_Middle+2};
 
     auto &io = ImGui::GetIO();
     bool pressed = (state == WL_POINTER_BUTTON_STATE_PRESSED);
@@ -196,7 +201,9 @@ static void HandlePointerAxisStop(void* data, wl_pointer* pointer, uint32_t time
 }
 
 static void HandlePointerAxisDiscrete(void* data, wl_pointer* pointer, uint32_t axis, int32_t discrete) {
-    // Provides discrete step information for scroll events
+   
+    auto &io = ImGui::GetIO();
+    io.AddMouseWheelEvent(0, discrete * -1.0f);
 }
 
 // Update your pointer listener to include ALL required events
@@ -499,7 +506,7 @@ static void SetInputRegionToWholeWindow() {
     
     // Create a region that covers the entire window
     wl_region* region = wl_compositor_create_region(compositor);
-    wl_region_add(region, 0, 0, width, height);
+    wl_region_add(region, 0, 0, gWidth, gHeight);
     
     // Set this region as the input region for your surface
     wl_surface_set_input_region(surface, region);
@@ -508,10 +515,54 @@ static void SetInputRegionToWholeWindow() {
     wl_region_destroy(region);
 }
 
+
+static void ConfigureToplevelDecoration()
+{
+    if (!gDecorationManager || !gXdgToplevel) {
+        std::cout << "Decoration manager or toplevel not available, using client-side decorations" << std::endl;
+        return;
+    }
+    
+    // Create a decoration object for the toplevel
+    gToplevelDecoration = zxdg_decoration_manager_v1_get_toplevel_decoration(
+        gDecorationManager, gXdgToplevel);
+    
+    if (!gToplevelDecoration) {
+        std::cerr << "Failed to create toplevel decoration" << std::endl;
+        return;
+    }
+    
+    // Request server-side decorations
+    zxdg_toplevel_decoration_v1_set_mode(gToplevelDecoration, 
+        ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+    
+}
+
+static void HandleDecorationConfigure(void* data, 
+                                    zxdg_toplevel_decoration_v1* decoration, 
+                                    uint32_t mode)
+{
+    switch (mode) {
+        case ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE:
+            std::cout << "Compositor enforced client-side decorations" << std::endl;
+            break;
+        case ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE:
+            std::cout << "Using server-side decorations" << std::endl;
+            break;
+        default:
+            std::cout << "Unknown decoration mode: " << mode << std::endl;
+    }
+}
+
+static const zxdg_toplevel_decoration_v1_listener sDecorationListener = {
+    HandleDecorationConfigure
+};
+
+
 void WaylandDisplayServer::CreateWindow(const mercury::ll::os::OS::NativeWindowDescriptor &desc)
 {
-    width = desc.width;
-    height = desc.height;
+    gWidth = desc.width;
+    gHeight = desc.height;
     
     // Create surface
     gSurface = wl_compositor_create_surface(gCompositor);
@@ -540,11 +591,18 @@ void WaylandDisplayServer::CreateWindow(const mercury::ll::os::OS::NativeWindowD
     
     xdg_toplevel_add_listener(gXdgToplevel, &sXdgToplevelListener, nullptr);
     xdg_toplevel_set_title(gXdgToplevel, (const char*)desc.title.c_str());
-    
+ 
+    const auto& cfg = mercury::Application::GetCurrentApplication()->GetConfig();
+
+    xdg_toplevel_set_app_id(gXdgToplevel, (const char*)cfg.appID);
     // Set window size (this is a hint, the compositor may ignore it)
-    xdg_toplevel_set_min_size(gXdgToplevel, desc.width, desc.height);
-    xdg_toplevel_set_max_size(gXdgToplevel, desc.width, desc.height);
-    
+    xdg_toplevel_set_min_size(gXdgToplevel, 16, 16);
+    xdg_toplevel_set_max_size(gXdgToplevel, 4096, 4096);
+    //xdg_toplevel_set_fullscreen(gXdgToplevel, nullptr);
+    //xdg_toplevel_set_minimized(gXdgToplevel);
+    //xdg_toplevel_show_window_menu(gXdgToplevel,gSeat,0,100,200);
+    xdg_toplevel_set_maximized(gXdgToplevel);
+    //xdg_toplevel_resize
     // Commit the surface to make the window visible
     wl_surface_commit(gSurface);
     
@@ -581,8 +639,10 @@ void WaylandDisplayServer::DestroyWindow()
 
 // Registry global handler
 void HandleRegistryGlobal(void* data, wl_registry* registry, uint32_t name, 
-                                              const char* interface, uint32_t version)
+                         const char* interface, uint32_t version)
 {
+    printf("has wayland interface: %s\n",interface);
+    
     if (std::strcmp(interface, "wl_compositor") == 0) {
         gCompositor = static_cast<wl_compositor*>(
             wl_registry_bind(registry, name, &wl_compositor_interface, 3));
@@ -591,11 +651,13 @@ void HandleRegistryGlobal(void* data, wl_registry* registry, uint32_t name,
             wl_registry_bind(registry, name, &xdg_wm_base_interface, 1));
     } else if (std::strcmp(interface, "wl_seat") == 0) {
         gSeat = static_cast<wl_seat*>(
-            wl_registry_bind(registry, name, &wl_seat_interface, 7)); // Use version 7
-
-         wl_seat_add_listener(gSeat, &sSeatListener, nullptr);            
+            wl_registry_bind(registry, name, &wl_seat_interface, 7));
+        wl_seat_add_listener(gSeat, &sSeatListener, nullptr);
+    } else if (std::strcmp(interface, "zxdg_decoration_manager_v1") == 0) {
+        // Bind the decoration manager
+        gDecorationManager = static_cast<zxdg_decoration_manager_v1*>(
+            wl_registry_bind(registry, name, &zxdg_decoration_manager_v1_interface, 1));
     }
-    
 }
 
 // Registry global remove handler
@@ -626,9 +688,9 @@ void HandleXdgToplevelConfigure(void* data, xdg_toplevel* xdg_toplevel,
                 printf("HandleXdgToplevelConfigure\n");
     // Handle window configuration changes
     if (new_width > 0 && new_height > 0) {
-        width = new_width;
-        height = new_height;
-        std::cout << "Window configured to size " << width << "x" << height << std::endl;
+        gWidth = new_width;
+        gHeight = new_height;
+        std::cout << "Window configured to size " << gWidth << "x" << gHeight << std::endl;
 
         gIsWindowReady = true;
     }
@@ -691,6 +753,10 @@ bool WaylandDisplayServer::CheckIfPresentSupportedOnQueue(void* vk_physical_devi
 
     void WaylandDisplayServer::ImguiNewFrame()
     {
+        auto& io = ImGui::GetIO();
+        io.DisplaySize.x = (float)gWidth;
+        io.DisplaySize.y = (float)gHeight;
+
         ImGui_ImplWayland_NewFrame();
     }
 
