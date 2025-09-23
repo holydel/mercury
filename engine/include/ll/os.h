@@ -54,11 +54,11 @@ public:
   };
 
   void CreateNativeWindow(NativeWindowDescriptor &desc);
-  void DestroyNativeWindow(void* native_window_handle);
-  void SetNativeWindowTitle(void* native_window_handle, const std::u8string &title);
-  void SetNativeWindowSize(void* native_window_handle, int width, int height);
-  void SetNativeWindowFullscreen(void* native_window_handle, bool fullscreen);  
-  bool IsNativeWindowFullscreen(void* native_window_handle);
+  void DestroyNativeWindow();
+  void SetNativeWindowTitle(const std::u8string &title);
+  void SetNativeWindowSize(int width, int height);
+  void SetNativeWindowFullscreen(bool fullscreen);  
+  bool IsNativeWindowFullscreen();
 
   void Update();
 

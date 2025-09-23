@@ -11,8 +11,10 @@
 #include <thread>
 
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
-#include "ll/graphics/vulkan/mercury_vulkan.h"
+#include "ll/graphics/vulkan/vk_swapchain.h"
 #endif
+
+#include "../../../imgui/imgui_impl.h"
 
 #pragma comment(lib, "xinput.lib")
 #pragma comment(lib, "Winmm.lib")
@@ -217,29 +219,29 @@ namespace mercury::ll::os
     gMainWindow = hWnd;
   }
 
-  void OS::DestroyNativeWindow(void* native_window_handle)
+  void OS::DestroyNativeWindow()
   {
 
   }
 
-  void OS::SetNativeWindowTitle(void* native_window_handle, const std::u8string &title)
+  void OS::SetNativeWindowTitle(const std::u8string &title)
   {
 
   }
 
-  void OS::SetNativeWindowSize(void* native_window_handle, int width, int height)
+  void OS::SetNativeWindowSize(int width, int height)
   {
 
   }
 
-  void OS::SetNativeWindowFullscreen(void* native_window_handle, bool fullscreen)
+  void OS::SetNativeWindowFullscreen(bool fullscreen)
   {
 
   }
 
-  bool OS::IsNativeWindowFullscreen(void* native_window_handle)
+  bool OS::IsNativeWindowFullscreen()
   {
-    
+      return false;
   }
 
   void OS::Update()
@@ -337,19 +339,58 @@ namespace mercury::ll::os
     return osName;
   }
 
-  void* CreateVkSurface(void* vk_instance)
+  bool OS::IsNativeWindowReady()
+  {
+        return gMainWindow != nullptr;
+  }
+
+  void OS::GetActualWindowSize(unsigned int& widthOut, unsigned int& heightOut)
+  {
+      if (gMainWindow == nullptr)
+      {
+          widthOut = 0;
+          heightOut = 0;
+          return;
+      }
+      RECT rect;
+      if (GetClientRect(gMainWindow, &rect))
+      {
+          widthOut = rect.right - rect.left;
+          heightOut = rect.bottom - rect.top;
+      }
+      else
+      {
+          widthOut = 0;
+          heightOut = 0;
+	  }
+  }
+  void OS::ImguiInitialize()
+  {
+      ImGui_ImplWin32_Init(gMainWindow);
+  }
+  void OS::ImguiNewFrame()
+  {
+      ImGui_ImplWin32_NewFrame();
+  }
+  void OS::ImguiShutdown()
+  {
+      ImGui_ImplWin32_Shutdown();
+  }
+
+  void* OS::CreateVkSurface(void* vk_instance, void* allocations_callback)
   {
 	VkWin32SurfaceCreateInfoKHR createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	createInfo.hwnd = static_cast<HWND>(native_window_handle);
+	createInfo.hwnd = static_cast<HWND>(gMainWindow);
 	createInfo.hinstance = static_cast<HINSTANCE>(GetModuleHandleA(nullptr));
 
-	VK_CALL(vkCreateWin32SurfaceKHR(gVKInstance, &createInfo, nullptr, &gVKSurface));
+	VK_CALL(vkCreateWin32SurfaceKHR(gVKInstance, &createInfo, (VkAllocationCallbacks*)allocations_callback, &gVKSurface));
+    return gVKSurface;
   }
  
-  bool IsQueueSupportPresent(void* vk_physical_device, u32 queueIndex)
+  bool OS::IsQueueSupportPresent(void* vk_physical_device, u32 queueIndex)
   {
-    bool supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr ? vkGetPhysicalDeviceWin32PresentationSupportKHR(vk_physical_device, queueIndex) : false;
+    bool supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr ? vkGetPhysicalDeviceWin32PresentationSupportKHR((VkPhysicalDevice)vk_physical_device, queueIndex) : false;
     return supportPresent;
   }
 

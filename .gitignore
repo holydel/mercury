@@ -45,3 +45,6 @@ build-emsdk
 build-default
 test-emsdk
 build-windows
+solutions/VisualStudio2026/.vs
+solutions/VisualStudio2026/intermediate
+solutions/VisualStudio2026/out

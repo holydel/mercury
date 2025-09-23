@@ -67,10 +67,6 @@ void mercury_imgui::Initialize()
 
 	mercury::ll::os::gOS->ImguiInitialize();
 
-#ifdef MERCURY_LL_OS_WIN32
-	HWND mainWinHandle = static_cast<HWND>(mercury::ll::os::gOS->GetCurrentNativeWindowHandle());
-	ImGui_ImplWin32_Init(mainWinHandle);
-#endif
 #ifdef MERCURY_LL_OS_LINUX
 	//auto win = static_cast<xcb_window_t*>(mercury::platform::getMainWindowHandle());
 	//auto connection = static_cast<xcb_connection_t*>(mercury::platform::getAppInstanceHandle());
@@ -102,9 +98,6 @@ void mercury_imgui::Shutdown()
 #ifdef MERCURY_LL_OS_ANDROID
 		ImGui_ImplAndroid_Shutdown();
 #endif
-#ifdef MERCURY_LL_OS_WIN32
-		ImGui_ImplWin32_Shutdown();
-#endif
 #ifdef MERCURY_LL_OS_EMSCRIPTEN
 		ImGui_ImplEmscripten_Shutdown();
 #endif
@@ -125,9 +118,7 @@ void mercury_imgui::BeginFrame(mercury::ll::graphics::CommandList cmdList)
 #ifdef MERCURY_LL_GRAPHICS_WEBGPU
 	ImGui_ImplWGPU_NewFrame();
 #endif
-#ifdef MERCURY_LL_OS_WIN32
-	ImGui_ImplWin32_NewFrame();
-#endif
+
 #ifdef MERCURY_LL_OS_LINUX
 
 	//ImGui_ImplX11_NewFrame();

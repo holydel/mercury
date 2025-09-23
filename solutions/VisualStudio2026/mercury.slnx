@@ -1,0 +1,23 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Dev" />
+    <BuildType Name="Retail" />
+    <Platform Name="Android-arm64-v8a" />
+    <Platform Name="Emscripten" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="D:/Projects/mercury/solutions/VisualStudio2026/mercury.vcxproj" Id="e65014e2-0ef6-48fa-b05c-f54ae0611aa8">
+    <BuildType Solution="Dev|Emscripten" Project="Retail" />
+  </Project>
+  <Project Path="editor.vcxproj" Id="1edbb0ca-dfcd-40a8-9367-49cd2ef94afd">
+    <BuildType Solution="Retail|Android-arm64-v8a" Project="Debug" />
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <Platform Project="x64" />
+  </Project>
+  <Project Path="testbed.vcxproj" Id="6d9ead10-16d1-4773-a025-89f3a6e40cb2">
+    <BuildType Solution="Retail|Android-arm64-v8a" Project="Debug" />
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <Platform Project="x64" />
+  </Project>
+</Solution>
