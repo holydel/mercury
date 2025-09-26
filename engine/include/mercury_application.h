@@ -19,21 +19,21 @@ namespace mercury
       u16 height = 600;
 
       // flags
-      u8 headlessMode : 1 = false;
-      u8 resizable : 1 = false;
-      u8 fullscreen : 1 = false;
-      u8 maximized : 1 = false;
-      u8 borderless : 1 = false;
-      u8 alwaysOnTop : 1 = false;
+      bool headlessMode : 1 = false;
+      bool resizable : 1 = false;
+      bool fullscreen : 1 = false;
+      bool maximized : 1 = false;
+      bool borderless : 1 = false;
+      bool alwaysOnTop : 1 = false;
     } window;
 
     struct EngineConfig
     {
-      bool EnableIMGUI = false;
-      bool EnableSound = false;
-      bool EnableBulletPhysics = false;
-      bool EnableXR = false;
-      bool EnableXRMirroring = false;
+      bool EnableIMGUI : 1 = false;
+      bool EnableSound : 1 = false;
+      bool EnableBulletPhysics : 1 = false;
+      bool EnableXR : 1 = false;
+      bool EnableXRMirroring : 1 = false;
     };
 
     struct D3D12Config
@@ -58,8 +58,9 @@ namespace mercury
 
     struct ImguiConfig
     {
-      bool enable = true;
-      bool enableDocking = false;
+      bool enable : 1 = true;
+      bool enableDocking : 1 = false;
+	  bool enableViewports : 1 = false;
     } imgui;
     struct Graphics
     {

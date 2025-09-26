@@ -15,6 +15,11 @@
     <BuildType Solution="Retail|Emscripten" Project="Debug" />
     <Platform Project="x64" />
   </Project>
+  <Project Path="SimdJsonPlatground/SimdJsonPlatground.vcxproj" Id="64e221a0-686d-4f1e-80da-a37cfcadd069">
+    <BuildType Solution="Dev|*" Project="Release" />
+    <BuildType Solution="Retail|*" Project="Debug" />
+    <Platform Project="x64" />
+  </Project>
   <Project Path="testbed.vcxproj" Id="6d9ead10-16d1-4773-a025-89f3a6e40cb2">
     <BuildType Solution="Retail|Android-arm64-v8a" Project="Debug" />
     <BuildType Solution="Retail|Emscripten" Project="Debug" />

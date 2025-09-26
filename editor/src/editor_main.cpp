@@ -6,12 +6,16 @@
 
 #include "editor_main_window.h"
 
+import Project;
+import ShellOS;
+
 using namespace mercury;
 
 class EditorApplication : public Application {
     bool m_running = true;
 
     EditorMainWindow mainWindow;
+	MProject currentProject;
 public:
        void Configure() override
        {
@@ -33,7 +37,8 @@ public:
 EditorApplication gEditor;
 
 void EditorApplication::Initialize() {
-
+   currentProject.LoadFromFolder(u8"D:\\Projects\\mercury\\sample_project");
+	//currentProject.CreateNew(u8"D:\\Projects\\mercury\\new_sample_project");
 }
 
 void EditorApplication::Tick() {

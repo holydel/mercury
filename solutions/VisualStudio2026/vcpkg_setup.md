@@ -1,0 +1,1 @@
+﻿.\vcpkg install assimp:x64-windows ffmpeg:x64-windows pcl:x64-windows usd:x64-windows openimageio[webp,gif,jpegxl,libheif,libraw,openjpeg,libheif]:x64-windows tinyply:x64-windows ktx:x64-windows directxtex:x64-windows 

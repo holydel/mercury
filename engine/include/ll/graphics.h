@@ -324,6 +324,7 @@ public:
   void ImguiInitialize();
   void ImguiNewFrame();
   void ImguiShutdown();
+  void ImguiRegenerateFontAtlas();
 };
 
 class Swapchain {

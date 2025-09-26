@@ -1,6 +1,7 @@
 #include "mercury_imgui.h"
 #include "imgui_impl.h"
 #include <mercury_input.h>
+#include <mercury_ui.h>
 #include <ll/os.h>
 #include <ll/graphics.h>
 
@@ -356,7 +357,7 @@ void mercury_imgui::EndFrame(mercury::ll::graphics::CommandList cmdList)
 	auto &io = ImGui::GetIO();
 
 	ImGui::ShowDemoWindow(); // Show demo window! :)
-	DrawStatisticsWindow();
+	//DrawStatisticsWindow();
 
 	   // Optional: Draw a marker at the reported position for visual verification
     // You can add this to your ImGui rendering code

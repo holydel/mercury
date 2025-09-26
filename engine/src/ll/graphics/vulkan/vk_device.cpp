@@ -508,6 +508,11 @@ void Device::ImguiInitialize()
 	vkCreateDescriptorPool(gVKDevice, &dp_create_info, nullptr, &init_info.DescriptorPool);
 
 	ImGui_ImplVulkan_Init(&init_info);
+	ImguiRegenerateFontAtlas();
+}
+
+void Device::ImguiRegenerateFontAtlas()
+{
 	ImGui_ImplVulkan_CreateFontsTexture();
 }
 

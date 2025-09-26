@@ -48,3 +48,4 @@ build-windows
 solutions/VisualStudio2026/.vs
 solutions/VisualStudio2026/intermediate
 solutions/VisualStudio2026/out
+solutions/VisualStudio2026/SimdJsonPlatground/x64

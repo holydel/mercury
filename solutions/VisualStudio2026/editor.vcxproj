@@ -76,13 +76,23 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party/simdjson/</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>false</ExceptionHandling>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i
+xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying media and third-party DLLs...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
     <ClCompile>
@@ -93,13 +103,19 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party/simdjson/</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying media and third-party DLLs...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
     <ClCompile>
@@ -110,13 +126,19 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party/simdjson/</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying media and third-party DLLs...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="mercury.vcxproj">
@@ -124,11 +146,28 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\editor\src\editor_main.cpp" />
-    <ClCompile Include="..\..\editor\src\editor_main_window.cpp" />
+    <ClCompile Include="..\..\editor\src\Asset.ixx" />
+    <ClCompile Include="..\..\editor\src\AssetsBrowserWindow.ixx" />
+    <ClCompile Include="..\..\editor\src\EditorMain.ixx" />
+    <ClCompile Include="..\..\editor\src\EditorMainWindow.ixx" />
+    <ClCompile Include="..\..\editor\src\EditorState.ixx" />
+    <ClCompile Include="..\..\editor\src\ImguiState.ixx" />
+    <ClCompile Include="..\..\editor\src\Project.ixx" />
+    <ClCompile Include="..\..\editor\src\PropertyWindow.ixx" />
+    <ClCompile Include="..\..\editor\src\SceneHierarchyWindow.ixx" />
+    <ClCompile Include="..\..\editor\src\ShaderCompiler.ixx" />
+    <ClCompile Include="..\..\editor\src\ShellOS.ixx" />
+    <ClCompile Include="..\..\editor\third_party\simdjson\simdjson.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\editor\include\editor_main_window.h" />
+    <ClInclude Include="..\..\editor\third_party\simdjson\simdjson.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vcpkg_setup.md">
+      <SubType>
+      </SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

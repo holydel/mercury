@@ -13,12 +13,48 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\third_party">
+      <UniqueIdentifier>{214f0b13-90f7-4208-a0b2-67f99b94e713}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\third_party\simdjson">
+      <UniqueIdentifier>{8626b4fc-ddad-4620-b652-cb67c995ff9e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\editor\src\editor_main.cpp">
+    <ClCompile Include="..\..\editor\third_party\simdjson\simdjson.cpp">
+      <Filter>Source Files\third_party\simdjson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\Project.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\editor\src\editor_main_window.cpp">
+    <ClCompile Include="..\..\editor\src\Asset.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\ShellOS.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\EditorMain.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\EditorMainWindow.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\EditorState.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\ImguiState.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\ShaderCompiler.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\AssetsBrowserWindow.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\PropertyWindow.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\SceneHierarchyWindow.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,5 +62,11 @@
     <ClInclude Include="..\..\editor\include\editor_main_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\editor\third_party\simdjson\simdjson.h">
+      <Filter>Source Files\third_party\simdjson</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="vcpkg_setup.md" />
   </ItemGroup>
 </Project>
