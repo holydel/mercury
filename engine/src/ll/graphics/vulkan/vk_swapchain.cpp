@@ -971,4 +971,13 @@ void Swapchain::SetFullscreen(bool fullscreen)
 {
 }
 
+int Swapchain::GetWidth() const
+{
+	return gVKSurfaceCaps.currentExtent.width;
+}
+
+int Swapchain::GetHeight() const
+{
+	return gVKSurfaceCaps.currentExtent.height;
+}
 #endif

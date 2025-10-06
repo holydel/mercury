@@ -24,7 +24,7 @@ void MercuryGraphicsInitialize()
     gInstance->Initialize();
 
     AdapterSelectorInfo selector_info = {};
-    selector_info.adapter_type_preference = graphicsCfg.adapterPreference;
+    //selector_info.adapter_type_preference = graphicsCfg.adapterPreference;
     selector_info.adapter_index = graphicsCfg.explicitAdapterIndex;
     gInstance->AcquireAdapter(selector_info);
 
@@ -86,9 +86,12 @@ void MercuryGraphicsTick()
         {
             auto finalCmdList = gSwapchain->AcquireNextImage();
 
+			finalCmdList.SetViewport(0, 0, (float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight());
+			finalCmdList.SetScissor(0, 0, (u32)gSwapchain->GetWidth(), (u32)gSwapchain->GetHeight());
 
-            mercury_imgui::BeginFrame(finalCmdList);
+            mercury::Application::GetCurrentApplication()->OnFinalPass(finalCmdList);
 
+            mercury_imgui::BeginFrame(finalCmdList);         
             mercury::Application::GetCurrentApplication()->OnImgui();
             mercury_imgui::EndFrame(finalCmdList);
             // do all graphics job here
@@ -165,35 +168,35 @@ mercury::u8 SelectAdapterByHeuristic(
         return 0; // No adapters available
     }
 
-    if(selector_info.adapter_type_preference == Config::Graphics::AdapterTypePreference::Any)
-    {
-        // sort by adapter index (Let OS decide)
-        std::sort(rankedAdapters.begin(), rankedAdapters.end(), [](const AdapterRank &a, const AdapterRank &b) {
-            return a.index < b.index;
-        });
+    //if(selector_info.adapter_type_preference == Config::Graphics::AdapterTypePreference::Any)
+    //{
+    //    // sort by adapter index (Let OS decide)
+    //    std::sort(rankedAdapters.begin(), rankedAdapters.end(), [](const AdapterRank &a, const AdapterRank &b) {
+    //        return a.index < b.index;
+    //    });
 
-        return rankedAdapters.front().index;
-    }
+    //    return rankedAdapters.front().index;
+    //}
    
-    if(selector_info.adapter_type_preference == Config::Graphics::AdapterTypePreference::HighPerformance)
-    {
-        // sort by score (prefer discrete adapters)
-        std::sort(rankedAdapters.begin(), rankedAdapters.end(), [](const AdapterRank &a, const AdapterRank &b) {
-            return a.score > b.score;
-        });
+    //if(selector_info.adapter_type_preference == Config::Graphics::AdapterTypePreference::HighPerformance)
+    //{
+    //    // sort by score (prefer discrete adapters)
+    //    std::sort(rankedAdapters.begin(), rankedAdapters.end(), [](const AdapterRank &a, const AdapterRank &b) {
+    //        return a.score > b.score;
+    //    });
 
-        return rankedAdapters.front().index;
-    }
+    //    return rankedAdapters.front().index;
+    //}
 
-    if(selector_info.adapter_type_preference == Config::Graphics::AdapterTypePreference::LowPower)
-    {
-        // sort by score (prefer integrated adapters)
-        std::sort(rankedAdapters.begin(), rankedAdapters.end(), [](const AdapterRank &a, const AdapterRank &b) {
-            return a.score < b.score;
-        });
+    //if(selector_info.adapter_type_preference == Config::Graphics::AdapterTypePreference::LowPower)
+    //{
+    //    // sort by score (prefer integrated adapters)
+    //    std::sort(rankedAdapters.begin(), rankedAdapters.end(), [](const AdapterRank &a, const AdapterRank &b) {
+    //        return a.score < b.score;
+    //    });
 
-        return rankedAdapters.front().index;
-    }
+    //    return rankedAdapters.front().index;
+    //}
 
     return 0;
 }

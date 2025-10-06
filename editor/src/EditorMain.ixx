@@ -11,7 +11,10 @@ export module EditorMain;
 import EditorMainWindow;
 import ShellOS;
 import EditorState;
+import EditorOptions;
 import ImguiState;
+import ShaderCompiler;
+import PropertyWindow;
 
 using namespace mercury;
 
@@ -31,18 +34,24 @@ public:
 
         config.imgui.enableDocking = true;
         config.imgui.enableViewports = true;
+
+		
+        EditorOptions::Initialize();
+
+        ShaderCompiler::Initialize(); //initialize as early as possible
     }
     void Initialize() override;
     void Tick() override;
     void Shutdown() override;
     void OnImgui() override;
+    void OnFinalPass(ll::graphics::CommandList &finalCL) override;
     bool IsRunning() override { return EditorState::IsRunning(); }
 };
 
 EditorApplication gEditor;
 
 void EditorApplication::Initialize() {
-    EditorState::gCurrentProject.LoadFromFolder(u8"D:\\Projects\\mercury\\sample_project");
+    EditorState::gCurrentProject.LoadFromFolder(u8"D:\\Projects\\mercury\\testbed_project");
 
 
     ImguiState::PrepareImgui();
@@ -62,10 +71,17 @@ void EditorApplication::Tick() {
 
 }
 
+void EditorApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL)
+{
+	PropertyWindow::Get().ProcessFinalPass(finalCL);
+}
+
 void EditorApplication::OnImgui()
 {    
     mainWindow.ProcessImgui();
 }
 
 void EditorApplication::Shutdown() {
+    
+	ShaderCompiler::Shutdown();
 }

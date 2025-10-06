@@ -19,6 +19,8 @@ VkQueue gVKComputeQueue = VK_NULL_HANDLE;
 VmaAllocator gVMA_Allocator = nullptr;
 
 DeviceEnabledExtensions gVKDeviceEnabledExtensions;
+std::vector<PipelineObjects> gAllPSOs;
+std::vector<ShaderModuleCached> gAllShaderModules;
 
 struct EnabledVKFeatures
 {
@@ -43,7 +45,8 @@ struct EnabledVKFeatures
 void *EnabledVKFeatures::BuildPChains()
 {
 	features11.multiview = true;
-
+	features11.shaderDrawParameters = true;
+	
 	features12.timelineSemaphore = true;
 	timelineSemaphoreFeatures.timelineSemaphore = true;
 	sync2Features.synchronization2 = true;
@@ -526,8 +529,203 @@ void Device::ImguiShutdown()
 	ImGui_ImplVulkan_Shutdown();
 }
 
+void _createShaderModuleCache(const ShaderBytecodeView& bytecode, ShaderModuleCached& out)
+{
+	VkShaderModuleCreateInfo createInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+	createInfo.codeSize = bytecode.size;
+	createInfo.pCode = reinterpret_cast<const uint32_t*>(bytecode.data);
+	VK_CALL(vkCreateShaderModule(gVKDevice, &createInfo, gVKGlobalAllocationsCallbacks, &out.module));
+}
+
+Handle<u32> Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
+{
+	Handle<u32> result;
+	auto& psoOut = gAllShaderModules.emplace_back();
+	result.handle = static_cast<u32>(gAllShaderModules.size() - 1);
+	_createShaderModuleCache(bytecode, psoOut);
+	return result;
+}
+
+void Device::UpdateShaderModule(Handle<u32> shaderModuleID, const ShaderBytecodeView& bytecode)
+{
+	vkDestroyShaderModule(gVKDevice, gAllShaderModules[shaderModuleID.handle].module, gVKGlobalAllocationsCallbacks);
+	_createShaderModuleCache(bytecode, gAllShaderModules[shaderModuleID.handle]);
+}
+
+void Device::DestroyShaderModule(Handle<u32> shaderModuleID)
+{
+	vkDestroyShaderModule(gVKDevice, gAllShaderModules[shaderModuleID.handle].module, gVKGlobalAllocationsCallbacks);
+}
+
+void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects& out)
+{
+	VkPipelineLayoutCreateInfo layoutCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};	
+	vkCreatePipelineLayout(gVKDevice, &layoutCreateInfo, gVKGlobalAllocationsCallbacks, &out.pipelineLayout);
+
+
+	VkGraphicsPipelineCreateInfo psoCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+	psoCreateInfo.layout = out.pipelineLayout;
+
+	psoCreateInfo.renderPass = gVKFinalRenderPass;
+	psoCreateInfo.subpass = 0;
+
+	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;	
+	VkPipelineVertexInputStateCreateInfo vertexInputState = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+	VkPipelineTessellationStateCreateInfo tessellationState = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO };
+	VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+	VkPipelineRasterizationStateCreateInfo rasterizationState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+	VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+	VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+	VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+	VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+
+	if(desc.vertexShader.isValid())
+	{
+		auto& shaderModule = gAllShaderModules[desc.vertexShader.handle];
+		VkPipelineShaderStageCreateInfo stageInfo = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
+		stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		stageInfo.module = shaderModule.module;
+		stageInfo.pName = "main";
+		shaderStages.push_back(stageInfo);
+	}
+
+	if(desc.fragmentShader.isValid())
+	{
+		auto& shaderModule = gAllShaderModules[desc.fragmentShader.handle];
+		VkPipelineShaderStageCreateInfo stageInfo = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
+		stageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		stageInfo.module = shaderModule.module;
+		stageInfo.pName = "main";
+		shaderStages.push_back(stageInfo);
+	}
+
+	inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkViewport viewport = {};
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.width = static_cast<float>(gVKSurfaceCaps.currentExtent.width);
+	viewport.height = static_cast<float>(gVKSurfaceCaps.currentExtent.height);
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
+	viewportState.pViewports = &viewport;
+	viewportState.viewportCount = 1;
+
+	VkRect2D scissor = {};
+	scissor.offset = { 0, 0 };
+	scissor.extent = { gVKSurfaceCaps.currentExtent.width, gVKSurfaceCaps.currentExtent.height };
+	viewportState.pScissors = &scissor;
+	viewportState.scissorCount = 1;
+
+	rasterizationState.lineWidth = 1.0f;
+	rasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
+
+	multisampleState.rasterizationSamples = gVKSurfaceSamples;
+
+	VkPipelineColorBlendAttachmentState attachment = {};
+	attachment.blendEnable = false;
+	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	colorBlendState.attachmentCount = 1;
+	colorBlendState.pAttachments = &attachment;
+
+	std::vector<VkDynamicState> dynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+		//VK_DYNAMIC_STATE_LINE_WIDTH
+	};
+
+	dynamicState.pDynamicStates = dynamicStates.data();
+	dynamicState.dynamicStateCount = static_cast<u32>(dynamicStates.size());
+
+	
+	psoCreateInfo.pStages = shaderStages.data();
+	psoCreateInfo.stageCount = static_cast<u32>(shaderStages.size());
+
+	psoCreateInfo.pVertexInputState = &vertexInputState; // TODO: vertex input state
+	psoCreateInfo.pInputAssemblyState = &inputAssemblyState; // TODO: input assembly state
+	psoCreateInfo.pTessellationState = nullptr; // TODO: tessellation state
+	psoCreateInfo.pViewportState = &viewportState; // TODO: viewport state
+	psoCreateInfo.pRasterizationState = &rasterizationState; // TODO: rasterization state
+	psoCreateInfo.pMultisampleState = &multisampleState; // TODO: multisample state
+	psoCreateInfo.pDepthStencilState = &depthStencilState; // TODO: depth stencil state
+	psoCreateInfo.pColorBlendState =  &colorBlendState; // TODO: color blend state
+	psoCreateInfo.pDynamicState = &dynamicState; // TODO: dynamic state
+	
+	VK_CALL(vkCreateGraphicsPipelines(gVKDevice, VK_NULL_HANDLE, 1, &psoCreateInfo, gVKGlobalAllocationsCallbacks, &out.pipeline));
+
+	//desc.fragmentShader.size
+	//psoCreateInfo.stageCount = 0; // TODO: shader stages
+}
+
+Handle<u32> Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
+{	
+	Handle<u32> result;
+	
+	auto& psoOut = gAllPSOs.emplace_back();
+	result.handle = static_cast<u32>(gAllPSOs.size() - 1);
+
+	_createGraphicsPSO(desc, psoOut);
+	
+	return result;
+}
+
+void Device::DestroyRasterizePipeline(Handle<u32> psoID)
+{
+	//TODO: Think about delayed descruction while GPU is using old PSO
+	vkDestroyPipeline(gVKDevice, gAllPSOs[psoID.handle].pipeline, gVKGlobalAllocationsCallbacks);
+	vkDestroyPipelineLayout(gVKDevice, gAllPSOs[psoID.handle].pipelineLayout, gVKGlobalAllocationsCallbacks);
+}
+
+void Device::UpdatePipelineState(Handle<u32> psoID, const RasterizePipelineDescriptor& desc)
+{
+	VkPipeline oldPipeline = gAllPSOs[psoID.handle].pipeline;
+	VkPipelineLayout oldLayout = gAllPSOs[psoID.handle].pipelineLayout;
+
+	_createGraphicsPSO(desc, gAllPSOs[psoID.handle]);
+
+	//TODO: Think about delayed descruction while GPU is using old PSO
+	//vkDestroyPipeline(gVKDevice, oldPipeline, gVKGlobalAllocationsCallbacks);
+	//vkDestroyPipelineLayout(gVKDevice, oldLayout, gVKGlobalAllocationsCallbacks);
+}
+
 void CommandList::RenderImgui()
 {	
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(nativePtr));
+}
+
+void CommandList::SetPSO(Handle<u32> psoID)
+{
+	vkCmdBindPipeline(static_cast<VkCommandBuffer>(nativePtr), VK_PIPELINE_BIND_POINT_GRAPHICS, gAllPSOs[psoID.handle].pipeline);
+}
+
+void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
+{
+	vkCmdDraw(static_cast<VkCommandBuffer>(nativePtr), vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void CommandList::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+{
+	VkViewport viewport;
+	viewport.x = x;
+	viewport.y = y;
+	viewport.width = width;
+	viewport.height = height;
+	viewport.minDepth = minDepth;
+	viewport.maxDepth = maxDepth;
+
+	vkCmdSetViewport(static_cast<VkCommandBuffer>(nativePtr), 0, 1, &viewport);
+}
+
+void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
+{
+	VkRect2D scissor;
+	scissor.offset = { x, y };
+	scissor.extent = { width, height };
+
+	vkCmdSetScissor(static_cast<VkCommandBuffer>(nativePtr), 0, 1, &scissor);
 }
 #endif

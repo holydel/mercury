@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../mercury_api.h"
-#include "mercury_application.h"
+#include "mercury_shader.h"
 #include <string>
 #include <glm/glm.hpp>
 namespace mercury {
@@ -163,6 +163,21 @@ enum class Format {
   WGPU_DEPTH24PLUS_STENCIL8,
 };
 
+struct ShaderBytecodeView
+{
+  const void* data = nullptr;
+  size_t size = 0;
+};
+
+struct RasterizePipelineDescriptor
+{
+	Handle<u32> vertexShader;
+	Handle<u32> tessControlShader;
+	Handle<u32> tessEvalShader;
+	Handle<u32> geometryShader;
+	Handle<u32> fragmentShader;
+};
+
 struct TimelineSemaphore
 {
   void* nativePtr;
@@ -189,6 +204,12 @@ struct CommandList
   void Destroy();
 
   void RenderImgui();
+
+  void SetPSO(Handle<u32> psoID);
+  void Draw(u32 vertexCount, u32 instanceCount = 1, u32 firstVertex = 0, u32 firstInstance = 0);
+
+  void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f);
+  void SetScissor(i32 x, i32 y, u32 width, u32 height);
 };
 
 struct CommandPool
@@ -210,7 +231,7 @@ class Swapchain;
 struct AdapterSelectorInfo {
   u8 adapter_index = 255;
 
-  Config::Graphics::AdapterTypePreference adapter_type_preference = Config::Graphics::AdapterTypePreference::Any;
+  //Config::Graphics::AdapterTypePreference adapter_type_preference = Config::Graphics::AdapterTypePreference::Any;
 };
 
 /// @brief Cross GAPI physical device information.
@@ -325,6 +346,14 @@ public:
   void ImguiNewFrame();
   void ImguiShutdown();
   void ImguiRegenerateFontAtlas();
+
+  Handle<u32> CreateShaderModule(const ShaderBytecodeView& bytecode);
+  void UpdateShaderModule(Handle<u32> shaderModuleID, const ShaderBytecodeView& bytecode);
+  void DestroyShaderModule(Handle<u32> shaderModuleID);
+
+  Handle<u32> CreateRasterizePipeline(const RasterizePipelineDescriptor& desc);
+  void UpdatePipelineState(Handle<u32> psoID, const RasterizePipelineDescriptor& desc);
+  void DestroyRasterizePipeline(Handle<u32> psoID);  
 };
 
 class Swapchain {
@@ -352,7 +381,11 @@ public:
   void SetDebugName(const char* utf8_name);
 
   void Resize(u16 width, u16 height);
+  int GetWidth() const;
+  int GetHeight() const;
 };
+
+
 
 extern Device *gDevice;
 extern Instance *gInstance;

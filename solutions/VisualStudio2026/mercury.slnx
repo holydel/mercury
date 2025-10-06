@@ -7,6 +7,15 @@
     <Platform Name="Emscripten" />
     <Platform Name="x64" />
   </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="../../README.md" />
+  </Folder>
+  <Project Path="../../TestBedUWP/TestBedUWP.vcxproj" Id="90ec6e76-f839-4654-a818-4c35127095c8">
+    <BuildType Solution="Dev|*" Project="Release" />
+    <BuildType Solution="Retail|*" Project="Debug" />
+    <Platform Project="x64" />
+    <Deploy />
+  </Project>
   <Project Path="D:/Projects/mercury/solutions/VisualStudio2026/mercury.vcxproj" Id="e65014e2-0ef6-48fa-b05c-f54ae0611aa8">
     <BuildType Solution="Dev|Emscripten" Project="Retail" />
   </Project>

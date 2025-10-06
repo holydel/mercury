@@ -238,7 +238,7 @@ void TestBedApplication::Tick() {
       if(ll::graphics::gSwapchain)
       {
        ll::graphics::gSwapchain->clearColor = glm::vec4(sin(t)*0.5f + 0.5f,cos(t)*0.5f + 0.5f,0.33f,1.0f);
-        ll::graphics::gSwapchain->clearColor = glm::vec4(0.02f,0.03f,0.05f,1.0f);
+       // ll::graphics::gSwapchain->clearColor = glm::vec4(0.02f,0.03f,0.05f,1.0f);
       }      
 
       frameCount++;

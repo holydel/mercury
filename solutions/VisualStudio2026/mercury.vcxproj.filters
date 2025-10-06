@@ -215,5 +215,11 @@
     <ClInclude Include="..\..\engine\include\ll\xr.h">
       <Filter>Header Files\ll</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\engine\include\mercury_shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\engine\include\mercury_material.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

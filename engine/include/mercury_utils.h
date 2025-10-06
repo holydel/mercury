@@ -1,6 +1,7 @@
 #pragma once
 
-#include "mercury_api.h"
+#include "mercury_log.h"
+#include "mercury_shader.h"
 #include <string>
 #include <uchar.h>
 
@@ -16,10 +17,13 @@ int utf8_to_utf16(const c8 *utf8_str, c16 *utf16_str, int max_length);
 int utf16_to_utf8(const c16 *utf16_str, c8 *utf8_str, int max_length);
 
 std::string format_size(u64 size);
+std::string from(ShaderStage stage);
 } // namespace string
+
+
 namespace debug {
-void output_debug_string_to_ide(const c8 *str);
-void output_debug_string_to_console(const c8 *str);
+void output_debug_string_to_ide(logging::Severity severity, const c8 *str);
+void output_debug_string_to_console(logging::Severity severity, const c8 *str);
 }
 } // namespace utils
 } // namespace mercury

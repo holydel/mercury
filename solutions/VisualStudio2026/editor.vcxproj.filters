@@ -57,6 +57,15 @@
     <ClCompile Include="..\..\editor\src\SceneHierarchyWindow.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\editor\src\PersistentKeyValueStorage.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\EditorOptions.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\AssetShaderSetImpl.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\editor\include\editor_main_window.h">
@@ -64,6 +73,9 @@
     </ClInclude>
     <ClInclude Include="..\..\editor\third_party\simdjson\simdjson.h">
       <Filter>Source Files\third_party\simdjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\editor\third_party\IconsFontAwesome7.h">
+      <Filter>Source Files\third_party</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

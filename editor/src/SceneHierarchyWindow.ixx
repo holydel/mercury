@@ -6,6 +6,10 @@ export module SceneHierarchyWindow;
 export class SceneHierarchyWindow
 {
 public:
+	static SceneHierarchyWindow& Get() {
+		static SceneHierarchyWindow instance;
+		return instance;
+	}
 	void ProcessImgui();
 };
 

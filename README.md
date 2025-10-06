@@ -78,3 +78,8 @@ The test bed inherits from `mercury::MercuryApplication` and demonstrates:
 - CMake 3.20 or higher
 - C++20 compatible compiler
 - Visual Studio 2022 (Windows) or GCC/Clang (Linux/macOS)
+
+# Autors
+
+- Editor folder icons by [NajmunNahar](https://www.flaticon.com/authors/najmunnahar)
+- Editor shader modules icon by [Freepik](https://www.flaticon.com/authors/freepik)

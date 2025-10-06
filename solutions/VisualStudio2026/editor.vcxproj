@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -76,7 +76,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party/simdjson/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party;../../editor/third_party_prebuilt/include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ExceptionHandling>false</ExceptionHandling>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -85,9 +85,11 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>../../editor/third_party_prebuilt/debug/lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i
+      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\debug\bin\*.dll" "$(OutDir)" /y /d /i
+xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\debug\bin\*.pdb" "$(OutDir)" /y /d /i
 xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -103,12 +105,13 @@ xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party/simdjson/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party;../../editor/third_party_prebuilt/include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>../../editor/third_party_prebuilt/lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i</Command>
@@ -126,12 +129,13 @@ xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party/simdjson/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/include;../../editor/include;../../editor/src;../../third_party/glm/;../../third_party/imgui/;../../editor/third_party;../../editor/third_party_prebuilt/include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>../../editor/third_party_prebuilt/lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i</Command>
@@ -148,10 +152,13 @@ xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
   <ItemGroup>
     <ClCompile Include="..\..\editor\src\Asset.ixx" />
     <ClCompile Include="..\..\editor\src\AssetsBrowserWindow.ixx" />
+    <ClCompile Include="..\..\editor\src\AssetShaderSetImpl.ixx" />
     <ClCompile Include="..\..\editor\src\EditorMain.ixx" />
     <ClCompile Include="..\..\editor\src\EditorMainWindow.ixx" />
+    <ClCompile Include="..\..\editor\src\EditorOptions.ixx" />
     <ClCompile Include="..\..\editor\src\EditorState.ixx" />
     <ClCompile Include="..\..\editor\src\ImguiState.ixx" />
+    <ClCompile Include="..\..\editor\src\PersistentKeyValueStorage.ixx" />
     <ClCompile Include="..\..\editor\src\Project.ixx" />
     <ClCompile Include="..\..\editor\src\PropertyWindow.ixx" />
     <ClCompile Include="..\..\editor\src\SceneHierarchyWindow.ixx" />
@@ -161,6 +168,7 @@ xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\editor\include\editor_main_window.h" />
+    <ClInclude Include="..\..\editor\third_party\IconsFontAwesome7.h" />
     <ClInclude Include="..\..\editor\third_party\simdjson\simdjson.h" />
   </ItemGroup>
   <ItemGroup>

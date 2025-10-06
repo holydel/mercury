@@ -8,6 +8,7 @@ using namespace mercury::ll::graphics;
 #include "vk_graphics.h"
 #include "vk_utils.h"
 
+
 mercury::Config::VKConfig gVKConfig;
 
 VkRenderPass gVKFinalRenderPass = VK_NULL_HANDLE;

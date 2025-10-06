@@ -1,5 +1,6 @@
 #pragma once
 #include "mercury_api.h"
+#include "ll/graphics.h"
 
 namespace mercury
 {
@@ -170,6 +171,7 @@ namespace mercury
     virtual void Tick() {};
     virtual void Shutdown() {};
     virtual void OnImgui() {};
+	virtual void OnFinalPass(mercury::ll::graphics::CommandList &finalCL) {};
     virtual bool IsRunning() { return true; }
 
     Config &GetConfig() { return config; }

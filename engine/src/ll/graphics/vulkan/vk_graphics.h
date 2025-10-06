@@ -3,7 +3,9 @@
 
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
 #include "ll/graphics.h"
-
+#include <vector>
+#include <unordered_map>
+#include "mercury_application.h"
 //constants
 constexpr mercury::u32 Ver11 = VK_MAKE_VERSION(1, 1, 0);
 constexpr mercury::u32 Ver12 = VK_MAKE_VERSION(1, 2, 0);
@@ -32,4 +34,18 @@ extern mercury::Config::VKConfig gVKConfig;
 extern VkRenderPass gVKFinalRenderPass;
 
 extern VmaAllocator gVMA_Allocator;
+
+struct PipelineObjects
+{
+	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+	VkPipeline pipeline = VK_NULL_HANDLE;
+};
+
+struct ShaderModuleCached
+{
+	VkShaderModule module = VK_NULL_HANDLE;
+};
+
+extern std::vector<PipelineObjects> gAllPSOs;
+extern std::vector<ShaderModuleCached> gAllShaderModules;
 #endif

@@ -122,6 +122,13 @@ namespace mercury
 		{
 			handle = InvalidValue;
 		}
+
+        template<typename U> 
+        Handle<T>& operator=(U value) requires std::is_convertible_v<U, T>
+        {
+            handle = static_cast<T>(value);
+            return *this;
+		}
 	};
 
     // Ensure N is an exact multiple of E (and E > 0)

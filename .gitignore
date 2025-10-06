@@ -49,3 +49,7 @@ solutions/VisualStudio2026/.vs
 solutions/VisualStudio2026/intermediate
 solutions/VisualStudio2026/out
 solutions/VisualStudio2026/SimdJsonPlatground/x64
+editor/shaders/.vs
+testbed_project/shaders/.vs
+solutions/VisualStudio2026/x64
+TestBedUWP/x64
