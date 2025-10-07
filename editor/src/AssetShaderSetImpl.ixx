@@ -112,6 +112,11 @@ void ShaderSetAsset::Compile(ShaderCompiler::CompileTarget requestedTargets)
 
 		ep->cachedShaderID.Invalidate();
 	}
+
+	if(currentPreviewPipeline.isValid())
+	{
+		UpdatePreivewGraphicsPipeline();
+	}
 }
 
 void ShaderAsset::CacheIfNeeded()
@@ -124,6 +129,58 @@ void ShaderAsset::CacheIfNeeded()
 	view.size = compiledData.spirv.size();
 
 	cachedShaderID = graphics::gDevice->CreateShaderModule(view);
+}
+
+void ShaderSetAsset::UpdatePreivewGraphicsPipeline()
+{	
+	ShaderAsset* vertesShaderAsset = vertexShaderMap[selectedVertexEntryPoint];
+
+	if (!vertesShaderAsset)
+		return;
+
+	ShaderAsset* fragmentShaderAsset = selectedFragmentEntryPoint >= 0 ? fragmentShaderMap[selectedFragmentEntryPoint] : nullptr;
+	ShaderAsset* tessControlShaderAsset = selectedTessControlEntryPoint >= 0 ? tessControlShaderMap[selectedTessControlEntryPoint] : nullptr;
+	ShaderAsset* tessEvalShaderAsset = selectedTessEvalEntryPoint >= 0 ? tessEvalShaderMap[selectedTessEvalEntryPoint] : nullptr;
+	ShaderAsset* geometryShaderAsset = selectedGeometryEntryPoint >= 0 ? geometryShaderMap[selectedGeometryEntryPoint] : nullptr;
+
+
+	graphics::RasterizePipelineDescriptor desc = {};
+
+	vertesShaderAsset->CacheIfNeeded();
+	desc.vertexShader = vertesShaderAsset->cachedShaderID;
+
+	if (tessControlShaderAsset)
+	{
+		tessControlShaderAsset->CacheIfNeeded();
+		desc.tessControlShader = tessControlShaderAsset->cachedShaderID;
+	}
+
+	if (tessEvalShaderAsset)
+	{
+		tessEvalShaderAsset->CacheIfNeeded();
+		desc.tessEvalShader = tessEvalShaderAsset->cachedShaderID;
+	}
+
+	if (geometryShaderAsset)
+	{
+		geometryShaderAsset->CacheIfNeeded();
+		desc.geometryShader = geometryShaderAsset->cachedShaderID;
+	}
+
+	if (fragmentShaderAsset)
+	{
+		fragmentShaderAsset->CacheIfNeeded();
+		desc.fragmentShader = fragmentShaderAsset->cachedShaderID;
+	}
+
+	if (currentPreviewPipeline.isValid())
+	{
+		graphics::gDevice->UpdatePipelineState(currentPreviewPipeline, desc);
+	}
+	else
+	{
+		currentPreviewPipeline = graphics::gDevice->CreateRasterizePipeline(desc);
+	}
 }
 
 void ShaderSetAsset::DrawRasterizationPipelineProps()
@@ -150,50 +207,7 @@ void ShaderSetAsset::DrawRasterizationPipelineProps()
 	ImGui::BeginDisabled(!canCreatePipeline);
 	if (ImGui::Button("Create Rasterization Pipeline"))
 	{
-		ShaderAsset* vertesShaderAsset = vertexShaderMap[selectedVertexEntryPoint];
-
-		ShaderAsset* fragmentShaderAsset = selectedFragmentEntryPoint >= 0 ? fragmentShaderMap[selectedFragmentEntryPoint] : nullptr;
-		ShaderAsset* tessControlShaderAsset = selectedTessControlEntryPoint >= 0 ? tessControlShaderMap[selectedTessControlEntryPoint] : nullptr;
-		ShaderAsset* tessEvalShaderAsset = selectedTessEvalEntryPoint >= 0 ? tessEvalShaderMap[selectedTessEvalEntryPoint] : nullptr;
-		ShaderAsset* geometryShaderAsset = selectedGeometryEntryPoint >= 0 ? geometryShaderMap[selectedGeometryEntryPoint] : nullptr;
-
-		graphics::RasterizePipelineDescriptor desc = {};
-
-		vertesShaderAsset->CacheIfNeeded();
-		desc.vertexShader = vertesShaderAsset->cachedShaderID;
-
-		if (tessControlShaderAsset)
-		{
-			tessControlShaderAsset->CacheIfNeeded();
-			desc.tessControlShader = tessControlShaderAsset->cachedShaderID;
-		}
-
-		if (tessEvalShaderAsset)
-		{
-			tessEvalShaderAsset->CacheIfNeeded();
-			desc.tessEvalShader = tessEvalShaderAsset->cachedShaderID;
-		}
-
-		if (geometryShaderAsset)
-		{
-			geometryShaderAsset->CacheIfNeeded();
-			desc.geometryShader = geometryShaderAsset->cachedShaderID;
-		}
-
-		if (fragmentShaderAsset)
-		{
-			fragmentShaderAsset->CacheIfNeeded();
-			desc.fragmentShader = fragmentShaderAsset->cachedShaderID;
-		}
-
-		if (currentPreviewPipeline.isValid())
-		{
-			graphics::gDevice->UpdatePipelineState(currentPreviewPipeline, desc);
-		}
-		else
-		{
-			currentPreviewPipeline = graphics::gDevice->CreateRasterizePipeline(desc);
-		}
+		UpdatePreivewGraphicsPipeline();
 	}
 	ImGui::EndDisabled();
 }

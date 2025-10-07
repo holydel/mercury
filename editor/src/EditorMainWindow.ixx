@@ -12,6 +12,7 @@ import AssetsBrowserWindow;
 import SceneHierarchyWindow;
 import PropertyWindow;
 import EditorOptions;
+import ShaderCompiler;
 
 export class EditorMainWindow
 {
@@ -19,9 +20,11 @@ export class EditorMainWindow
 	bool showAboutModalWindow = false;
     
     // Track first-time layout initialization
-    bool firstTime = true;
+    bool firstTime = true;	
 public:
     void ProcessImgui();
+
+
 };
 
 
@@ -101,6 +104,37 @@ void EditorMainWindow::ProcessMainMenu()
 		if (ImGui::MenuItem(ICON_FA_GEAR " Options")) {
 			EditorOptions::ShowEditorOptionsWindow();
 		}
+
+		ImGui::Separator();
+
+		if (ImGui::MenuItem(ICON_FA_SHAPES "Recompile engine embedded shaders")) {
+
+			ShaderCompiler::RebuildShaderDesc desc;
+
+			desc.shadersFolder = EditorOptions::GetMercuryEngineShadersPath();
+			desc.outputHeaderPath = EditorOptions::GetMercuryEngineRootPath() / "include" / "mercury_embedded_shaders.h";
+			desc.outputSourceSPIRVPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/vulkan/ebedded_shaders_spirv.cpp";
+			desc.outputSourceDXILPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/d3d12/ebedded_shaders_dxil.cpp";
+			desc.outputSourceMetalPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/metal/ebedded_shaders_metal.cpp";
+			desc.outputSourceWGSLPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/webgpu/ebedded_shaders_wgsl.cpp";
+			
+			ShaderCompiler::RebuildEmbdeddedShaders(desc);
+		}
+
+		if (ImGui::MenuItem(ICON_FA_SHAPES "Recompile editor embedded shaders")) {
+			
+			ShaderCompiler::RebuildShaderDesc desc;
+
+			desc.shadersFolder = EditorOptions::GetMercuryEditorShadersPath();
+			desc.outputHeaderPath = EditorOptions::GetMercuryEditorRootPath() / "include" / "editor_embedded_shaders.h";
+			desc.outputSourceSPIRVPath = EditorOptions::GetMercuryEditorRootPath() / "src/editor_embedded_shaders_spirv.cpp";
+			desc.outputSourceDXILPath = EditorOptions::GetMercuryEditorRootPath() / "src/editor_embedded_shaders_dxil.cpp";
+			desc.outputSourceMetalPath = EditorOptions::GetMercuryEditorRootPath() / "src/editor_embedded_shaders_metal.cpp";
+			desc.outputSourceWGSLPath = EditorOptions::GetMercuryEditorRootPath() / "src/editor_embedded_shaders_wgsl.cpp";
+
+			ShaderCompiler::RebuildEmbdeddedShaders(desc);
+		}
+
 		ImGui::EndMenu();
 	}
 

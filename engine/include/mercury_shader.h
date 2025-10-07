@@ -1,5 +1,6 @@
 #pragma once
 #include "mercury_api.h"
+#include "ll/graphics.h"
 
 namespace mercury
 {
@@ -44,5 +45,4 @@ namespace mercury
 
         MAX
 	};
-
 }

@@ -56,6 +56,18 @@ export namespace ShaderCompiler
 
 	export CompileResult CompileShader(const std::filesystem::path& slangFile, CompileTarget selectedTargets = CompileTarget::ALL);
 
+	struct RebuildShaderDesc
+	{
+		std::filesystem::path shadersFolder;
+		std::filesystem::path outputHeaderPath;
+		std::filesystem::path outputSourceSPIRVPath = "";
+		std::filesystem::path outputSourceDXILPath = "";
+		std::filesystem::path outputSourceMetalPath = "";
+		std::filesystem::path outputSourceWGSLPath = "";
+	};
+
+	export void RebuildEmbdeddedShaders(const RebuildShaderDesc& desc);
+
 	CompileTarget GetLiveShaderCompileTarget()
 	{
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
@@ -68,6 +80,8 @@ export namespace ShaderCompiler
 		return ShaderCompiler::CompileTarget::WGSL;
 #endif
 	}
+
+
 }
 
 using namespace slang;
@@ -260,7 +274,7 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 		static std::u8string u8EngineShadersPath = engineShadersPath.u8string();
 
 		desc.searchPathCount = 1;
-		const char* searchPaths[] = { (const char*)u8EngineShadersPath.c_str() };
+		static const char* searchPaths[] = { (const char*)u8EngineShadersPath.c_str() };
 		desc.searchPaths = searchPaths;
 	}
 	SlangResult res = gSlangGlobalSession->createSession(desc, slangSession.writeRef());
@@ -360,4 +374,9 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 		compileResult.entryPoints.push_back(compiledEntry);
 	}
 	return compileResult;
+}
+
+void ShaderCompiler::RebuildEmbdeddedShaders(const RebuildShaderDesc& desc)
+{
+	
 }

@@ -22,6 +22,8 @@ export class Project {
 	FolderAsset* rootAssetsFolder = nullptr;
 	FolderAsset* rootShadersFolder = nullptr;
 
+	std::unordered_map<std::filesystem::path, ShaderSetAsset*> shadersMap;
+
 public:
 	Project() = default;
 	~Project() = default;
@@ -71,6 +73,29 @@ public:
 
 								if (action & ShellOS::WatcherAction::FileNameChanged)
 								{
+									auto it = shadersMap.find(changedPath);
+
+									if(it != shadersMap.end())
+									{
+										MLOG_INFO(u8"Recompile shader: %s", changedPath.u8string().c_str());
+										it->second->Compile();
+									}
+									else
+									{
+										MLOG_INFO(u8"New shader detected: %s", changedPath.u8string().c_str());
+										// New shader file
+										auto* shaderSet = new ShaderSetAsset();
+										shaderSet->path = changedPath;
+										shaderSet->size = std::filesystem::file_size(changedPath);
+										shaderSet->Compile();
+										if (rootShadersFolder)
+										{
+											rootShadersFolder->assets.push_back(shaderSet);
+											rootShadersFolder->subfolders.push_back(shaderSet);
+											shaderSet->ResolveAssetName();
+										}
+										shadersMap[changedPath] = shaderSet;
+									}
 									MLOG_INFO(u8"Recompile now");
 								}
 							}
@@ -167,7 +192,7 @@ private:
 public:
 	void ScanFolderForShader(FolderAsset* parent)
 	{
-		auto onFile = [](FolderAsset* folder, const std::filesystem::directory_entry& entry)
+		auto onFile = [this](FolderAsset* folder, const std::filesystem::directory_entry& entry)
 			{
 				if (entry.path().extension() == ".slang")
 				{
@@ -178,6 +203,8 @@ public:
 					folder->assets.push_back(shaderSet);
 					folder->subfolders.push_back(shaderSet);
 					shaderSet->ResolveAssetName();
+
+					shadersMap[entry.path()] = shaderSet;
 				}
 			};
 

@@ -253,6 +253,7 @@ namespace mercury::ll::os
       {
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
+		::Sleep(1);
       }
     }
   }

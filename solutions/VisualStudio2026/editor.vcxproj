@@ -109,12 +109,14 @@ xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../../editor/third_party_prebuilt/lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>../../editor/third_party_prebuilt/release/lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+      <Command>xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\release\bin\*.dll" "$(OutDir)" /y /d /i
+xcopy "$(ProjectDir)..\..\editor\third_party_prebuilt\release\bin\*.pdb" "$(OutDir)" /y /d /i
+xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Copying media and third-party DLLs...</Message>

@@ -17,7 +17,13 @@ BaseVertexOutputColorOnly TestTriangleVS(uint vertexID : SV_VertexID)
 [shader("fragment")]
 float4 TestTrianglePS(BaseVertexOutputColorOnly input) : SV_Target
 {
-    return input.color + float4(0.1f,0.9f,0.1f,0.0f);
+    float3 screenPos = input.position.xyz / input.position.w;
+
+
+    if ((int(screenPos.y) & 7) == 0)
+        discard;
+
+    return input.color;
 }
 
 [shader("fragment")]

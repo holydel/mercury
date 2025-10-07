@@ -132,6 +132,9 @@
     <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp">
       <Filter>Source Files\third_party\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\engine_embedded_shaders.cpp">
+      <Filter>Source Files\ll\graphics\vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\engine\src\application.h">

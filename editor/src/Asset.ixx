@@ -137,6 +137,8 @@ private:
     std::unordered_map<int, ShaderAsset*> closestHitShaderMap;
     std::unordered_map<int, ShaderAsset*> missShaderMap;
     std::unordered_map<int, ShaderAsset*> callableShaderMap;
+
+	void UpdatePreivewGraphicsPipeline();
 };
 
 // Thumbnail support (unchanged)

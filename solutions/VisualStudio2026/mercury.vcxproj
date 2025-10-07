@@ -299,6 +299,7 @@
     <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_utils.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\mercury_swapchain.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\null\null_graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\engine_embedded_shaders.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_adapter.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_device.cpp" />
