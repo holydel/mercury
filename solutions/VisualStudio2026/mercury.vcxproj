@@ -297,9 +297,10 @@
     <ClCompile Include="..\..\engine\src\input.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_utils.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\embedded_shaders_dxil.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\mercury_swapchain.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\null\null_graphics.cpp" />
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\engine_embedded_shaders.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\embedded_shaders_spirv.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_adapter.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_device.cpp" />
@@ -307,6 +308,7 @@
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_instance.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp" />
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_input.cpp" />
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_os.cpp" />
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_utils.cpp" />
@@ -328,6 +330,7 @@
     <ClInclude Include="..\..\engine\include\mercury.h" />
     <ClInclude Include="..\..\engine\include\mercury_api.h" />
     <ClInclude Include="..\..\engine\include\mercury_application.h" />
+    <ClInclude Include="..\..\engine\include\mercury_embedded_shaders.h" />
     <ClInclude Include="..\..\engine\include\mercury_framegraph.h" />
     <ClInclude Include="..\..\engine\include\mercury_input.h" />
     <ClInclude Include="..\..\engine\include\mercury_log.h" />

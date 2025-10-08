@@ -49,6 +49,9 @@
     <Filter Include="Source Files\third_party\imgui">
       <UniqueIdentifier>{2f848b45-a6ab-4b80-b576-3e50d5e8c696}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ll\graphics\webgpu">
+      <UniqueIdentifier>{f936fb2e-5242-438d-98db-3df76b98efc9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\engine\src\application.cpp">
@@ -132,8 +135,14 @@
     <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp">
       <Filter>Source Files\third_party\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\engine_embedded_shaders.cpp">
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\embedded_shaders_spirv.cpp">
       <Filter>Source Files\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\embedded_shaders_dxil.cpp">
+      <Filter>Source Files\ll\graphics\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp">
+      <Filter>Source Files\ll\graphics\webgpu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -222,6 +231,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\engine\include\mercury_material.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\engine\include\mercury_embedded_shaders.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

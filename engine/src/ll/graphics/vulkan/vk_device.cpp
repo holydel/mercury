@@ -537,22 +537,22 @@ void _createShaderModuleCache(const ShaderBytecodeView& bytecode, ShaderModuleCa
 	VK_CALL(vkCreateShaderModule(gVKDevice, &createInfo, gVKGlobalAllocationsCallbacks, &out.module));
 }
 
-Handle<u32> Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
+ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 {
-	Handle<u32> result;
+	ShaderHandle result;
 	auto& psoOut = gAllShaderModules.emplace_back();
 	result.handle = static_cast<u32>(gAllShaderModules.size() - 1);
 	_createShaderModuleCache(bytecode, psoOut);
 	return result;
 }
 
-void Device::UpdateShaderModule(Handle<u32> shaderModuleID, const ShaderBytecodeView& bytecode)
+void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecodeView& bytecode)
 {
 	vkDestroyShaderModule(gVKDevice, gAllShaderModules[shaderModuleID.handle].module, gVKGlobalAllocationsCallbacks);
 	_createShaderModuleCache(bytecode, gAllShaderModules[shaderModuleID.handle]);
 }
 
-void Device::DestroyShaderModule(Handle<u32> shaderModuleID)
+void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 {
 	vkDestroyShaderModule(gVKDevice, gAllShaderModules[shaderModuleID.handle].module, gVKGlobalAllocationsCallbacks);
 }
@@ -661,10 +661,10 @@ void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects
 	//psoCreateInfo.stageCount = 0; // TODO: shader stages
 }
 
-Handle<u32> Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
+PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
 {	
-	Handle<u32> result;
-	
+	PsoHandle result;
+
 	auto& psoOut = gAllPSOs.emplace_back();
 	result.handle = static_cast<u32>(gAllPSOs.size() - 1);
 
@@ -673,14 +673,14 @@ Handle<u32> Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& d
 	return result;
 }
 
-void Device::DestroyRasterizePipeline(Handle<u32> psoID)
+void Device::DestroyRasterizePipeline(PsoHandle psoID)
 {
 	//TODO: Think about delayed descruction while GPU is using old PSO
 	vkDestroyPipeline(gVKDevice, gAllPSOs[psoID.handle].pipeline, gVKGlobalAllocationsCallbacks);
 	vkDestroyPipelineLayout(gVKDevice, gAllPSOs[psoID.handle].pipelineLayout, gVKGlobalAllocationsCallbacks);
 }
 
-void Device::UpdatePipelineState(Handle<u32> psoID, const RasterizePipelineDescriptor& desc)
+void Device::UpdatePipelineState(PsoHandle psoID, const RasterizePipelineDescriptor& desc)
 {
 	VkPipeline oldPipeline = gAllPSOs[psoID.handle].pipeline;
 	VkPipelineLayout oldLayout = gAllPSOs[psoID.handle].pipelineLayout;

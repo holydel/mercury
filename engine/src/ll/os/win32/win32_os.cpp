@@ -378,6 +378,7 @@ namespace mercury::ll::os
       ImGui_ImplWin32_Shutdown();
   }
 
+#ifdef MERCURY_LL_GRAPHICS_VULKAN
   void* OS::CreateVkSurface(void* vk_instance, void* allocations_callback)
   {
 	VkWin32SurfaceCreateInfoKHR createInfo{};
@@ -394,10 +395,9 @@ namespace mercury::ll::os
     bool supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr ? vkGetPhysicalDeviceWin32PresentationSupportKHR((VkPhysicalDevice)vk_physical_device, queueIndex) : false;
     return supportPresent;
   }
-
+#endif
   OS* gOS = nullptr;
-} 
-
+}
 // entry point for win32
 
 void WinPlatformInit() {

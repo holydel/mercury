@@ -9,6 +9,10 @@ module;
 #include <mercury_shader.h>
 #include <string>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <cctype>
 
 #include <mercury_log.h>
 
@@ -28,12 +32,30 @@ export namespace ShaderCompiler
 		NONE = 0,
 
 		SPIRV = 1,
-		DXIL = 1 << 1,
+		DXIL  = 1 << 1,
 		Metal = 1 << 2,
-		WGSL = 1 << 3,
+		WGSL  = 1 << 3,
 
 		ALL = 0xFFFFFFFFu
 	};
+
+	// Bitmask operators for CompileTarget
+	export constexpr inline CompileTarget operator|(CompileTarget a, CompileTarget b)
+	{
+		return static_cast<CompileTarget>(static_cast<mercury::u32>(a) | static_cast<mercury::u32>(b));
+	}
+	export constexpr inline CompileTarget operator&(CompileTarget a, CompileTarget b)
+	{
+		return static_cast<CompileTarget>(static_cast<mercury::u32>(a) & static_cast<mercury::u32>(b));
+	}
+	export constexpr inline CompileTarget& operator|=(CompileTarget& a, CompileTarget b)
+	{
+		a = a | b; return a;
+	}
+	export constexpr inline CompileTarget& operator&=(CompileTarget& a, CompileTarget b)
+	{
+		a = a & b; return a;
+	}
 
 	export struct CompiledEntryPoint
 	{
@@ -51,22 +73,26 @@ export namespace ShaderCompiler
 		std::vector<CompiledEntryPoint> entryPoints;
 	};
 
+	export struct RebuildShaderDesc
+	{
+		std::filesystem::path shadersFolder;
+		std::filesystem::path outputHeaderPath;
+		std::filesystem::path outputSourceSPIRVPath;
+		std::filesystem::path outputSourceDXILPath;
+		std::filesystem::path outputSourceMetalPath;
+		std::filesystem::path outputSourceWGSLPath;
+	};
+
 	export void Initialize();
 	export void Shutdown();	
 
 	export CompileResult CompileShader(const std::filesystem::path& slangFile, CompileTarget selectedTargets = CompileTarget::ALL);
 
-	struct RebuildShaderDesc
-	{
-		std::filesystem::path shadersFolder;
-		std::filesystem::path outputHeaderPath;
-		std::filesystem::path outputSourceSPIRVPath = "";
-		std::filesystem::path outputSourceDXILPath = "";
-		std::filesystem::path outputSourceMetalPath = "";
-		std::filesystem::path outputSourceWGSLPath = "";
-	};
-
+	// New API with structured descriptor
 	export void RebuildEmbdeddedShaders(const RebuildShaderDesc& desc);
+	
+	// Legacy API (for backward compatibility or simple cases)
+	export void RebuildEmbeddedShaders(const std::filesystem::path& shaderSourceDir, const std::filesystem::path& outputDir);
 
 	CompileTarget GetLiveShaderCompileTarget()
 	{
@@ -376,7 +402,285 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 	return compileResult;
 }
 
+// Helper functions for embedded shader generation
+std::string SanitizeIdentifier(const std::string& name)
+{
+	std::string result = name;
+	// Replace invalid characters with underscore
+	for (char& c : result)
+	{
+		if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_')
+			c = '_';
+	}
+	return result;
+}
+
+std::string GetStagePrefix(mercury::ShaderStage stage)
+{
+	using namespace mercury;
+	switch (stage)
+	{
+	case ShaderStage::Vertex: return "VS";
+	case ShaderStage::Fragment: return "PS";
+	case ShaderStage::Compute: return "CS";
+	case ShaderStage::Geometry: return "GS";
+	case ShaderStage::TessellationControl: return "HS";
+	case ShaderStage::TessellationEvaluation: return "DS";
+	case ShaderStage::Mesh: return "MS";
+	case ShaderStage::Task: return "AS";
+	default: return "Unknown";
+	}
+}
+
+void WriteByteArray(std::ofstream& out, const std::vector<mercury::u8>& data, const std::string& indent)
+{
+	out << indent << "static const mercury::u8 data[] = {\n" << indent << "\t";
+	for (size_t i = 0; i < data.size(); ++i)
+	{
+		if (i > 0)
+		{
+			out << ", ";
+			if (i % 16 == 0)
+				out << "\n" << indent << "\t";
+		}
+		out << "0x" << std::hex << std::setfill('0') << std::setw(2) << (int)data[i] << std::dec;
+	}
+	out << "\n" << indent << "};\n";
+}
+
+void WriteCharArray(std::ofstream& out, const std::vector<char>& data, const std::string& indent)
+{
+	out << indent << "static const char data[] = {\n" << indent << "\t";
+	for (size_t i = 0; i < data.size(); ++i)
+	{
+		if (i > 0)
+		{
+			out << ", ";
+			if (i % 16 == 0)
+				out << "\n" << indent << "\t";
+		}
+		// Write as unsigned to avoid negative values
+		out << "0x" << std::hex << std::setfill('0') << std::setw(2) << ((int)(unsigned char)data[i]) << std::dec;
+	}
+	out << "\n" << indent << "};\n";
+}
+
 void ShaderCompiler::RebuildEmbdeddedShaders(const RebuildShaderDesc& desc)
 {
+	if (!std::filesystem::exists(desc.shadersFolder) || !std::filesystem::is_directory(desc.shadersFolder))
+	{
+		MLOG_ERROR(u8"Shader source directory does not exist: %s", desc.shadersFolder.string().c_str());
+		return;
+	}
+
+	// Find all .slang files
+	std::vector<std::filesystem::path> slangFiles;
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(desc.shadersFolder))
+	{
+		if (entry.is_regular_file() && entry.path().extension() == ".slang")
+		{
+			slangFiles.push_back(entry.path());
+		}
+	}
+
+	if (slangFiles.empty())
+	{
+		MLOG_WARNING(u8"No .slang files found in: %s", desc.shadersFolder.string().c_str());
+		return;
+	}
+
+	// Compile all shaders
+	struct CompiledShaderData
+	{
+		std::string functionName;
+		std::string baseName;
+		mercury::ShaderStage stage;
+		std::vector<mercury::u8> spirv;
+		std::vector<mercury::u8> dxil;
+		std::vector<char> metal;
+		std::vector<char> wgsl;
+	};
+
+	std::vector<CompiledShaderData> allShaders;
+
+	for (const auto& slangFile : slangFiles)
+	{
+		MLOG_INFO(u8"Compiling embedded shader: %s", slangFile.filename().string().c_str());
+		
+		auto compileResult = CompileShader(slangFile, CompileTarget::ALL);
+		
+		if (compileResult.entryPoints.empty())
+		{
+			MLOG_WARNING(u8"No entry points found in: %s", slangFile.filename().string().c_str());
+			continue;
+		}
+
+		std::string baseName = slangFile.stem().string();
+		baseName = SanitizeIdentifier(baseName);
+
+		for (const auto& entry : compileResult.entryPoints)
+		{
+			CompiledShaderData shaderData;
+			shaderData.baseName = baseName;
+			shaderData.stage = entry.stage;
+			shaderData.functionName = entry.entryPoint;
+			shaderData.spirv = entry.spirv;
+			shaderData.dxil = entry.dxil;
+			shaderData.metal = entry.metal;
+			shaderData.wgsl = entry.wgsl;
+
+			allShaders.push_back(std::move(shaderData));
+		}
+	}
+
+	if (allShaders.empty())
+	{
+		MLOG_WARNING(u8"No shaders compiled successfully");
+		return;
+	}
+
+	// Generate header file
+	{
+		std::filesystem::create_directories(desc.outputHeaderPath.parent_path());
+		std::ofstream header(desc.outputHeaderPath);
+		
+		header << "#pragma once\n\n";
+		header << "#include <ll/graphics.h>\n\n";
+		header << "namespace mercury::ll::graphics::embedded_shaders {\n\n";
+
+		for (const auto& shader : allShaders)
+		{
+			header << "\t// " << shader.baseName << " - " << GetStagePrefix(shader.stage) << "\n";
+			header << "\tmercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "();\n\n";
+		}
+
+		header << "} // namespace mercury::ll::graphics::embedded_shaders\n";
+		header.close();
+		
+		MLOG_INFO(u8"Generated header: %s", desc.outputHeaderPath.string().c_str());
+	}
+
+	// Generate SPIRV implementation
+	if (!desc.outputSourceSPIRVPath.empty())
+	{
+		std::filesystem::create_directories(desc.outputSourceSPIRVPath.parent_path());
+		std::ofstream spirv(desc.outputSourceSPIRVPath);
+		
+		spirv << "#include \"" << desc.outputHeaderPath.filename().string() << "\"\n\n";
+		spirv << "#ifdef MERCURY_LL_GRAPHICS_VULKAN\n\n";
+		spirv << "namespace mercury::ll::graphics::embedded_shaders {\n\n";
+
+		for (const auto& shader : allShaders)
+		{
+			if (shader.spirv.empty()) continue;
+
+			spirv << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
+			WriteByteArray(spirv, shader.spirv, "\t");
+			spirv << "\treturn { data, sizeof(data) };\n";
+			spirv << "}\n\n";
+		}
+
+		spirv << "} // namespace mercury::ll::graphics::embedded_shaders\n";
+		spirv << "#endif";
+		spirv.close();
+		
+		MLOG_INFO(u8"Generated SPIRV implementation: %s", desc.outputSourceSPIRVPath.string().c_str());
+	}
+
+	// Generate DXIL implementation
+	if (!desc.outputSourceDXILPath.empty())
+	{
+		std::filesystem::create_directories(desc.outputSourceDXILPath.parent_path());
+		std::ofstream dxil(desc.outputSourceDXILPath);
+		
+		dxil << "#include \"" << desc.outputHeaderPath.filename().string() << "\"\n\n";
+		dxil << "#ifdef MERCURY_LL_GRAPHICS_D3D12\n\n";
+		dxil << "namespace mercury::ll::graphics::embedded_shaders {\n\n";
+
+		for (const auto& shader : allShaders)
+		{
+			if (shader.dxil.empty()) continue;
+
+			dxil << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
+			WriteByteArray(dxil, shader.dxil, "\t");
+			dxil << "\treturn { data, sizeof(data) };\n";
+			dxil << "}\n\n";
+		}
+
+		dxil << "} // namespace mercury::ll::graphics::embedded_shaders\n";
+		dxil << "#endif";
+		dxil.close();
+		
+		MLOG_INFO(u8"Generated DXIL implementation: %s", desc.outputSourceDXILPath.string().c_str());
+	}
+
+	// Generate Metal implementation
+	if (!desc.outputSourceMetalPath.empty())
+	{
+		std::filesystem::create_directories(desc.outputSourceMetalPath.parent_path());
+		std::ofstream metal(desc.outputSourceMetalPath);
+		
+		metal << "#include \"" << desc.outputHeaderPath.filename().string() << "\"\n\n";
+		metal << "#ifdef MERCURY_LL_GRAPHICS_METAL\n\n";
+		metal << "namespace mercury::ll::graphics::embedded_shaders {\n\n";
+
+		for (const auto& shader : allShaders)
+		{
+			if (shader.metal.empty()) continue;
+
+			metal << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
+			WriteCharArray(metal, shader.metal, "\t");
+			metal << "\treturn { data, sizeof(data) };\n";
+			metal << "}\n\n";
+		}
+
+		metal << "} // namespace mercury::ll::graphics::embedded_shaders\n";
+		metal << "#endif";
+		metal.close();
+		
+		MLOG_INFO(u8"Generated Metal implementation: %s", desc.outputSourceMetalPath.string().c_str());
+	}
+
+	// Generate WGSL implementation
+	if (!desc.outputSourceWGSLPath.empty())
+	{
+		std::filesystem::create_directories(desc.outputSourceWGSLPath.parent_path());
+		std::ofstream wgsl(desc.outputSourceWGSLPath);
+		
+		wgsl << "#include \"" << desc.outputHeaderPath.filename().string() << "\"\n\n";
+		wgsl << "#ifdef MERCURY_LL_GRAPHICS_WEBGPU\n\n";
+		wgsl << "namespace mercury::ll::graphics::embedded_shaders {\n\n";
+
+		for (const auto& shader : allShaders)
+		{
+			if (shader.wgsl.empty()) continue;
+
+			wgsl << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
+			WriteCharArray(wgsl, shader.wgsl, "\t");
+			wgsl << "\treturn { data, sizeof(data) };\n";
+			wgsl << "}\n\n";
+		}
+
+		wgsl << "} // namespace mercury::ll::graphics::embedded_shaders\n";
+		wgsl << "#endif";
+		wgsl.close();
+		
+		MLOG_INFO(u8"Generated WGSL implementation: %s", desc.outputSourceWGSLPath.string().c_str());
+	}
+
+	MLOG_INFO(u8"Successfully rebuilt %zu embedded shaders", allShaders.size());
+}
+
+// Legacy API implementation (uses simplified directory structure)
+void ShaderCompiler::RebuildEmbeddedShaders(const std::filesystem::path& shaderSourceDir, const std::filesystem::path& outputDir)
+{
+	RebuildShaderDesc desc;
+	desc.shadersFolder = shaderSourceDir;
+	desc.outputHeaderPath = outputDir / "engine_embedded_shaders.h";
+	desc.outputSourceSPIRVPath = outputDir / "engine_embedded_shaders_spirv.cpp";
+	desc.outputSourceDXILPath = outputDir / "engine_embedded_shaders_dxil.cpp";
+	desc.outputSourceMetalPath = outputDir / "engine_embedded_shaders_metal.cpp";
+	desc.outputSourceWGSLPath = outputDir / "engine_embedded_shaders_wgsl.cpp";
 	
+	RebuildEmbdeddedShaders(desc);
 }

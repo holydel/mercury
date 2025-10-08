@@ -4,6 +4,9 @@
 #include "ll/os.h"
 #include "ll/graphics.h"
 
+#include "mercury_embedded_shaders.h"
+#include "mercury_shader.h"
+
 using namespace mercury;
 
 void test_simd() {
@@ -203,6 +206,9 @@ class TestBedApplication : public Application {
        bool m_running = true;
        int frameCount = 0;
        float t = 0;
+	   mercury::ll::graphics::PsoHandle testTrianglePSO;
+       mercury::ll::graphics::ShaderHandle testTriangleVS;
+       mercury::ll::graphics::ShaderHandle testTriangleFS;
 public:
        void Configure() override
        {
@@ -218,7 +224,7 @@ public:
        void Initialize() override;
        void Tick() override;
        void Shutdown() override;
-
+       void OnFinalPass(mercury::ll::graphics::CommandList& finalCL) override;
        bool IsRunning() override { return m_running; }
 };
 
@@ -229,7 +235,15 @@ void TestBedApplication::Initialize() {
        //test_simd();
        //test_memory();
 
-       memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
+       //memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
+       testTriangleVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTriangleVS());
+       testTriangleFS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTrianglePS());
+
+	   ll::graphics::RasterizePipelineDescriptor psoDesc = {};
+	   psoDesc.vertexShader = testTriangleVS;
+	   psoDesc.fragmentShader = testTriangleFS;
+
+	   testTrianglePSO = ll::graphics::gDevice->CreateRasterizePipeline(psoDesc);
 }
 
 void TestBedApplication::Tick() {
@@ -269,6 +283,11 @@ void TestBedApplication::Tick() {
        }
 }
 
+void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL)
+{
+    finalCL.SetPSO(testTrianglePSO);
+	finalCL.Draw(3, 1, 0, 0);
+}
 void TestBedApplication::Shutdown() {
        MLOG_DEBUG(u8"TestBedApplication::Shutdown");
 }

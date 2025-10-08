@@ -62,7 +62,7 @@ export struct ShaderAsset : public Asset {
     void ResolveAssetName() override { assetName = compiledData.entryPoint; }
     void DrawProperty() override;
 
-    mercury::Handle<mercury::u32> cachedShaderID;
+    mercury::ll::graphics::ShaderHandle cachedShaderID;
 
     void CacheIfNeeded();
 };
@@ -73,7 +73,7 @@ export struct ShaderSetAsset : public FolderAsset {
     void DrawProperty() override;
     void FinalPassPreview(mercury::ll::graphics::CommandList& finalCL) override;
 private:
-    mercury::Handle<mercury::u32> currentPreviewPipeline;
+    mercury::ll::graphics::PsoHandle currentPreviewPipeline;
 
 	void DrawRasterizationPipelineProps();
 	void DrawComputePipelineProps();

@@ -7,6 +7,15 @@
 namespace mercury {
 namespace ll {
 namespace graphics {
+
+struct ShaderHandle : public Handle<u32>
+{
+};
+
+struct PsoHandle : public Handle<u32>
+{
+};
+
 enum class Format {
   // Common formats
   RGBA8_UNORM,
@@ -347,13 +356,13 @@ public:
   void ImguiShutdown();
   void ImguiRegenerateFontAtlas();
 
-  Handle<u32> CreateShaderModule(const ShaderBytecodeView& bytecode);
-  void UpdateShaderModule(Handle<u32> shaderModuleID, const ShaderBytecodeView& bytecode);
-  void DestroyShaderModule(Handle<u32> shaderModuleID);
+  ShaderHandle CreateShaderModule(const ShaderBytecodeView& bytecode);
+  void UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecodeView& bytecode);
+  void DestroyShaderModule(ShaderHandle shaderModuleID);
 
-  Handle<u32> CreateRasterizePipeline(const RasterizePipelineDescriptor& desc);
-  void UpdatePipelineState(Handle<u32> psoID, const RasterizePipelineDescriptor& desc);
-  void DestroyRasterizePipeline(Handle<u32> psoID);  
+  PsoHandle CreateRasterizePipeline(const RasterizePipelineDescriptor& desc);
+  void UpdatePipelineState(PsoHandle psoID, const RasterizePipelineDescriptor& desc);
+  void DestroyRasterizePipeline(PsoHandle psoID);
 };
 
 class Swapchain {

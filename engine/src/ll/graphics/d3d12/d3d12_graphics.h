@@ -27,6 +27,9 @@ extern std::vector<ID3D12PipelineState*> gAllPSOs;
 
 extern D3D12MA::Allocator* gAllocator;
 extern DXGI_FORMAT gD3DSwapChainFormat;
+
+extern ID3D12DescriptorHeap* gImgui_pd3dSrvDescHeap;
+
 #define D3D_CALL(func) {HRESULT res = (func); if(res < 0){ mercury::ll::os::gOS->FatalFail( std::system_category().message(res).c_str() ); } }
 
 #endif

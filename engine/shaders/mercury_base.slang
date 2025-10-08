@@ -1,4 +1,4 @@
-module mercury;
+﻿module mercury_base;
 
 public struct BaseVertexOutput
 {

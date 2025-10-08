@@ -7,6 +7,8 @@
 #include "mercury_application.h"
 #include "mercury_utils.h"
 
+#include "../../../imgui/imgui_impl.h"
+
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
@@ -22,6 +24,7 @@ ID3D12CommandQueue *gD3DCommandQueue = nullptr;
 ID3D12CommandAllocator *gD3DCommandAllocator = nullptr;
 ID3D12DescriptorHeap *gDescriptorsHeapRTV = nullptr;
 ID3D12DescriptorHeap *gDescriptorsHeapDSV = nullptr;
+ID3D12DescriptorHeap* gImgui_pd3dSrvDescHeap = nullptr;
 
 D3D12MA::Allocator *gAllocator = nullptr;
 DXGI_FORMAT gD3DSwapChainFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -196,7 +199,7 @@ void Device::Tick()
     // MLOG_DEBUG(u8"Tick Device (NULL)");
 }
 
-void Device::InitializeSwapchain(void *native_window_handle)
+void Device::InitializeSwapchain()
 {
     if (gSwapchain != nullptr)
     {
@@ -207,6 +210,43 @@ void Device::InitializeSwapchain(void *native_window_handle)
     gSwapchain = new Swapchain();
     gSwapchain->Initialize();
 }
+
+void Device::ImguiInitialize()
+{
+    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+    desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    desc.NumDescriptors = 20;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gImgui_pd3dSrvDescHeap));
+
+    ImGui_ImplDX12_InitInfo init_info = {};
+    init_info.CommandQueue = gD3DCommandQueue;
+    init_info.Device = gD3DDevice;
+    init_info.SrvDescriptorHeap = gImgui_pd3dSrvDescHeap;
+    init_info.NumFramesInFlight = 3;
+    init_info.RTVFormat = gD3DSwapChainFormat;
+    init_info.LegacySingleSrvCpuDescriptor = gImgui_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart();
+    init_info.LegacySingleSrvGpuDescriptor = gImgui_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart();
+    ImGui_ImplDX12_Init(&init_info);
+
+    ImGui_ImplDX12_CreateDeviceObjects();
+}
+
+void Device::ImguiShutdown()
+{
+    ImGui_ImplDX12_Shutdown();
+}
+
+void Device::ImguiNewFrame()
+{
+    ImGui_ImplDX12_NewFrame();
+}
+
+void Device::ImguiRegenerateFontAtlas()
+{
+    ImGui_ImplDX12_CreateDeviceObjects();
+}
+
 
 void Device::ShutdownSwapchain()
 {
@@ -228,7 +268,7 @@ void *Swapchain::GetNativeHandle()
     return nullptr;
 }
 
-void Swapchain::Initialize(void *native_window_handle)
+void Swapchain::Initialize()
 {
 }
 
@@ -304,4 +344,11 @@ void CommandPool::Reset()
 {
 }
 
+void CommandList::RenderImgui()
+{
+    auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+
+    cmdListD3D12->SetDescriptorHeaps(1, &gImgui_pd3dSrvDescHeap);
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdListD3D12);
+}
 #endif

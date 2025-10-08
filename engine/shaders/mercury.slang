@@ -1,6 +1,9 @@
+﻿module mercury;
+
 import mercury_base;
 
-BaseVertexOutputColorOnly TestTriangleVS(int vertexID : SV_VertexID)
+[shader("vertex")]
+BaseVertexOutputColorOnly TestTriangleVS(uint vertexID : SV_VertexID)
 {
     BaseVertexOutputColorOnly output;
 
@@ -13,6 +16,7 @@ BaseVertexOutputColorOnly TestTriangleVS(int vertexID : SV_VertexID)
     return output;
 }
 
+[shader("fragment")]
 float4 TestTrianglePS(BaseVertexOutputColorOnly input) : SV_Target
 {
     return input.color;

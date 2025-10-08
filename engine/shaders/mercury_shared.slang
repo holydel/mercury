@@ -1,1 +1,1 @@
-import mercury;
+﻿import mercury_base;

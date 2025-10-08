@@ -5,12 +5,6 @@
 #include <ll/os.h>
 #include <ll/graphics.h>
 
-
-#ifdef MERCURY_LL_GRAPHICS_D3D12
-#include "../ll/graphics/d3d12/d3d12_graphics.h"
-static ID3D12DescriptorHeap* gImgui_pd3dSrvDescHeap = nullptr;
-#endif
-
 #include "../application.h"
 #include <mercury_input.h>
 
@@ -34,27 +28,6 @@ void mercury_imgui::Initialize()
 	ImGui::StyleColorsDark();
 
 	mercury::ll::graphics::gDevice->ImguiInitialize();
-
-#ifdef MERCURY_LL_GRAPHICS_D3D12
-	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	desc.NumDescriptors = 20;
-	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gImgui_pd3dSrvDescHeap));
-
-	ImGui_ImplDX12_InitInfo init_info = {};
-	init_info.CommandQueue = gD3DCommandQueue;
-	init_info.Device = gD3DDevice;	
-	init_info.SrvDescriptorHeap = gImgui_pd3dSrvDescHeap;
-	init_info.NumFramesInFlight = 3;
-	init_info.RTVFormat = gD3DSwapChainFormat;
-	init_info.LegacySingleSrvCpuDescriptor = gImgui_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart();
-	init_info.LegacySingleSrvGpuDescriptor = gImgui_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart();
-	ImGui_ImplDX12_Init(&init_info);
-
-	ImGui_ImplDX12_CreateDeviceObjects();
-	//ImGui_ImplDX12_CreateFontsTexture();
-#endif
 
 #ifdef MERCURY_LL_GRAPHICS_WEBGPU
 	ImGui_ImplWGPU_InitInfo initInfo = {};
@@ -90,9 +63,6 @@ void mercury_imgui::Shutdown()
 {
 	mercury::ll::graphics::gDevice->ImguiShutdown();
 
-#ifdef MERCURY_LL_GRAPHICS_D3D12
-		ImGui_ImplDX12_Shutdown();
-#endif
 #ifdef MERCURY_LL_GRAPHICS_WEBGPU
 		ImGui_ImplWGPU_Shutdown();
 #endif
@@ -113,9 +83,6 @@ void mercury_imgui::BeginFrame(mercury::ll::graphics::CommandList cmdList)
 	graphics::gDevice->ImguiNewFrame();
 	os::gOS->ImguiNewFrame();
 
-#ifdef MERCURY_LL_GRAPHICS_D3D12
-	ImGui_ImplDX12_NewFrame();
-#endif
 #ifdef MERCURY_LL_GRAPHICS_WEBGPU
 	ImGui_ImplWGPU_NewFrame();
 #endif
@@ -367,12 +334,6 @@ void mercury_imgui::EndFrame(mercury::ll::graphics::CommandList cmdList)
 
 	cmdList.RenderImgui();
 
-#ifdef MERCURY_LL_GRAPHICS_D3D12
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(cmdList);
-
-	cmdListD3D12->SetDescriptorHeaps(1, &gImgui_pd3dSrvDescHeap);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdListD3D12);
-#endif
 #ifdef MERCURY_LL_GRAPHICS_WEBGPU
 	auto cmdList = static_cast<WGPURenderPassEncoder>(ctx.impl);
 	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), cmdList);

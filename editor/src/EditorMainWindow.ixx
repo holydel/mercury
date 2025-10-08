@@ -113,12 +113,12 @@ void EditorMainWindow::ProcessMainMenu()
 
 			desc.shadersFolder = EditorOptions::GetMercuryEngineShadersPath();
 			desc.outputHeaderPath = EditorOptions::GetMercuryEngineRootPath() / "include" / "mercury_embedded_shaders.h";
-			desc.outputSourceSPIRVPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/vulkan/ebedded_shaders_spirv.cpp";
-			desc.outputSourceDXILPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/d3d12/ebedded_shaders_dxil.cpp";
-			desc.outputSourceMetalPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/metal/ebedded_shaders_metal.cpp";
-			desc.outputSourceWGSLPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/webgpu/ebedded_shaders_wgsl.cpp";
-			
-			ShaderCompiler::RebuildEmbdeddedShaders(desc);
+			desc.outputSourceSPIRVPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/vulkan/embedded_shaders_spirv.cpp";
+			desc.outputSourceDXILPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/d3d12/embedded_shaders_dxil.cpp";
+			desc.outputSourceMetalPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/metal/embedded_shaders_metal.cpp";
+			desc.outputSourceWGSLPath = EditorOptions::GetMercuryEngineRootPath() / "src/ll/graphics/webgpu/embedded_shaders_wgsl.cpp";
+
+			ShaderCompiler::RebuildEmbeddedShaders(desc);
 		}
 
 		if (ImGui::MenuItem(ICON_FA_SHAPES "Recompile editor embedded shaders")) {
