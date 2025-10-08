@@ -315,11 +315,13 @@
     <ClCompile Include="..\..\engine\src\mercury_log.cpp" />
     <ClCompile Include="..\..\engine\src\mercury_memory.cpp" />
     <ClCompile Include="..\..\engine\src\mercury_string_utils.cpp" />
+    <ClCompile Include="..\..\engine\third_party\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\engine\include\ll\graphics.h" />

@@ -52,6 +52,9 @@
     <Filter Include="Source Files\ll\graphics\webgpu">
       <UniqueIdentifier>{f936fb2e-5242-438d-98db-3df76b98efc9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ll\graphics\d3d12\third_party">
+      <UniqueIdentifier>{fec682c0-433e-4cd2-85f7-01085fadec07}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\engine\src\application.cpp">
@@ -143,6 +146,12 @@
     </ClCompile>
     <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp">
       <Filter>Source Files\ll\graphics\webgpu</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\third_party\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp">
+      <Filter>Source Files\ll\graphics\d3d12\third_party</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
