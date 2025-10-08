@@ -132,7 +132,7 @@ void EditorMainWindow::ProcessMainMenu()
 			desc.outputSourceMetalPath = EditorOptions::GetMercuryEditorRootPath() / "src/editor_embedded_shaders_metal.cpp";
 			desc.outputSourceWGSLPath = EditorOptions::GetMercuryEditorRootPath() / "src/editor_embedded_shaders_wgsl.cpp";
 
-			ShaderCompiler::RebuildEmbdeddedShaders(desc);
+			ShaderCompiler::RebuildEmbeddedShaders(desc);
 		}
 
 		ImGui::EndMenu();

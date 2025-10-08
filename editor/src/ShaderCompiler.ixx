@@ -88,21 +88,17 @@ export namespace ShaderCompiler
 
 	export CompileResult CompileShader(const std::filesystem::path& slangFile, CompileTarget selectedTargets = CompileTarget::ALL);
 
-	// New API with structured descriptor
-	export void RebuildEmbdeddedShaders(const RebuildShaderDesc& desc);
+	export void RebuildEmbeddedShaders(const RebuildShaderDesc& desc);
 	
-	// Legacy API (for backward compatibility or simple cases)
-	export void RebuildEmbeddedShaders(const std::filesystem::path& shaderSourceDir, const std::filesystem::path& outputDir);
-
 	CompileTarget GetLiveShaderCompileTarget()
 	{
-#ifdef MERCURY_LL_GRAPHICS_VULKAN
+#if defined(MERCURY_LL_GRAPHICS_VULKAN)
 		return ShaderCompiler::CompileTarget::SPIRV;
-#elif MERCURY_LL_GRAPHICS_DIRECT3D12
+#elif defined(MERCURY_LL_GRAPHICS_D3D12)
 		return ShaderCompiler::CompileTarget::DXIL;
-#elif MERCURY_LL_GRAPHICS_METAL
+#elif defined(MERCURY_LL_GRAPHICS_METAL)
 		return ShaderCompiler::CompileTarget::Metal;
-#elif MERCURY_LL_GRAPHICS_WEBGPU
+#elif defined(MERCURY_LL_GRAPHICS_WEBGPU)
 		return ShaderCompiler::CompileTarget::WGSL;
 #endif
 	}
@@ -465,7 +461,7 @@ void WriteCharArray(std::ofstream& out, const std::vector<char>& data, const std
 	out << "\n" << indent << "};\n";
 }
 
-void ShaderCompiler::RebuildEmbdeddedShaders(const RebuildShaderDesc& desc)
+void ShaderCompiler::RebuildEmbeddedShaders(const RebuildShaderDesc& desc)
 {
 	if (!std::filesystem::exists(desc.shadersFolder) || !std::filesystem::is_directory(desc.shadersFolder))
 	{
@@ -672,15 +668,15 @@ void ShaderCompiler::RebuildEmbdeddedShaders(const RebuildShaderDesc& desc)
 }
 
 // Legacy API implementation (uses simplified directory structure)
-void ShaderCompiler::RebuildEmbeddedShaders(const std::filesystem::path& shaderSourceDir, const std::filesystem::path& outputDir)
-{
-	RebuildShaderDesc desc;
-	desc.shadersFolder = shaderSourceDir;
-	desc.outputHeaderPath = outputDir / "engine_embedded_shaders.h";
-	desc.outputSourceSPIRVPath = outputDir / "engine_embedded_shaders_spirv.cpp";
-	desc.outputSourceDXILPath = outputDir / "engine_embedded_shaders_dxil.cpp";
-	desc.outputSourceMetalPath = outputDir / "engine_embedded_shaders_metal.cpp";
-	desc.outputSourceWGSLPath = outputDir / "engine_embedded_shaders_wgsl.cpp";
-	
-	RebuildEmbdeddedShaders(desc);
-}
+//void ShaderCompiler::RebuildEmbeddedShaders(const std::filesystem::path& shaderSourceDir, const std::filesystem::path& outputDir)
+//{
+//	RebuildShaderDesc desc;
+//	desc.shadersFolder = shaderSourceDir;
+//	desc.outputHeaderPath = outputDir / "engine_embedded_shaders.h";
+//	desc.outputSourceSPIRVPath = outputDir / "engine_embedded_shaders_spirv.cpp";
+//	desc.outputSourceDXILPath = outputDir / "engine_embedded_shaders_dxil.cpp";
+//	desc.outputSourceMetalPath = outputDir / "engine_embedded_shaders_metal.cpp";
+//	desc.outputSourceWGSLPath = outputDir / "engine_embedded_shaders_wgsl.cpp";
+//	
+//	RebuildEmbdeddedShaders(desc);
+//}

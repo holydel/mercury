@@ -147,9 +147,6 @@
     <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp">
       <Filter>Source Files\ll\graphics\webgpu</Filter>
     </ClCompile>
-    <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\engine\third_party\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp">
       <Filter>Source Files\ll\graphics\d3d12\third_party</Filter>
     </ClCompile>

@@ -15,6 +15,9 @@ using namespace mercury::ll::graphics;
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+// Include D3D12 Memory Allocator implementation in this translation unit
+#include "../../../../engine/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp"
+
 IDXGIFactory4 *gD3DFactory = nullptr;
 ID3D12Debug1 *gDebugController = nullptr;
 IDXGIAdapter1 *gD3DAdapter = nullptr;
@@ -43,11 +46,34 @@ mercury::memory::ReservedAllocator *memory::gGraphicsMemoryAllocator = nullptr;
 
 const char *ll::graphics::GetBackendName()
 {
-    static const char *backendName = "NULL";
+    static const char *backendName = "D3D12";
     return backendName;
 }
 
 #define RPC_NO_WINDOWS_H
+
+// Helper functions for fence synchronization
+static u64 Signal(ID3D12CommandQueue* commandQueue, ID3D12Fence* fence, u64& fenceValue)
+{
+    u64 fenceValueForSignal = ++fenceValue;
+    commandQueue->Signal(fence, fenceValueForSignal);
+    return fenceValueForSignal;
+}
+
+static void WaitForFenceValue(ID3D12Fence* fence, u64 fenceValue, HANDLE fenceEvent)
+{
+    if (fence->GetCompletedValue() < fenceValue)
+    {
+        fence->SetEventOnCompletion(fenceValue, fenceEvent);
+        WaitForSingleObject(fenceEvent, INFINITE);
+    }
+}
+
+static void Flush(ID3D12CommandQueue* commandQueue, ID3D12Fence* fence, u64& fenceValue, HANDLE fenceEvent)
+{
+    u64 fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
+    WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
+}
 
 void Instance::Initialize()
 {
@@ -112,12 +138,12 @@ void Instance::Initialize()
 
 void Instance::Shutdown()
 {
-    MLOG_DEBUG(u8"Shutdown Graphics System (NULL)");
+    MLOG_DEBUG(u8"Shutdown Graphics System (D3D12)");
 }
 
 void *Instance::GetNativeHandle()
 {
-    return nullptr; // null instance has no native handle
+    return nullptr;
 }
 
 void Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
@@ -128,7 +154,7 @@ void Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
 
 void *Adapter::GetNativeHandle()
 {
-    return nullptr; // null adapter has no native handle
+    return nullptr;
 }
 
 void Adapter::CreateDevice()
@@ -139,17 +165,17 @@ void Adapter::CreateDevice()
 
 void Adapter::Initialize()
 {
-    MLOG_DEBUG(u8"Initialize Adapter (NULL)");
+    MLOG_DEBUG(u8"Initialize Adapter (D3D12)");
 }
 
 void Adapter::Shutdown()
 {
-    MLOG_DEBUG(u8"Shutdown Adapter (NULL)");
+    MLOG_DEBUG(u8"Shutdown Adapter (D3D12)");
 }
 
 void Device::Initialize()
 {
-    MLOG_DEBUG(u8"Initialize Device (NULL)");
+    MLOG_DEBUG(u8"Initialize Device (D3D12)");
 
     const auto &renderCfg = Application::GetCurrentApplication()->GetConfig().graphics;
 
@@ -187,7 +213,6 @@ void Device::Initialize()
     D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
     allocatorDesc.pDevice = gD3DDevice;
     allocatorDesc.pAdapter = gD3DAdapter;
-    // These flags are optional but recommended.
     allocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED |
                           D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
 
@@ -196,12 +221,11 @@ void Device::Initialize()
 
 void Device::Shutdown()
 {
-    MLOG_DEBUG(u8"Shutdown Device (NULL)");
+    MLOG_DEBUG(u8"Shutdown Device (D3D12)");
 }
 
 void Device::Tick()
 {
-    // MLOG_DEBUG(u8"Tick Device (NULL)");
 }
 
 void Device::InitializeSwapchain()
@@ -252,7 +276,6 @@ void Device::ImguiRegenerateFontAtlas()
     ImGui_ImplDX12_CreateDeviceObjects();
 }
 
-
 void Device::ShutdownSwapchain()
 {
     if (gSwapchain)
@@ -265,7 +288,7 @@ void Device::ShutdownSwapchain()
 
 void *Device::GetNativeHandle()
 {
-    return nullptr; // null device has no native handle
+    return gD3DDevice;
 }
 
 void *Swapchain::GetNativeHandle()
@@ -273,24 +296,40 @@ void *Swapchain::GetNativeHandle()
     return nullptr;
 }
 
+// Swapchain implementation with frame management
 struct BackbufferResourceInfo
 {
-    CD3DX12_CPU_DESCRIPTOR_HANDLE bbRTV = 0;
-    ID3D12Resource* bbResource = 0;
+    CD3DX12_CPU_DESCRIPTOR_HANDLE bbRTV;
+    ID3D12Resource* bbResource = nullptr;
     int frameIndex = 0;
 };
 
-int gNumFrames = 2;
+struct FrameData
+{
+    HANDLE fenceEvent = nullptr;
+    ID3D12Fence* fence = nullptr;
+    UINT64 fenceValue = 0;
+    ID3D12GraphicsCommandList* commandList = nullptr;
+    ID3D12CommandAllocator* commandAllocator = nullptr;
+    u64 frameIndex = 0;
+};
+
+int gNumFrames = 3;
 std::vector<BackbufferResourceInfo> gBBFrames;
+std::vector<FrameData> gFrames;
 IDXGISwapChain3* gSwapChain = nullptr;
 u64 gCurrentBBResourceIndex = 0;
+u32 gFrameRingCurrent = 0;
 u64 gFrameID = 0;
-DXGI_FORMAT gSwapChainFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 u32 gNewWidth = 0;
 u32 gCurWidth = 0;
 u32 gNewHeight = 0;
 u32 gCurHeight = 0;
-u32 gDeltaFrameInBB = 0;
+
+static BackbufferResourceInfo& GetCurrentBackbufferResourceInfo()
+{
+    return gBBFrames[gCurrentBBResourceIndex];
+}
 
 void Swapchain::Initialize()
 {
@@ -299,73 +338,237 @@ void Swapchain::Initialize()
     RECT clientRect = {};
     GetClientRect(hwnd, (LPRECT)&clientRect);
 
-    int gNewWidth = clientRect.right - clientRect.left;
-    int gNewHeight = clientRect.bottom - clientRect.top;
+    gNewWidth = gCurWidth = clientRect.right - clientRect.left;
+    gNewHeight = gCurHeight = clientRect.bottom - clientRect.top;
 
+    // Create swapchain
     DXGI_SWAP_CHAIN_DESC1 sdesc = {};
-    sdesc.Width = gNewWidth = gCurWidth = clientRect.right - clientRect.left;
-    sdesc.Height = gNewHeight = gCurHeight = clientRect.bottom - clientRect.top;
+    sdesc.Width = gCurWidth;
+    sdesc.Height = gCurHeight;
     sdesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
     sdesc.BufferCount = gNumFrames;
-    sdesc.Format = gSwapChainFormat;
+    sdesc.Format = gD3DSwapChainFormat;
     sdesc.SampleDesc.Count = 1;
     sdesc.SampleDesc.Quality = 0;
     sdesc.Scaling = DXGI_SCALING_NONE;
     sdesc.Stereo = false;
     sdesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-    DXGI_SWAP_CHAIN_FULLSCREEN_DESC sfdesc = {};
-    sfdesc.Windowed = true;
-    sfdesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-    sfdesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-    sfdesc.RefreshRate.Numerator = 1;
-    sfdesc.RefreshRate.Denominator = 60;
-    IDXGIOutput* output = nullptr;
+    sdesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 
     IDXGISwapChain1* swapchain1 = nullptr;
-    auto res = gD3DFactory->CreateSwapChainForHwnd(gD3DCommandQueue, hwnd, &sdesc, nullptr, output, &swapchain1);
-    swapchain1->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&gSwapChain);
+    D3D_CALL(gD3DFactory->CreateSwapChainForHwnd(gD3DCommandQueue, hwnd, &sdesc, nullptr, nullptr, &swapchain1));
+    D3D_CALL(swapchain1->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&gSwapChain));
+    swapchain1->Release();
 
+    // Create backbuffer resources
     gBBFrames.resize(gNumFrames);
-
     auto rtvDescriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(gDescriptorsHeapRTV->GetCPUDescriptorHandleForHeapStart());
 
     for (uint32_t i = 0; i < gNumFrames; ++i)
     {
         BackbufferResourceInfo& bb = gBBFrames[i];
-
         gSwapChain->GetBuffer(i, IID_PPV_ARGS(&bb.bbResource));
 
         D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-        rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS; // Multisampled view
+        rtvDesc.Format = gD3DSwapChainFormat;
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
         gD3DDevice->CreateRenderTargetView(bb.bbResource, &rtvDesc, rtvHandle);
-
         bb.bbRTV = rtvHandle;
+        bb.frameIndex = i;
         rtvHandle.Offset(rtvDescriptorSize);
+    }
+
+    // Initialize frame data for CPU-GPU synchronization
+    gFrames.resize(gNumFrames);
+    for (uint32_t i = 0; i < gNumFrames; ++i)
+    {
+        FrameData& frame = gFrames[i];
+        D3D_CALL(gD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frame.fence)));
+        D3D_CALL(gD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame.commandAllocator)));
+        D3D_CALL(gD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frame.commandAllocator, nullptr, IID_PPV_ARGS(&frame.commandList)));
+        D3D_CALL(frame.commandList->Close());
+        
+        frame.fenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+        frame.fenceValue = 0;
+        frame.frameIndex = i;
     }
 }
 
 void Swapchain::Shutdown()
 {
+    // Wait for all frames to complete
+    for (auto& frame : gFrames)
+    {
+        if (frame.fence)
+        {
+            Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
+            frame.fence->Release();
+            ::CloseHandle(frame.fenceEvent);
+        }
+        if (frame.commandList) frame.commandList->Release();
+        if (frame.commandAllocator) frame.commandAllocator->Release();
+    }
+    gFrames.clear();
+
+    for (auto& bb : gBBFrames)
+    {
+        if (bb.bbResource) bb.bbResource->Release();
+    }
+    gBBFrames.clear();
+
+    if (gSwapChain)
+    {
+        gSwapChain->Release();
+        gSwapChain = nullptr;
+    }
 }
 
 CommandList Swapchain::AcquireNextImage()
 {
+    // Check if resize is needed
+    RECT clientRect = {};
+    HWND hwnd = static_cast<HWND>(os::gOS->GetCurrentNativeWindowHandle());
+    GetClientRect(hwnd, (LPRECT)&clientRect);
+    
+    gNewWidth = clientRect.right - clientRect.left;
+    gNewHeight = clientRect.bottom - clientRect.top;
+
+    if (gNewWidth != gCurWidth || gCurHeight != gNewHeight && gNewWidth > 0 && gNewHeight > 0)
+    {
+        // Flush all frames before resize
+        for (auto& frame : gFrames)
+        {
+            Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
+        }
+
+        gCurWidth = gNewWidth;
+        gCurHeight = gNewHeight;
+
+        // Release old backbuffer resources
+        for (auto& bb : gBBFrames)
+        {
+            if (bb.bbResource)
+            {
+                bb.bbResource->Release();
+                bb.bbResource = nullptr;
+            }
+        }
+
+        // Resize swapchain
+        DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+        D3D_CALL(gSwapChain->GetDesc(&swapChainDesc));
+        D3D_CALL(gSwapChain->ResizeBuffers(swapChainDesc.BufferCount, gCurWidth, gCurHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+        // Recreate backbuffer RTVs
+        auto rtvDescriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(gDescriptorsHeapRTV->GetCPUDescriptorHandleForHeapStart());
+
+        for (uint32_t i = 0; i < gNumFrames; ++i)
+        {
+            BackbufferResourceInfo& bb = gBBFrames[i];
+            gSwapChain->GetBuffer(i, IID_PPV_ARGS(&bb.bbResource));
+
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+            rtvDesc.Format = gD3DSwapChainFormat;
+            rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+            gD3DDevice->CreateRenderTargetView(bb.bbResource, &rtvDesc, rtvHandle);
+            bb.bbRTV = rtvHandle;
+            rtvHandle.Offset(rtvDescriptorSize);
+        }
+    }
+
+    auto& frame = gFrames[gFrameRingCurrent];
+
+    // Wait for this frame's fence
+    WaitForFenceValue(frame.fence, frame.fenceValue, frame.fenceEvent);
+
+    // Reset command allocator and list
+    frame.commandAllocator->Reset();
+    frame.commandList->Reset(frame.commandAllocator, nullptr);
+
+    // Get current backbuffer index
     gCurrentBBResourceIndex = gSwapChain->GetCurrentBackBufferIndex();
-	gFrameID++;
-    return CommandList();
+    gFrameID++;
+
+    auto& bbResource = GetCurrentBackbufferResourceInfo();
+
+    // Transition to render target
+    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        bbResource.bbResource,
+        D3D12_RESOURCE_STATE_PRESENT,
+        D3D12_RESOURCE_STATE_RENDER_TARGET);
+    frame.commandList->ResourceBarrier(1, &barrier);
+
+    // Clear and set render target
+    auto clearColor = mercury::ll::graphics::gSwapchain->clearColor;
+
+    FLOAT clearColorD3D[] = { clearColor.x, clearColor.y, clearColor.z, clearColor.w };
+    frame.commandList->ClearRenderTargetView(bbResource.bbRTV, clearColorD3D, 0, nullptr);
+    frame.commandList->OMSetRenderTargets(1, &bbResource.bbRTV, FALSE, nullptr);
+
+    // Set viewport and scissor
+    D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (float)gCurWidth, (float)gCurHeight, 0.0f, 1.0f };
+    D3D12_RECT scissorRect = { 0, 0, (LONG)gCurWidth, (LONG)gCurHeight };
+    frame.commandList->RSSetViewports(1, &viewport);
+    frame.commandList->RSSetScissorRects(1, &scissorRect);
+
+    CommandList result;
+    result.nativePtr = frame.commandList;
+    return result;
 }
 
 void Swapchain::Present()
 {
-    gSwapChain->Present(1, DXGI_SWAP_EFFECT_DISCARD);
+    auto& frame = gFrames[gFrameRingCurrent];
+    auto& bbResource = GetCurrentBackbufferResourceInfo();
+
+    // Transition back to present
+    CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        bbResource.bbResource,
+        D3D12_RESOURCE_STATE_RENDER_TARGET,
+        D3D12_RESOURCE_STATE_PRESENT);
+    frame.commandList->ResourceBarrier(1, &barrier);
+
+    // Close and execute command list
+    D3D_CALL(frame.commandList->Close());
+
+    ID3D12CommandList* const commandLists[] = { frame.commandList };
+    gD3DCommandQueue->ExecuteCommandLists(1, commandLists);
+
+    // Present
+    gSwapChain->Present(1, 0);
+
+    // Signal fence
+    frame.fenceValue = Signal(gD3DCommandQueue, frame.fence, frame.fenceValue);
+
+    // Move to next frame
+    gFrameRingCurrent = (gFrameRingCurrent + 1) % gNumFrames;
 }
 
 void Swapchain::SetFullscreen(bool fullscreen)
 {
+    if (gSwapChain)
+    {
+        gSwapChain->SetFullscreenState(fullscreen, nullptr);
+    }
+}
+
+int Swapchain::GetWidth() const
+{
+    return gCurWidth;
+}
+
+int Swapchain::GetHeight() const
+{
+    return gCurHeight;
+}
+
+u8 Swapchain::GetNumberOfFrames()
+{
+    return static_cast<u8>(gNumFrames);
 }
 
 void TimelineSemaphore::WaitUntil(mercury::u64 value, mercury::u64 timeout)
@@ -407,6 +610,7 @@ void CommandList::Destroy()
 CommandList CommandPool::AllocateCommandList()
 {
     CommandList result;
+    // In D3D12, command lists are managed per-frame, not via pools
     return result;
 }
 
@@ -426,18 +630,20 @@ void CommandPool::Reset()
 void CommandList::RenderImgui()
 {
     auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
     cmdListD3D12->SetDescriptorHeaps(1, &gImgui_pd3dSrvDescHeap);
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdListD3D12);
 }
 
 void CommandList::SetPSO(Handle<u32> psoID)
 {
-    // TODO: Implement D3D12 pipeline state binding
     auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
     if (psoID.handle < gAllPSOs.size() && gAllPSOs[psoID.handle] != nullptr)
     {
         cmdListD3D12->SetPipelineState(gAllPSOs[psoID.handle]);
+        if (psoID.handle < gAllSignatures.size() && gAllSignatures[psoID.handle] != nullptr)
+        {
+            cmdListD3D12->SetGraphicsRootSignature(gAllSignatures[psoID.handle]);
+        }
     }
 }
 
@@ -477,7 +683,6 @@ void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
 
 ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 {
-    // TODO: Implement D3D12 shader module creation - storing bytecode for later use
     ShaderHandle result;
     result.handle = static_cast<u32>(gAllShaders.size());
     gAllShaders.emplace_back(bytecode.data, bytecode.size);
@@ -486,7 +691,6 @@ ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 
 void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecodeView& bytecode)
 {
-    // TODO: Implement D3D12 shader module update
     if (shaderModuleID.handle < gAllShaders.size())
     {
         gAllShaders[shaderModuleID.handle] = CD3DX12_SHADER_BYTECODE(bytecode.data, bytecode.size);
@@ -495,16 +699,16 @@ void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecod
 
 void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 {
-    // TODO: Implement D3D12 shader module destruction
     // In D3D12, shader bytecode is just data, no explicit cleanup needed
 }
 
 PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::RasterizePipelineDescriptor& desc)
 {
-    // TODO: Implement D3D12 rasterize pipeline creation
+    // TODO: Implement full D3D12 rasterize pipeline creation
     PsoHandle result;
     result.handle = static_cast<u32>(gAllPSOs.size());
-    gAllPSOs.push_back(nullptr); // Placeholder
+    gAllPSOs.push_back(nullptr);
+    gAllSignatures.push_back(nullptr);
     return result;
 }
 
@@ -515,24 +719,59 @@ void Device::UpdatePipelineState(PsoHandle psoID, const mercury::ll::graphics::R
 
 void Device::DestroyRasterizePipeline(PsoHandle psoID)
 {
-    // TODO: Implement D3D12 rasterize pipeline destruction
-    if (psoID.handle < gAllPSOs.size() && gAllPSOs[psoID.handle] != nullptr)
+    if (psoID.handle < gAllPSOs.size())
     {
-        gAllPSOs[psoID.handle]->Release();
-        gAllPSOs[psoID.handle] = nullptr;
+        if (gAllPSOs[psoID.handle])
+        {
+            gAllPSOs[psoID.handle]->Release();
+            gAllPSOs[psoID.handle] = nullptr;
+        }
+        if (psoID.handle < gAllSignatures.size() && gAllSignatures[psoID.handle])
+        {
+            gAllSignatures[psoID.handle]->Release();
+            gAllSignatures[psoID.handle] = nullptr;
+        }
     }
 }
 
-int Swapchain::GetWidth() const
+CommandPool Device::CreateCommandPool(QueueType queue_type)
 {
-    // TODO: Get actual swapchain width from D3D12 swapchain
-    return 1024; // Placeholder - use actual swapchain desc
+    CommandPool pool;
+    // In D3D12, command pools are managed per-frame, not explicitly created
+    return pool;
 }
 
-int Swapchain::GetHeight() const
+TimelineSemaphore Device::CreateTimelineSemaphore(mercury::u64 initial_value)
 {
-    // TODO: Get actual swapchain height from D3D12 swapchain
-    return 768; // Placeholder - use actual swapchain desc
+    TimelineSemaphore semaphore;
+    // D3D12 uses fences instead of timeline semaphores
+    ID3D12Fence* fence = nullptr;
+    D3D_CALL(gD3DDevice->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+    semaphore.nativePtr = fence;
+    return semaphore;
+}
+
+void Device::WaitIdle()
+{
+    for (auto& frame : gFrames)
+    {
+        Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
+    }
+}
+
+void Device::WaitQueueIdle(QueueType queue_type)
+{
+    WaitIdle();
+}
+
+void Device::SetDebugName(const char* utf8_name)
+{
+    if (gD3DDevice)
+    {
+        wchar_t wideName[256] = {};
+        MultiByteToWideChar(CP_UTF8, 0, utf8_name, -1, wideName, 256);
+        gD3DDevice->SetName(wideName);
+    }
 }
 
 #endif

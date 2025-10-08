@@ -321,7 +321,6 @@
     <ClCompile Include="..\..\third_party\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\engine\include\ll\graphics.h" />
