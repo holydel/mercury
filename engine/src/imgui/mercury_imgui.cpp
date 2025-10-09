@@ -28,17 +28,6 @@ void mercury_imgui::Initialize()
 	ImGui::StyleColorsDark();
 
 	mercury::ll::graphics::gDevice->ImguiInitialize();
-
-#ifdef MERCURY_LL_GRAPHICS_WEBGPU
-	ImGui_ImplWGPU_InitInfo initInfo = {};
-	initInfo.Device = gDevice;
-	initInfo.RenderTargetFormat = gPrefferedBackbufferFormat;
-	initInfo.NumFramesInFlight = 3;
-	initInfo.DepthStencilFormat = WGPUTextureFormat::WGPUTextureFormat_Undefined;
-
-	ImGui_ImplWGPU_Init(&initInfo);
-#endif
-
 	mercury::ll::os::gOS->ImguiInitialize();
 
 #ifdef MERCURY_LL_OS_LINUX
@@ -333,11 +322,6 @@ void mercury_imgui::EndFrame(mercury::ll::graphics::CommandList cmdList)
 	ImGui::Render();
 
 	cmdList.RenderImgui();
-
-#ifdef MERCURY_LL_GRAPHICS_WEBGPU
-	auto cmdList = static_cast<WGPURenderPassEncoder>(ctx.impl);
-	ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), cmdList);
-#endif
 }
 
 void mercury_imgui::Render()

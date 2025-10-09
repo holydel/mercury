@@ -89,10 +89,16 @@ public:
   void ImguiInitialize();
   void ImguiNewFrame();
   void ImguiShutdown();
+
   #ifdef MERCURY_LL_GRAPHICS_VULKAN
   void* CreateVkSurface(void* vk_instance,void* allocations_callback); //return VkSurface
   bool IsQueueSupportPresent(void* vk_physical_device, u32 queueIndex);
   #endif
+
+#ifdef MERCURY_LL_GRAPHICS_WEBGPU
+  void* GetWebGPUNativeWindowHandle(); //return EmscriptenWebGPUContext*
+  void WebGPUPresent();
+#endif
 };
 
 extern OS *gOS;

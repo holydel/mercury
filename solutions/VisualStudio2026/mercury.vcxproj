@@ -158,7 +158,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ExceptionHandling>false</ExceptionHandling>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
@@ -168,6 +168,15 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\release\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\engine\third_party_prebuilt\win64\release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Emscripten'">
     <ClCompile>
@@ -204,13 +213,22 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\release\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\engine\third_party_prebuilt\win64\release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Emscripten'">
     <ClCompile>
@@ -251,13 +269,22 @@
       <PreprocessorDefinitions>MERCURY_RETAIL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\release\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\engine\third_party_prebuilt\win64\release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Emscripten'">
     <ClCompile>
@@ -309,6 +336,8 @@
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.cpp" />
     <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.cpp" />
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_input.cpp" />
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_os.cpp" />
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_utils.cpp" />
@@ -352,6 +381,7 @@
     <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_graphics.h" />
     <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.h" />
     <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h" />
     <ClInclude Include="..\..\engine\src\ll\os\win32\win32_input.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

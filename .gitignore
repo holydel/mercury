@@ -54,3 +54,4 @@ testbed_project/shaders/.vs
 solutions/VisualStudio2026/x64
 TestBedUWP/x64
 engine/shaders/.vs
+engine/third_party_prebuilt/win64/release/lib/cmake

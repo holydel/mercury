@@ -16,6 +16,10 @@
 #include <backends/imgui_impl_dx12.cpp>
 #endif
 
+#ifdef MERCURY_LL_GRAPHICS_WEBGPU
+#include <backends/imgui_impl_wgpu.cpp>
+#endif
+
 #if defined(ALLOW_XCB_SURFACE) || defined(ALLOW_XLIB_SURFACE)
 #include <backends/imgui_impl_x11.cpp>
 #endif

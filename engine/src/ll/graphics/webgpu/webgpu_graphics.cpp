@@ -2,17 +2,30 @@
 #include "ll/os.h"
 #include "mercury_application.h"
 
-using namespace mercury;
-using namespace mercury::ll::graphics;
+
 
 #if defined(MERCURY_LL_GRAPHICS_WEBGPU)
 
+#ifdef MERCURY_LL_OS_WIN32
+#pragma comment(lib, "D:\\Projects\\mercury\\engine\\third_party_prebuilt\\win64\\release\\lib\\webgpu_dawn.lib")
+#endif
+
+using namespace mercury;
+using namespace mercury::ll::graphics;
+
+#include "../../../imgui/imgui_impl.h"
+
 #include "mercury_log.h"
-#include <webgpu/webgpu_cpp.h>
+
+#include "webgpu_utils.h"
+
+/*
+Move to OS
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include "webgpu_utils.h"
 #include <emscripten/fetch.h>
+*/
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -30,27 +43,12 @@ bool adapterReady = false;
 bool deviceRequested = false;
 bool deviceReady = false;
 
-//Temporary global variables for pipeline and shaders
-wgpu::RenderPipeline gTestTrinaglePipeline;
-wgpu::ShaderModule gTestTriangleVertexShader;
-wgpu::ShaderModule gTestTriangleFragmentShader;
-wgpu::Buffer gUniformBuffer;
-wgpu::BindGroup gBindGroup;
-
-
-// Point cloud rendering variables
-wgpu::RenderPipeline gPointCloudPipeline;
-wgpu::ShaderModule gPointCloudVertexShader;
-wgpu::ShaderModule gPointCloudFragmentShader;
-wgpu::Buffer gPointCloudUniformBuffer;
-wgpu::BindGroup gPointCloudBindGroup;
-wgpu::Buffer gPointCloudVertexBuffer;
-uint32_t gPointCloudPointCount = 0;
-
 int gInitialCanvasWidth = 0;
 int gInitialCanvasHeight = 0;
 
 // Function to get canvas surface
+/*
+* MOVE to Emscripten OS
 wgpu::Surface GetCanvasSurface()
 {
     MLOG_DEBUG(u8"Getting canvas surface...");
@@ -82,6 +80,7 @@ wgpu::Surface GetCanvasSurface()
 
     return surface;
 }
+*/
 
 void Instance::Initialize()
 {
@@ -93,7 +92,8 @@ void Instance::Initialize()
     instanceDesc.capabilities.timedWaitAnyEnable = true;
     instanceDesc.capabilities.timedWaitAnyMaxCount = 64;
     wgpuInstance = wgpu::CreateInstance(&instanceDesc);
-    wgpuSurface = GetCanvasSurface();
+    wgpuSurface = *(wgpu::Surface*)os::gOS->GetWebGPUNativeWindowHandle();
+
     gWebGPUSurface = wgpuSurface.Get();
 
     if (wgpuInstance)
@@ -120,370 +120,21 @@ void Instance::Shutdown()
     deviceReady = false;
 }
 
-u8 Instance::GetAdapterCount()
-{
-    return 1;
-}
-
 void *Instance::GetNativeHandle()
 {
     return wgpuInstance.Get();
 }
 
-Adapter *Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
+void Instance::AcquireAdapter(const AdapterSelectorInfo &selector_info)
 {
     if (gAdapter == nullptr)
         gAdapter = new Adapter();
-
-    return gAdapter;
 }
 
-Device *Adapter::CreateDevice()
+void Adapter::CreateDevice()
 {
     if (gDevice == nullptr)
         gDevice = new Device();
-
-    return gDevice;
-}
-
-void CreateTestTriangleShaders() {
-    // Corrected Vertex shader source for WGSL with rotation uniform
-    const char *vertexShaderSource = R"(
-        struct Uniforms {
-            angle: f32,
-        }
-
-        @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-
-        struct VSOutput {
-            @builtin(position) position: vec4<f32>,
-            @location(0) color: vec4<f32>,
-        }
-
-        @vertex
-        fn main(@builtin(vertex_index) vertexID : u32) -> VSOutput {
-            var positions = array<vec2<f32>, 3>(
-                vec2<f32>(0.0, 0.5),
-                vec2<f32>(-0.5, -0.5),
-                vec2<f32>(0.5, -0.5)
-            );
-
-            var colors = array<vec4<f32>, 3>(
-                vec4<f32>(1.0, 0.0, 0.0, 1.0), // Red
-                vec4<f32>(0.0, 1.0, 0.0, 1.0), // Green
-                vec4<f32>(0.0, 0.0, 1.0, 1.0)  // Blue
-            );
-
-            // Apply rotation
-            let cosAngle = cos(uniforms.angle);
-            let sinAngle = sin(uniforms.angle);
-            let pos = positions[vertexID];
-            let rotatedPos = vec2<f32>(
-                pos.x * cosAngle - pos.y * sinAngle,
-                pos.x * sinAngle + pos.y * cosAngle
-            );
-
-            var output : VSOutput;
-            output.position = vec4<f32>(rotatedPos, 0.0, 1.0);
-            output.color = colors[vertexID];
-            return output;
-        }
-    )";
-
-    // Corrected Fragment shader source for WGSL
-    const char *fragmentShaderSource = R"(
-        @fragment
-        fn main(@location(0) color : vec4<f32>) -> @location(0) vec4<f32> {
-            return color;
-        }
-    )";
-
-    wgpu::ShaderSourceWGSL vertexShaderSrc;
-    vertexShaderSrc.code = wgpu::StringView(vertexShaderSource);
-    vertexShaderSrc.nextInChain = nullptr;
-
-    wgpu::ShaderSourceWGSL fragmentShaderSrc;
-    fragmentShaderSrc.code = wgpu::StringView(fragmentShaderSource);
-    fragmentShaderSrc.nextInChain = nullptr;
-
-    wgpu::ShaderModuleDescriptor vertexShaderDesc = {};
-    vertexShaderDesc.nextInChain = &vertexShaderSrc;
-
-    wgpu::ShaderModuleDescriptor fragmentShaderDesc = {};
-    fragmentShaderDesc.nextInChain = &fragmentShaderSrc;
-
-    gTestTriangleVertexShader = wgpuDevice.CreateShaderModule(&vertexShaderDesc);
-    gTestTriangleFragmentShader = wgpuDevice.CreateShaderModule(&fragmentShaderDesc);
-}
-
-void CreateUniformBuffer() {
-    // Create uniform buffer
-    wgpu::BufferDescriptor bufferDesc = {};
-    bufferDesc.size = sizeof(float); // Size for one float (angle)
-    bufferDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
-    bufferDesc.mappedAtCreation = false;
-    gUniformBuffer = wgpuDevice.CreateBuffer(&bufferDesc);
-}
-
-void CreatePointCloudShaders() {
-    // Point cloud vertex shader with MVP matrix
-    const char *vertexShaderSource = R"(
-        struct Uniforms {
-            mvpMatrix: mat4x4<f32>,
-        }
-
-        @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-
-        struct VertexInput {
-            @location(0) position: vec3<f32>,
-            @location(1) color: vec4<f32>,
-        }
-
-        struct VSOutput {
-            @builtin(position) position: vec4<f32>,
-            @location(0) color: vec4<f32>,
-        }
-
-        @vertex
-        fn main(input: VertexInput) -> VSOutput {
-            var output: VSOutput;
-            output.position = uniforms.mvpMatrix * vec4<f32>(input.position, 1.0);
-            output.color = input.color;
-            return output;
-        }
-    )";
-
-    // Point cloud fragment shader
-    const char *fragmentShaderSource = R"(
-        @fragment
-        fn main(@location(0) color: vec4<f32>) -> @location(0) vec4<f32> {
-            return color;
-        }
-    )";
-
-    wgpu::ShaderSourceWGSL vertexShaderSrc;
-    vertexShaderSrc.code = wgpu::StringView(vertexShaderSource);
-    vertexShaderSrc.nextInChain = nullptr;
-
-    wgpu::ShaderSourceWGSL fragmentShaderSrc;
-    fragmentShaderSrc.code = wgpu::StringView(fragmentShaderSource);
-    fragmentShaderSrc.nextInChain = nullptr;
-
-    wgpu::ShaderModuleDescriptor vertexShaderDesc = {};
-    vertexShaderDesc.nextInChain = &vertexShaderSrc;
-
-    wgpu::ShaderModuleDescriptor fragmentShaderDesc = {};
-    fragmentShaderDesc.nextInChain = &fragmentShaderSrc;
-
-    gPointCloudVertexShader = wgpuDevice.CreateShaderModule(&vertexShaderDesc);
-    gPointCloudFragmentShader = wgpuDevice.CreateShaderModule(&fragmentShaderDesc);
-}
-
-void CreatePointCloudUniformBuffer() {
-    // Create uniform buffer for MVP matrix (16 floats = 64 bytes)
-    wgpu::BufferDescriptor bufferDesc = {};
-    bufferDesc.size = 16 * sizeof(float); // Size for 4x4 matrix
-    bufferDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
-    bufferDesc.mappedAtCreation = false;
-    gPointCloudUniformBuffer = wgpuDevice.CreateBuffer(&bufferDesc);
-}
-
-void CreatePipelineStateObject()
-{
-    // Create bind group layout for uniform buffer
-    wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = {};
-    bindGroupLayoutEntry.binding = 0;
-    bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex;
-    bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-    bindGroupLayoutEntry.buffer.minBindingSize = sizeof(float);
-
-    wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-    bindGroupLayoutDesc.entryCount = 1;
-    bindGroupLayoutDesc.entries = &bindGroupLayoutEntry;
-    wgpu::BindGroupLayout bindGroupLayout = wgpuDevice.CreateBindGroupLayout(&bindGroupLayoutDesc);
-
-    // Create pipeline layout with bind group layout
-    wgpu::PipelineLayoutDescriptor pipelineLayoutDesc = {};
-    pipelineLayoutDesc.bindGroupLayoutCount = 1;
-    pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
-    wgpu::PipelineLayout pipelineLayout = wgpuDevice.CreatePipelineLayout(&pipelineLayoutDesc);
-
-    // Create bind group
-    wgpu::BindGroupEntry bindGroupEntry = {};
-    bindGroupEntry.binding = 0;
-    bindGroupEntry.buffer = gUniformBuffer;
-    bindGroupEntry.size = sizeof(float);
-
-    wgpu::BindGroupDescriptor bindGroupDesc = {};
-    bindGroupDesc.layout = bindGroupLayout;
-    bindGroupDesc.entryCount = 1;
-    bindGroupDesc.entries = &bindGroupEntry;
-    gBindGroup = wgpuDevice.CreateBindGroup(&bindGroupDesc);
-
-    // Create fragment state
-    wgpu::FragmentState fragmentState = {};
-    fragmentState.module = gTestTriangleFragmentShader;
-    fragmentState.entryPoint = "main";
-    fragmentState.targetCount = 1;
-    wgpu::ColorTargetState colorTarget = {};
-    colorTarget.format = wgpu::TextureFormat::BGRA8Unorm;
-    fragmentState.targets = &colorTarget;
-
-    // Create render pipeline
-    wgpu::RenderPipelineDescriptor pipelineDesc = {};
-    pipelineDesc.layout = pipelineLayout;
-
-    pipelineDesc.vertex.module = gTestTriangleVertexShader;
-    pipelineDesc.vertex.entryPoint = "main";
-
-    pipelineDesc.fragment = &fragmentState;
-
-    gTestTrinaglePipeline = wgpuDevice.CreateRenderPipeline(&pipelineDesc);
-
-    MLOG_DEBUG(u8"Pipeline State Object created successfully");
-}
-
-void CreatePointCloudPSO()
-{
-    // Create bind group layout for uniform buffer (MVP matrix)
-    wgpu::BindGroupLayoutEntry bindGroupLayoutEntry = {};
-    bindGroupLayoutEntry.binding = 0;
-    bindGroupLayoutEntry.visibility = wgpu::ShaderStage::Vertex;
-    bindGroupLayoutEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-    bindGroupLayoutEntry.buffer.minBindingSize = 16 * sizeof(float); // 4x4 matrix
-
-    wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc = {};
-    bindGroupLayoutDesc.entryCount = 1;
-    bindGroupLayoutDesc.entries = &bindGroupLayoutEntry;
-    wgpu::BindGroupLayout bindGroupLayout = wgpuDevice.CreateBindGroupLayout(&bindGroupLayoutDesc);
-
-    // Create pipeline layout with bind group layout
-    wgpu::PipelineLayoutDescriptor pipelineLayoutDesc = {};
-    pipelineLayoutDesc.bindGroupLayoutCount = 1;
-    pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
-    wgpu::PipelineLayout pipelineLayout = wgpuDevice.CreatePipelineLayout(&pipelineLayoutDesc);
-
-    // Create bind group for point cloud
-    wgpu::BindGroupEntry bindGroupEntry = {};
-    bindGroupEntry.binding = 0;
-    bindGroupEntry.buffer = gPointCloudUniformBuffer;
-    bindGroupEntry.size = 16 * sizeof(float);
-
-    wgpu::BindGroupDescriptor bindGroupDesc = {};
-    bindGroupDesc.layout = bindGroupLayout;
-    bindGroupDesc.entryCount = 1;
-    bindGroupDesc.entries = &bindGroupEntry;
-    gPointCloudBindGroup = wgpuDevice.CreateBindGroup(&bindGroupDesc);
-
-    // Define vertex attributes for point cloud
-    wgpu::VertexAttribute positionAttribute = {};
-    positionAttribute.format = wgpu::VertexFormat::Float32x3;
-    positionAttribute.offset = 0;
-    positionAttribute.shaderLocation = 0;
-
-    wgpu::VertexAttribute colorAttribute = {};
-    colorAttribute.format = wgpu::VertexFormat::Float32x4;
-    colorAttribute.offset = 3 * sizeof(float);
-    colorAttribute.shaderLocation = 1;
-
-    wgpu::VertexAttribute attributes[] = {positionAttribute, colorAttribute};
-
-    wgpu::VertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.arrayStride = 7 * sizeof(float); // 3 position + 4 color
-    vertexBufferLayout.stepMode = wgpu::VertexStepMode::Vertex;
-    vertexBufferLayout.attributeCount = 2;
-    vertexBufferLayout.attributes = attributes;
-
-    // Create fragment state
-    wgpu::FragmentState fragmentState = {};
-    fragmentState.module = gPointCloudFragmentShader;
-    fragmentState.entryPoint = "main";
-    fragmentState.targetCount = 1;
-    wgpu::ColorTargetState colorTarget = {};
-    colorTarget.format = wgpu::TextureFormat::BGRA8Unorm;
-    fragmentState.targets = &colorTarget;
-
-    // Create render pipeline for point cloud
-    wgpu::RenderPipelineDescriptor pipelineDesc = {};
-    pipelineDesc.layout = pipelineLayout;
-
-    pipelineDesc.vertex.module = gPointCloudVertexShader;
-    pipelineDesc.vertex.entryPoint = "main";
-    pipelineDesc.vertex.bufferCount = 1;
-    pipelineDesc.vertex.buffers = &vertexBufferLayout;
-
-    pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::PointList;
-    pipelineDesc.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
-    pipelineDesc.primitive.frontFace = wgpu::FrontFace::CCW;
-    pipelineDesc.primitive.cullMode = wgpu::CullMode::None;
-
-    pipelineDesc.fragment = &fragmentState;
-
-    gPointCloudPipeline = wgpuDevice.CreateRenderPipeline(&pipelineDesc);
-
-    MLOG_DEBUG(u8"Point Cloud Pipeline State Object created successfully");
-}
-
-void DrawTestTriangle(wgpu::RenderPassEncoder rpEncoder)
-{
-    rpEncoder.SetPipeline(gTestTrinaglePipeline);
-    rpEncoder.SetBindGroup(0, gBindGroup);
-    rpEncoder.Draw(3, 1, 0, 0);
-}
-
-void DrawPointCloud(wgpu::RenderPassEncoder rpEncoder, wgpu::Buffer vertexBuffer, uint32_t pointCount)
-{
-    rpEncoder.SetPipeline(gPointCloudPipeline);
-    rpEncoder.SetBindGroup(0, gPointCloudBindGroup);
-    rpEncoder.SetVertexBuffer(0, vertexBuffer);
-    rpEncoder.Draw(pointCount, 1, 0, 0);
-}
-
-void UpdatePointCloudMVPMatrix(const float* mvpMatrix)
-{
-    // Update the point cloud uniform buffer with the MVP matrix
-    wgpuDevice.GetQueue().WriteBuffer(gPointCloudUniformBuffer, 0, mvpMatrix, 16 * sizeof(float));
-}
-
-wgpu::Buffer CreatePointCloudVertexBuffer(const void* pointData, size_t dataSize)
-{
-    wgpu::BufferDescriptor bufferDesc = {};
-    bufferDesc.size = dataSize;
-    bufferDesc.usage = wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst;
-    bufferDesc.mappedAtCreation = false;
-    
-    wgpu::Buffer buffer = wgpuDevice.CreateBuffer(&bufferDesc);
-    wgpuDevice.GetQueue().WriteBuffer(buffer, 0, pointData, dataSize);
-    
-    return buffer;
-}
-
-void LoadPointCloudFromURL(const char* url) {
-
-    MLOG_DEBUG(u8"Starting to fetch point cloud from: %s", url);
-    
-    emscripten_fetch_attr_t attr;
-    emscripten_fetch_attr_init(&attr);
-    strcpy(attr.requestMethod, "GET");
-    attr.attributes = EMSCRIPTEN_FETCH_LOAD_TO_MEMORY;
-    
-    attr.onsuccess = [](emscripten_fetch_t *fetch) {
-        MLOG_DEBUG(u8"Successfully fetched %zu bytes from URL", fetch->numBytes);
-
-
-        gPointCloudVertexBuffer = CreatePointCloudVertexBuffer(fetch->data, fetch->numBytes);
-        gPointCloudPointCount = fetch->numBytes / (sizeof(float) * 7); // Assuming PointCloudVertex is defined correctly
-
-        emscripten_fetch_close(fetch);
-    };
-    
-    attr.onerror = [](emscripten_fetch_t *fetch) {
-        MLOG_ERROR(u8"Failed to fetch point cloud from URL (HTTP %d)", fetch->status);
-        
-        emscripten_fetch_close(fetch);
-    };
-    
-    emscripten_fetch(&attr, url);
 }
 
 void Adapter::Initialize()
@@ -499,7 +150,8 @@ void Adapter::Initialize()
         wgpu::RequestAdapterOptions adapterOptions = {};
         adapterOptions.nextInChain = nullptr;
         adapterOptions.compatibleSurface = wgpuSurface;
-        adapterOptions.powerPreference = graphicsConfig.preferHighPerformance ? wgpu::PowerPreference::HighPerformance : wgpu::PowerPreference::LowPower;
+		//TODO: Implement power preference in config
+        //adapterOptions.powerPreference = graphicsConfig.preferHighPerformance ? wgpu::PowerPreference::HighPerformance : wgpu::PowerPreference::LowPower;
         // Try with surface first
         wgpuInstance.RequestAdapter(&adapterOptions,
                                     wgpu::CallbackMode::AllowSpontaneous,
@@ -673,17 +325,6 @@ void Device::Initialize()
         }
     }
     MLOG_DEBUG(u8"Device ready! Total wait time: %d ms", waitCount * 10);
-
-    CreateTestTriangleShaders();
-    CreateUniformBuffer();
-    CreatePipelineStateObject();
-    
-    CreatePointCloudShaders();
-    CreatePointCloudUniformBuffer();
-    CreatePointCloudPSO();
-    //InitializePointCloudData();
-
-    LoadPointCloudFromURL("pointcache.bin");
 }
 
 void Device::Shutdown()
@@ -695,14 +336,24 @@ void Device::Tick()
 {
 }
 
+void Device::ImguiInitialize()
+{
+    ImGui_ImplWGPU_InitInfo initInfo = {};
+    initInfo.Device = wgpuDevice.Get();
+    initInfo.RenderTargetFormat = WGPUTextureFormat_RGBA8Unorm;
+    initInfo.NumFramesInFlight = 3;
+    initInfo.DepthStencilFormat = WGPUTextureFormat::WGPUTextureFormat_Undefined;
+
+    ImGui_ImplWGPU_Init(&initInfo);
+}
+
 void *Device::GetNativeHandle()
 {
     return wgpuDevice.Get();
 }
 
-void Device::InitializeSwapchain(void *native_window_handle)
+void Device::InitializeSwapchain()
 {
-    assert(native_window_handle != nullptr && "Native window handle cannot be null");
     assert(gSwapchain == nullptr && "Swapchain already initialized");
 
     MLOG_DEBUG(u8"Initializing WebGPU swapchain...");
@@ -756,62 +407,17 @@ void *Swapchain::GetNativeHandle()
     return wgpuSurface.Get(); // WebGPU does not expose a native handle for swapchains
 }
 
-void Swapchain::AcquireNextImage()
+CommandList Swapchain::AcquireNextImage()
 {
     wgpuSurface.GetCurrentTexture(&wgpuCurrentSwapchainTexture);
+
+    //TODO: get
+    CommandList clist = {};
+    return clist;
 }
 
 void ClearTextureWithColor(float r, float g, float b, float a)
 {
-    static float rotationAngle = 0.0f;
-    rotationAngle += 0.02f; // Increment rotation angle
-
-    // Update uniform buffer with current rotation angle
-    wgpuDevice.GetQueue().WriteBuffer(gUniformBuffer, 0, &rotationAngle, sizeof(float));
-
-    // Create a rotating MVP matrix for point cloud around Y-axis
-    static float pointCloudRotationY = 0.0f;
-    pointCloudRotationY += 0.01f; // Rotate slower than triangle
-    
-    // Add floating Z movement
-    static float zFloatTime = 0.0f;
-    zFloatTime += 0.005f; // Very slow floating
-    float zDistance = -3.0f + sin(zFloatTime) * 0.5f; // Float between -3.5 and -2.5
-    
-    // Create perspective projection matrix using GLM
-    float fov = glm::radians(45.0f); // 45 degrees in radians
-    float aspect = 1024.0f / 576.0f; // Use actual surface dimensions
-    float nearPlane = 0.1f;
-    float farPlane = 100.0f;
-    
-    glm::mat4 projectionMatrix = glm::perspectiveRH_ZO(fov, aspect, nearPlane, farPlane);
-    
-    // Create view matrix using GLM (look at camera positioned back on Z-axis)
-    glm::vec3 eye(0.0f, 0.0f, -zDistance);  // Camera position (note: negated zDistance)
-    glm::vec3 center(0.0f, 0.0f, 0.0f);     // Look at origin
-    glm::vec3 up(0.0f, 1.0f, 0.0f);         // Up vector
-    glm::mat4 viewMatrix = glm::lookAt(eye, center, up);
-    
-    // Create model matrix using GLM
-    float modelScale = 0.005f;
-    glm::mat4 modelMatrix = glm::mat4(1.0f); // Identity matrix
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(modelScale)); // Apply scale
-    modelMatrix = glm::rotate(modelMatrix, pointCloudRotationY, glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate around Y-axis
-    
-    // Calculate MVP matrix using GLM
-    glm::mat4 mvpMatrix = projectionMatrix * viewMatrix * modelMatrix;
-    
-    // Update point cloud MVP matrix (GLM matrices are column-major, which WebGPU expects)
-    UpdatePointCloudMVPMatrix(glm::value_ptr(mvpMatrix));
-
-    // Debug: Log some matrix info periodically
-    static int debugCounter = 0;
-    if (debugCounter % 300 == 0) { // Every ~5 seconds at 60fps
-        MLOG_DEBUG(u8"Cube Debug - FOV: %.1f deg, Aspect: %.3f, Z-distance: %.2f, Rotation: %.2f", 
-                   glm::degrees(fov), aspect, zDistance, glm::degrees(pointCloudRotationY));
-    }
-    debugCounter++;
-
     wgpu::CommandEncoder commandEncoder = wgpuDevice.CreateCommandEncoder();
 
     // Create a render pass descriptor
@@ -828,9 +434,6 @@ void ClearTextureWithColor(float r, float g, float b, float a)
     // Begin the render pass
     wgpu::RenderPassEncoder renderPass = commandEncoder.BeginRenderPass(&renderPassDesc);
 
-    //DrawTestTriangle(renderPass);
-    if(gPointCloudPointCount > 0)
-        DrawPointCloud(renderPass, gPointCloudVertexBuffer, gPointCloudPointCount); // Draw point cloud with vertex buffer and count
     renderPass.End();
 
     // Finish encoding and submit the commands
@@ -840,17 +443,26 @@ void ClearTextureWithColor(float r, float g, float b, float a)
 
 void Swapchain::Present()
 {
-    static float a = 0.0f;
-    a += 0.01f;
+    //static float a = 0.0f;
+   // a += 0.01f;
 
-    ClearTextureWithColor(sin(a) * 0.5f + 0.5f, cos(a) * 0.5f + 0.5f, 0.5f, 1.0f);
+    //ClearTextureWithColor(sin(a) * 0.5f + 0.5f, cos(a) * 0.5f + 0.5f, 0.5f, 1.0f);
   
+    ll::os::gOS->WebGPUPresent();
+
+    /*
     #ifndef MERCURY_LL_OS_EMSCRIPTEN
     wgpuSurface.Present();
     #endif
+    */
 }
 
 
+void CommandList::RenderImgui()
+{
+    //auto cmdList = static_cast<WGPURenderPassEncoder>(ctx.impl);
+    //ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), cmdList);
+}
 
 
 #endif //MERCURY_LL_GRAPHICS_WEBGPU

@@ -150,6 +150,12 @@
     <ClCompile Include="..\..\engine\third_party\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp">
       <Filter>Source Files\ll\graphics\d3d12\third_party</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.cpp">
+      <Filter>Source Files\ll\graphics\webgpu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.cpp">
+      <Filter>Source Files\ll\graphics\webgpu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\engine\src\application.h">
@@ -241,6 +247,9 @@
     </ClInclude>
     <ClInclude Include="..\..\engine\include\mercury_embedded_shaders.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h">
+      <Filter>Source Files\ll\graphics\webgpu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -103,7 +103,6 @@ export namespace ShaderCompiler
 #endif
 	}
 
-
 }
 
 using namespace slang;
@@ -154,7 +153,7 @@ void ShaderCompiler::Initialize()
 
 	if (SLANG_SUCCEEDED(isDxilSupported))
 	{
-		gSupportedTargets.emplace_back(HelperDesc(SlangCompileTarget::SLANG_DXIL, gSlangGlobalSession->findProfile("sm_6_9")));
+		gSupportedTargets.emplace_back(HelperDesc(SlangCompileTarget::SLANG_DXIL, gSlangGlobalSession->findProfile("sm_6_6")));
 	}
 	else
 	{

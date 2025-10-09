@@ -179,7 +179,7 @@ void Device::Initialize()
 
     const auto &renderCfg = Application::GetCurrentApplication()->GetConfig().graphics;
 
-    D3D_CALL(D3D12CreateDevice(gD3DAdapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&gD3DDevice)));
+    D3D_CALL(D3D12CreateDevice(gD3DAdapter, D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&gD3DDevice)));
 
     if (renderCfg.enableValidationLayers)
     {
@@ -637,14 +637,9 @@ void CommandList::RenderImgui()
 void CommandList::SetPSO(Handle<u32> psoID)
 {
     auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-    if (psoID.handle < gAllPSOs.size() && gAllPSOs[psoID.handle] != nullptr)
-    {
-        cmdListD3D12->SetPipelineState(gAllPSOs[psoID.handle]);
-        if (psoID.handle < gAllSignatures.size() && gAllSignatures[psoID.handle] != nullptr)
-        {
-            cmdListD3D12->SetGraphicsRootSignature(gAllSignatures[psoID.handle]);
-        }
-    }
+    cmdListD3D12->SetPipelineState(gAllPSOs[psoID.handle]);
+    cmdListD3D12->SetGraphicsRootSignature(gAllSignatures[psoID.handle]);
+	cmdListD3D12->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
@@ -691,10 +686,7 @@ ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 
 void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecodeView& bytecode)
 {
-    if (shaderModuleID.handle < gAllShaders.size())
-    {
-        gAllShaders[shaderModuleID.handle] = CD3DX12_SHADER_BYTECODE(bytecode.data, bytecode.size);
-    }
+    gAllShaders[shaderModuleID.handle] = CD3DX12_SHADER_BYTECODE(bytecode.data, bytecode.size);
 }
 
 void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
@@ -707,8 +699,71 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
     // TODO: Implement full D3D12 rasterize pipeline creation
     PsoHandle result;
     result.handle = static_cast<u32>(gAllPSOs.size());
-    gAllPSOs.push_back(nullptr);
-    gAllSignatures.push_back(nullptr);
+
+    D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+    rootSignatureDesc.Init(0, nullptr, 0, nullptr, rootSignatureFlags);
+
+    ID3DBlob* signature = nullptr;
+    ID3DBlob* error = nullptr;
+    D3D_CALL(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+
+    gAllSignatures.emplace_back(nullptr);
+    gAllPSOs.emplace_back(nullptr);
+
+    D3D_CALL(gD3DDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&gAllSignatures[result.handle])));
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+
+    
+    psoDesc.pRootSignature = gAllSignatures[result.handle];
+    
+    if (desc.vertexShader.isValid())
+    {
+        psoDesc.VS = gAllShaders[desc.vertexShader.handle];
+    }
+
+    if (desc.tessControlShader.isValid())
+    {
+		psoDesc.HS = gAllShaders[desc.tessControlShader.handle];
+    }
+
+    if (desc.tessEvalShader.isValid())
+    {
+		psoDesc.DS = gAllShaders[desc.tessEvalShader.handle];
+    }
+
+    if (desc.geometryShader.isValid())
+    {
+        psoDesc.GS = gAllShaders[desc.geometryShader.handle];
+	}
+
+    if (desc.fragmentShader.isValid())
+    {
+        psoDesc.PS = gAllShaders[desc.fragmentShader.handle];
+	}
+
+
+    psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    psoDesc.RasterizerState.FrontCounterClockwise = true;
+
+    psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    psoDesc.DepthStencilState.DepthEnable = false;
+    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    //psoDesc.DepthStencilState.DepthEnable = FALSE;
+    //psoDesc.DepthStencilState.StencilEnable = FALSE;
+    psoDesc.SampleMask = UINT_MAX;
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    psoDesc.NumRenderTargets = 1;
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    //psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+    psoDesc.SampleDesc.Count = 1;
+    D3D_CALL(gD3DDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&gAllPSOs[result.handle])));
+
     return result;
 }
 
@@ -719,19 +774,11 @@ void Device::UpdatePipelineState(PsoHandle psoID, const mercury::ll::graphics::R
 
 void Device::DestroyRasterizePipeline(PsoHandle psoID)
 {
-    if (psoID.handle < gAllPSOs.size())
-    {
-        if (gAllPSOs[psoID.handle])
-        {
-            gAllPSOs[psoID.handle]->Release();
-            gAllPSOs[psoID.handle] = nullptr;
-        }
-        if (psoID.handle < gAllSignatures.size() && gAllSignatures[psoID.handle])
-        {
-            gAllSignatures[psoID.handle]->Release();
-            gAllSignatures[psoID.handle] = nullptr;
-        }
-    }
+    gAllPSOs[psoID.handle]->Release();
+    gAllPSOs[psoID.handle] = nullptr;
+
+    gAllSignatures[psoID.handle]->Release();
+    gAllSignatures[psoID.handle] = nullptr;
 }
 
 CommandPool Device::CreateCommandPool(QueueType queue_type)
