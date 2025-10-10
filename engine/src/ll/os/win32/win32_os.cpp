@@ -14,6 +14,10 @@
 #include "ll/graphics/vulkan/vk_swapchain.h"
 #endif
 
+#ifdef MERCURY_LL_GRAPHICS_WEBGPU
+#include "ll/graphics/webgpu/webgpu_graphics.h"
+#endif
+
 #include "../../../imgui/imgui_impl.h"
 
 #pragma comment(lib, "xinput.lib")
@@ -394,6 +398,42 @@ namespace mercury::ll::os
   {
     bool supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR != nullptr ? vkGetPhysicalDeviceWin32PresentationSupportKHR((VkPhysicalDevice)vk_physical_device, queueIndex) : false;
     return supportPresent;
+  }
+#endif
+
+#ifdef MERCURY_LL_GRAPHICS_WEBGPU
+  wgpu::Surface* gWebGPUSurfacePtr = nullptr;
+  void* OS::GetWebGPUNativeWindowHandle()
+  {
+      // Create WebGPU surface descriptor for Windows
+      wgpu::SurfaceDescriptorFromWindowsHWND windowsDesc = {};
+      windowsDesc.sType = wgpu::SType::SurfaceSourceWindowsHWND;
+      windowsDesc.hwnd = gMainWindow;
+      windowsDesc.hinstance = GetModuleHandle(nullptr);
+
+      wgpu::SurfaceDescriptor surfaceDesc = {};
+      surfaceDesc.nextInChain = &windowsDesc;
+      surfaceDesc.label = "Main Window WGPU Surface";
+
+      // Create the surface using the global WebGPU instance
+      wgpu::Surface surface = wgpuInstance.CreateSurface(&surfaceDesc);
+
+      if (!surface) {
+          MLOG_ERROR(u8"Failed to create WebGPU surface");
+          return nullptr;
+      }
+
+      MLOG_DEBUG(u8"WebGPU Win32 surface created successfully");
+
+      // Allocate and return the surface pointer
+      // The surface needs to be heap-allocated to persist beyond this function
+      gWebGPUSurfacePtr = new wgpu::Surface(surface);
+      return gWebGPUSurfacePtr;
+  }
+  void OS::WebGPUPresent()
+  {
+      if (gWebGPUSurfacePtr)
+          gWebGPUSurfacePtr->Present();
   }
 #endif
   OS* gOS = nullptr;

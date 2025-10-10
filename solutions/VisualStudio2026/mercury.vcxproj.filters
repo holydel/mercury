@@ -251,5 +251,8 @@
     <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h">
       <Filter>Source Files\ll\graphics\webgpu</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.h">
+      <Filter>Source Files\ll\graphics\webgpu</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -224,7 +224,6 @@ struct CommandList
 struct CommandPool
 {
   void* nativePtr;
-
   CommandList AllocateCommandList();
   void SetDebugName(const char* utf8_name);
   void Destroy();
