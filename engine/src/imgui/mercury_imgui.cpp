@@ -51,10 +51,8 @@ void mercury_imgui::Initialize()
 void mercury_imgui::Shutdown()
 {
 	mercury::ll::graphics::gDevice->ImguiShutdown();
+	mercury::ll::os::gOS->ImguiShutdown();
 
-#ifdef MERCURY_LL_GRAPHICS_WEBGPU
-		ImGui_ImplWGPU_Shutdown();
-#endif
 #ifdef MERCURY_LL_OS_ANDROID
 		ImGui_ImplAndroid_Shutdown();
 #endif

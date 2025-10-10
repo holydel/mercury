@@ -50,6 +50,12 @@ bool deviceReady = false;
 
 int gInitialCanvasWidth = 0;
 int gInitialCanvasHeight = 0;
+int gCurrentCanvasWidth = 0;
+int gCurrentCanvasHeight = 0;
+
+// Global storage for shaders and pipelines
+std::vector<wgpu::ShaderModule> gAllShaderModules;
+std::vector<wgpu::RenderPipeline> gAllPSOs;
 
 // Function to get canvas surface
 /*
@@ -134,6 +140,9 @@ void Instance::Shutdown()
     wgpuAdapter = nullptr;
     wgpuInstance = nullptr;
 
+    gAllShaderModules.clear();
+    gAllPSOs.clear();
+
     adapterRequested = false;
     adapterReady = false;
     deviceRequested = false;
@@ -170,14 +179,15 @@ void Adapter::Initialize()
         wgpu::RequestAdapterOptions adapterOptions = {};
         adapterOptions.nextInChain = nullptr;
         adapterOptions.compatibleSurface = wgpuSurface;
+        adapterOptions.featureLevel = wgpu::FeatureLevel::Core;
         adapterOptions.backendType = wgpu::BackendType::Vulkan;
-		//TODO: Implement power preference in config
-        //adapterOptions.powerPreference = graphicsConfig.preferHighPerformance ? wgpu::PowerPreference::HighPerformance : wgpu::PowerPreference::LowPower;
+        auto graphicsConfig = mercury::Application::GetCurrentApplication()->GetConfig().graphics;
+        //adapterOptions.powerPreference = graphicsConfig.adapterPreference == Config::Graphics::AdapterTypePreference::HighPerformance ? wgpu::PowerPreference::HighPerformance : wgpu::PowerPreference::LowPower;
         // Try with surface first
        
         wgpuInstance.RequestAdapter(&adapterOptions,
                                     wgpu::CallbackMode::AllowSpontaneous,
-                                    [](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView message)
+                                    [this](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView)
                                     {
                                         MLOG_DEBUG(u8"RequestAdapter callback called with status: %d", (int)status);
                                         if (status == wgpu::RequestAdapterStatus::Success)
@@ -411,6 +421,11 @@ void Device::ImguiInitialize()
     ImGui_ImplWGPU_Init(&initInfo);
 }
 
+void Device::ImguiRegenerateFontAtlas()
+{
+    ImGui_ImplWGPU_CreateDeviceObjects();
+}
+
 void *Device::GetNativeHandle()
 {
     return wgpuDevice.Get();
@@ -442,6 +457,8 @@ void Swapchain::Initialize()
     MLOG_DEBUG(u8"Initializing Swapchain (WEBGPU)");
 
 	ll::os::gOS->GetActualWindowSize((unsigned int&)gInitialCanvasWidth, (unsigned int&)gInitialCanvasHeight);
+    gCurrentCanvasWidth = gInitialCanvasWidth;
+    gCurrentCanvasHeight = gInitialCanvasHeight;
 
     wgpu::SurfaceConfiguration surfaceConfig = {};
     surfaceConfig.nextInChain = nullptr;
@@ -476,6 +493,8 @@ void Swapchain::Resize(u16 width, u16 height)
     surfaceConfig.device = wgpuDevice;
     surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Opaque;
     wgpuSurface.Configure(&surfaceConfig);
+    gCurrentCanvasWidth = width;
+    gCurrentCanvasHeight = height;
     MLOG_DEBUG(u8"Swapchain resized with format: %s, usage: %d, present mode: %s, size: %dx%d",
                wgpu_utils::GetTextureFormatString(surfaceConfig.format),
                (int)surfaceConfig.usage,
@@ -538,6 +557,8 @@ void Swapchain::Present()
     {
         gInitialCanvasWidth = currentWidth;
         gInitialCanvasHeight = currentHeight;
+        gCurrentCanvasWidth = currentWidth;
+        gCurrentCanvasHeight = currentHeight;
         Resize(gInitialCanvasWidth, gInitialCanvasHeight);
     }
 }
@@ -557,29 +578,22 @@ const char* ll::graphics::GetBackendName()
 // CommandList implementations
 void CommandList::SetPSO(Handle<u32> psoID)
 {
-    // TODO: Implement WebGPU pipeline state setting
-    // Will need to store pipeline state and bind it during render pass
+    gCurrentFinalRenderPass.SetPipeline(gAllPSOs[psoID.handle]);
 }
 
 void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
 {
-    // TODO: Implement WebGPU draw call
-    // auto renderPass = static_cast<wgpu::RenderPassEncoder>(nativePtr);
-    // renderPass.Draw(vertexCount, instanceCount, firstVertex, firstInstance);
+    gCurrentFinalRenderPass.Draw(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 void CommandList::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
 {
-    // TODO: Implement WebGPU viewport setting
-    // auto renderPass = static_cast<wgpu::RenderPassEncoder>(nativePtr);
-    // renderPass.SetViewport(x, y, width, height, minDepth, maxDepth);
+    gCurrentFinalRenderPass.SetViewport(x, y, width, height, minDepth, maxDepth);
 }
 
 void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
 {
-    // TODO: Implement WebGPU scissor rect setting
-    // auto renderPass = static_cast<wgpu::RenderPassEncoder>(nativePtr);
-    // renderPass.SetScissorRect(x, y, width, height);
+    gCurrentFinalRenderPass.SetScissorRect(x, y, width, height);
 }
 
 // Device implementations
@@ -596,62 +610,153 @@ void Device::ImguiShutdown()
 ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 {
     ShaderHandle result;
-    // TODO: Implement WebGPU shader module creation
-    // wgpu::ShaderModuleDescriptor desc{};
-    // wgpu::ShaderModuleWGSLDescriptor wgslDesc{};
-    // wgslDesc.code = static_cast<const char*>(bytecode.data);
-    // desc.nextInChain = &wgslDesc;
-    // auto module = wgpuDevice.CreateShaderModule(&desc);
-    // Store module and return handle
+    result.handle = static_cast<u32>(gAllShaderModules.size());
+
+    wgpu::ShaderSourceWGSL wgslDesc{};
+    wgslDesc.code = static_cast<const char*>(bytecode.data);
+    wgslDesc.nextInChain = nullptr;
+    wgslDesc.sType = wgpu::SType::ShaderSourceWGSL;
+
+    wgpu::ShaderModuleDescriptor desc{};
+    desc.nextInChain = &wgslDesc;
+
+    auto module = wgpuDevice.CreateShaderModule(&desc);
+    gAllShaderModules.push_back(module);
+
     return result;
 }
 
 void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecodeView& bytecode)
 {
-    // TODO: Implement shader module update
-    // Recreate the shader module with new bytecode
+    // Release old module
+    gAllShaderModules[shaderModuleID.handle] = nullptr;
+
+    wgpu::ShaderSourceWGSL wgslDesc{};
+    wgslDesc.code = static_cast<const char*>(bytecode.data);
+    wgslDesc.nextInChain = nullptr;
+    wgslDesc.sType = wgpu::SType::ShaderSourceWGSL;
+
+    wgpu::ShaderModuleDescriptor desc{};
+    desc.nextInChain = &wgslDesc;
+
+    auto module = wgpuDevice.CreateShaderModule(&desc);
+    gAllShaderModules[shaderModuleID.handle] = module;
 }
 
 void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 {
-    // TODO: Implement shader module destruction
-    // Release the stored WebGPU shader module
+    gAllShaderModules[shaderModuleID.handle] = nullptr;
 }
 
 PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
 {
     PsoHandle result;
-    // TODO: Implement WebGPU render pipeline creation
-    // wgpu::RenderPipelineDescriptor pipelineDesc{};
-    // Configure vertex, fragment, and render state
-    // auto pipeline = wgpuDevice.CreateRenderPipeline(&pipelineDesc);
-    // Store pipeline and return handle
+    result.handle = static_cast<u32>(gAllPSOs.size());
+
+    wgpu::RenderPipelineDescriptor pipelineDesc{};
+    pipelineDesc.nextInChain = nullptr;
+
+    // Vertex stage
+    wgpu::VertexState vertexState{};
+    if (desc.vertexShader.isValid())
+    {
+        vertexState.module = gAllShaderModules[desc.vertexShader.handle];
+        vertexState.entryPoint = "main";
+    }
+    pipelineDesc.vertex = vertexState;
+
+    // Fragment stage
+    wgpu::FragmentState fragmentState{};
+    if (desc.fragmentShader.isValid())
+    {
+        fragmentState.module = gAllShaderModules[desc.fragmentShader.handle];
+        fragmentState.entryPoint = "main";
+
+        wgpu::ColorTargetState colorTarget{};
+        colorTarget.format = wgpuSwapchainFormat;
+        fragmentState.targets = &colorTarget;
+        fragmentState.targetCount = 1;
+    }
+    pipelineDesc.fragment = &fragmentState;
+
+    // Primitive state
+    wgpu::PrimitiveState primitiveState{};
+    primitiveState.topology = wgpu::PrimitiveTopology::TriangleList;
+    pipelineDesc.primitive = primitiveState;
+
+    // Multisample state
+    wgpu::MultisampleState multisampleState{};
+    multisampleState.count = 1;
+    multisampleState.mask = 0xFFFFFFFF;
+    pipelineDesc.multisample = multisampleState;
+
+    auto pipeline = wgpuDevice.CreateRenderPipeline(&pipelineDesc);
+    gAllPSOs.push_back(pipeline);
+
     return result;
 }
 
 void Device::UpdatePipelineState(PsoHandle psoID, const RasterizePipelineDescriptor& desc)
 {
-    // TODO: Implement pipeline state update
-    // In WebGPU, pipelines are immutable, so this would need to create a new pipeline
+    // Release old pipeline
+    gAllPSOs[psoID.handle] = nullptr;
+
+    wgpu::RenderPipelineDescriptor pipelineDesc{};
+    pipelineDesc.nextInChain = nullptr;
+
+    // Vertex stage
+    wgpu::VertexState vertexState{};
+    if (desc.vertexShader.isValid())
+    {
+        vertexState.module = gAllShaderModules[desc.vertexShader.handle];
+        vertexState.entryPoint = "main";
+    }
+    pipelineDesc.vertex = vertexState;
+
+    // Fragment stage
+    wgpu::FragmentState fragmentState{};
+    if (desc.fragmentShader.isValid())
+    {
+        fragmentState.module = gAllShaderModules[desc.fragmentShader.handle];
+        fragmentState.entryPoint = "main";
+
+        wgpu::ColorTargetState colorTarget{};
+        colorTarget.format = wgpuSwapchainFormat;
+        fragmentState.targets = &colorTarget;
+        fragmentState.targetCount = 1;
+    }
+    pipelineDesc.fragment = &fragmentState;
+
+    // Primitive state
+    wgpu::PrimitiveState primitiveState{};
+    primitiveState.topology = wgpu::PrimitiveTopology::TriangleList;
+    pipelineDesc.primitive = primitiveState;
+
+    // Multisample state
+    wgpu::MultisampleState multisampleState{};
+    multisampleState.count = 1;
+    multisampleState.mask = 0xFFFFFFFF;
+    pipelineDesc.multisample = multisampleState;
+
+    auto pipeline = wgpuDevice.CreateRenderPipeline(&pipelineDesc);
+    gAllPSOs[psoID.handle] = pipeline;
 }
 
 void Device::DestroyRasterizePipeline(PsoHandle psoID)
 {
-    // TODO: Implement pipeline destruction
-    // Release the stored WebGPU render pipeline
+    gAllPSOs[psoID.handle] = nullptr;
 }
+
 
 // Swapchain implementations
 int Swapchain::GetWidth() const
 {
-    // TODO: Get actual swapchain width from configuration or stored value
-    return 1024; // Placeholder - should return actual width
+    return gCurrentCanvasWidth;
 }
 
 int Swapchain::GetHeight() const
 {
-    // TODO: Get actual swapchain height from configuration or stored value
-    return 576; // Placeholder - should return actual height
+    return gCurrentCanvasHeight;
 }
 
-#endif //MERCURY_LL_GRAPHICS_WEBGPU
+#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU

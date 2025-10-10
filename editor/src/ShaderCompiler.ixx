@@ -443,23 +443,6 @@ void WriteByteArray(std::ofstream& out, const std::vector<mercury::u8>& data, co
 	out << "\n" << indent << "};\n";
 }
 
-void WriteCharArray(std::ofstream& out, const std::vector<char>& data, const std::string& indent)
-{
-	out << indent << "static const char data[] = {\n" << indent << "\t";
-	for (size_t i = 0; i < data.size(); ++i)
-	{
-		if (i > 0)
-		{
-			out << ", ";
-			if (i % 16 == 0)
-				out << "\n" << indent << "\t";
-		}
-		// Write as unsigned to avoid negative values
-		out << "0x" << std::hex << std::setfill('0') << std::setw(2) << ((int)(unsigned char)data[i]) << std::dec;
-	}
-	out << "\n" << indent << "};\n";
-}
-
 void ShaderCompiler::RebuildEmbeddedShaders(const RebuildShaderDesc& desc)
 {
 	if (!std::filesystem::exists(desc.shadersFolder) || !std::filesystem::is_directory(desc.shadersFolder))
@@ -624,7 +607,8 @@ void ShaderCompiler::RebuildEmbeddedShaders(const RebuildShaderDesc& desc)
 			if (shader.metal.empty()) continue;
 
 			metal << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
-			WriteCharArray(metal, shader.metal, "\t");
+			std::string metalStr(shader.metal.begin(), shader.metal.end());
+			metal << "\tstatic const char data[] = R\"(" << metalStr << ")\";\n";
 			metal << "\treturn { data, sizeof(data) };\n";
 			metal << "}\n\n";
 		}
@@ -651,7 +635,8 @@ void ShaderCompiler::RebuildEmbeddedShaders(const RebuildShaderDesc& desc)
 			if (shader.wgsl.empty()) continue;
 
 			wgsl << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
-			WriteCharArray(wgsl, shader.wgsl, "\t");
+			std::string wgslStr(shader.wgsl.begin(), shader.wgsl.end());
+			wgsl << "\tstatic const char data[] = R\"(" << wgslStr << ")\";\n";
 			wgsl << "\treturn { data, sizeof(data) };\n";
 			wgsl << "}\n\n";
 		}
