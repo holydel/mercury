@@ -4,16 +4,34 @@
 #include <concepts>
 
 // Platform detection
+#ifndef MERCURY_LL_OS_EMSCRIPTEN
 #if defined(__EMSCRIPTEN__)
 #define MERCURY_LL_OS_EMSCRIPTEN
-#elif defined(_WIN32)
+#endif
+#endif
+
+#ifndef MERCURY_LL_OS_WIN32
+#if defined(_WIN32)
 #define MERCURY_LL_OS_WIN32
-#elif defined(__APPLE__)
+#endif
+#endif
+
+#ifndef MERCURY_LL_OS_MACOS
+#if defined(__APPLE__)
 #define MERCURY_LL_OS_MACOS
-#elif defined(__linux__)
+#endif
+#endif
+
+#ifndef MERCURY_LL_OS_LINUX
+#if defined(__linux__)
 #define MERCURY_LL_OS_LINUX
-#elif defined(__ANDROID__)
+#endif
+#endif
+
+#ifndef MERCURY_LL_OS_ANDROID
+#if defined(__ANDROID__)
 #define MERCURY_LL_OS_ANDROID
+#endif
 #endif
 
 // SIMD support includes
@@ -27,11 +45,16 @@
 #include <immintrin.h>
 #endif
 
+// Graphics API selection
+#ifndef MERCURY_LL_GRAPHICS_NULL
 //#define MERCURY_LL_GRAPHICS_NULL
+#endif
 //#define MERCURY_LL_GRAPHICS_VULKAN
 //#define MERCURY_LL_GRAPHICS_D3D12
-//  #define MERCURY_LL_GRAPHICS_METAL
-#define MERCURY_LL_GRAPHICS_WEBGPU
+//#define MERCURY_LL_GRAPHICS_METAL
+#ifndef MERCURY_LL_GRAPHICS_WEBGPU
+//#define MERCURY_LL_GRAPHICS_WEBGPU
+#endif
 
 #define MERCURY_LL_SOUND_NONE
 // #define MERCURY_LL_SOUND_MINIAUDIO

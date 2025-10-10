@@ -43,9 +43,6 @@ void mercury_imgui::Initialize()
 	void* view = mercury::platform::getAppInstanceHandle(); //view
 	ImGui_ImplOSX_Init(view);
 #endif
-#ifdef MERCURY_LL_OS_EMSCRIPTEN
-	ImGui_ImplEmscripten_Init();
-#endif
 }
 
 void mercury_imgui::Shutdown()
@@ -57,7 +54,8 @@ void mercury_imgui::Shutdown()
 		ImGui_ImplAndroid_Shutdown();
 #endif
 #ifdef MERCURY_LL_OS_EMSCRIPTEN
-		ImGui_ImplEmscripten_Shutdown();
+		// ImGui temporarily disabled for Emscripten
+		// ImGui_ImplEmscripten_Shutdown();
 #endif
 
 	ImGui::DestroyContext();
@@ -70,10 +68,6 @@ void mercury_imgui::BeginFrame(mercury::ll::graphics::CommandList cmdList)
 	graphics::gDevice->ImguiNewFrame();
 	os::gOS->ImguiNewFrame();
 
-#ifdef MERCURY_LL_GRAPHICS_WEBGPU
-	ImGui_ImplWGPU_NewFrame();
-#endif
-
 #ifdef MERCURY_LL_OS_LINUX
 
 	//ImGui_ImplX11_NewFrame();
@@ -84,10 +78,6 @@ void mercury_imgui::BeginFrame(mercury::ll::graphics::CommandList cmdList)
 #ifdef MERCURY_LL_OS_MACOS
 	void* view = mercury::platform::getAppInstanceHandle(); //view
 	ImGui_ImplOSX_NewFrame(view);
-#endif
-#ifdef MERCURY_LL_OS_EMSCRIPTEN
-	ImGui_ImplEmscripten_Event();
-	ImGui_ImplEmscripten_NewFrame();
 #endif
 	ImGui::NewFrame();
 }

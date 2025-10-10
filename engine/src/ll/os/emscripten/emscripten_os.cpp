@@ -1,11 +1,20 @@
 #include "ll/os.h"
 #ifdef MERCURY_LL_OS_EMSCRIPTEN
-
+#include "mercury_log.h"
 #include "application.h"
 #include <emscripten.h>
 #include <iostream>
 
+#ifdef MERCURY_LL_GRAPHICS_WEBGPU
+#include "ll/graphics/webgpu/webgpu_graphics.h"
+#endif
+
+#include "../../../imgui/imgui_impl.h"
+
 #include "emscripten_input.h"
+#include <emscripten/html5.h>
+#include <emscripten.h>
+
 // Export C functions for JavaScript access
 EMSCRIPTEN_KEEPALIVE
 extern "C" void onPageHidden();
@@ -20,7 +29,12 @@ extern "C" void requestApplicationShutdown();
 static bool g_applicationRunning = true;
 static bool g_pageVisible = true;
 
-extern void* gWebGPUSurface;
+float emMouseX;
+float emMouseY;
+bool emMouseDown[5];
+
+wgpu::Surface gWgpuSurface;
+
 namespace mercury::ll::os
 {
   const OSInfo &OS::GetInfo() { 
@@ -43,12 +57,93 @@ namespace mercury::ll::os
   }
 
   void* OS::GetCurrentNativeWindowHandle() {
-    #ifdef MERCURY_LL_GRAPHICS_WEBGPU
-    return gWebGPUSurface;
-    #else
+    if(gWgpuSurface)
+    {
+      return gWgpuSurface.Get();
+    }
     return nullptr;
-    #endif
   }
+
+  void OS::CreateNativeWindow(NativeWindowDescriptor& desc) {
+    // Emscripten doesn't need to create windows - they're provided by the browser
+  }
+
+  void OS::Update() {
+    // Emscripten main loop is handled by emscripten_set_main_loop
+  }
+
+  void OS::GetActualWindowSize(unsigned int& width, unsigned int& height) {
+    // Get canvas size from browser
+    int widthValue = 0;
+    int heightValue = 0;
+    emscripten_get_canvas_element_size("#canvas", &widthValue, &heightValue);
+    width = widthValue;
+    height = heightValue;
+  }
+
+  void OS::ImguiInitialize() {
+    ImGui_ImplEmscripten_Init();
+  }
+
+  void OS::ImguiNewFrame() {
+    	// ImGui temporarily disabled for Emscripten
+      int width = 0;
+      int height = 0;
+      emscripten_get_canvas_element_size("#canvas", &width, &height);
+      ImGui::GetIO().DisplaySize = ImVec2((float)width, (float)height);
+	  ImGui_ImplEmscripten_Event();
+    ImGui_ImplEmscripten_NewFrame();
+  }
+
+  void OS::ImguiShutdown() {
+    ImGui_ImplEmscripten_Shutdown();
+  }
+
+  const char* OS::GetName() {
+    return "Emscripten";
+  }
+
+#ifdef MERCURY_LL_GRAPHICS_WEBGPU
+  void* OS::GetWebGPUNativeWindowHandle() {
+    // Function to get canvas surface
+
+    MLOG_DEBUG(u8"Getting canvas surface...");
+
+    int gInitialCanvasWidth = 0;
+    int gInitialCanvasHeight = 0;
+    // Get the canvas element
+    EMSCRIPTEN_RESULT result = emscripten_get_canvas_element_size("#canvas", &gInitialCanvasWidth, &gInitialCanvasHeight);
+    if (result != EMSCRIPTEN_RESULT_SUCCESS)
+    {
+        MLOG_ERROR(u8"Failed to get canvas element");
+        return nullptr;
+    }
+
+    // Create surface from canvas using Emscripten-specific types
+    wgpu::EmscriptenSurfaceSourceCanvasHTMLSelector canvasDesc;
+    canvasDesc.selector = "canvas";
+
+    wgpu::SurfaceDescriptor surfaceDesc = {};
+    surfaceDesc.nextInChain = &canvasDesc;
+
+    gWgpuSurface = wgpuInstance.CreateSurface(&surfaceDesc);
+    if (gWgpuSurface)
+    {
+        MLOG_DEBUG(u8"Canvas surface created successfully");
+    }
+    else
+    {
+        MLOG_ERROR(u8"Failed to create canvas surface");
+    }
+
+    return &gWgpuSurface;
+  }
+
+  void OS::WebGPUPresent() {
+    // Emscripten WebGPU present is handled automatically
+  }
+#endif
+
   OS* gOS = nullptr;
 } 
 

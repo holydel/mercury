@@ -109,8 +109,9 @@ void *Swapchain::GetNativeHandle()
     return nullptr;
 }
 
-void Swapchain::Initialize(void* native_window_handle)
+void Swapchain::Initialize()
 {
+    // null implementation - do nothing
 }
 
 void Swapchain::Shutdown()
@@ -128,6 +129,16 @@ void Swapchain::Present()
 
 void Swapchain::SetFullscreen(bool fullscreen)
 {
+}
+
+int Swapchain::GetWidth() const
+{
+    return 800; // default width for null implementation
+}
+
+int Swapchain::GetHeight() const
+{
+    return 600; // default height for null implementation
 }
 
 void TimelineSemaphore::WaitUntil(mercury::u64 value, mercury::u64 timeout)
@@ -184,5 +195,102 @@ void CommandPool::Destroy()
 void CommandPool::Reset()
 {    
 }
+
+// Missing functions for testbed compatibility
+ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
+{
+    ShaderHandle result;
+    result.handle = 0; // null implementation
+    return result;
+}
+
+void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecodeView& bytecode)
+{
+    // null implementation - do nothing
+}
+
+void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
+{
+    // null implementation - do nothing
+}
+
+PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
+{
+    PsoHandle result;
+    result.handle = 0; // null implementation
+    return result;
+}
+
+void Device::UpdatePipelineState(PsoHandle psoID, const RasterizePipelineDescriptor& desc)
+{
+    // null implementation - do nothing
+}
+
+void Device::DestroyRasterizePipeline(PsoHandle psoID)
+{
+    // null implementation - do nothing
+}
+
+void CommandList::SetPSO(Handle<u32> psoID)
+{
+    // null implementation - do nothing
+}
+
+void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
+{
+    // null implementation - do nothing
+}
+
+void CommandList::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+{
+    // null implementation - do nothing
+}
+
+void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
+{
+    // null implementation - do nothing
+}
+
+void CommandList::RenderImgui()
+{
+    // null implementation - do nothing
+}
+
+void Device::ImguiInitialize()
+{
+    // null implementation - do nothing
+}
+
+void Device::ImguiRegenerateFontAtlas()
+{
+    // null implementation - do nothing
+}
+
+void Device::ImguiNewFrame()
+{
+    // null implementation - do nothing
+}
+
+void Device::ImguiShutdown()
+{
+    // null implementation - do nothing
+}
+
+// Embedded shaders for testbed compatibility
+namespace mercury::ll::graphics::embedded_shaders {
+
+mercury::ll::graphics::ShaderBytecodeView TestTriangleVS()
+{
+    static const char data[] = "// null shader";
+    return { data, sizeof(data) };
+}
+
+mercury::ll::graphics::ShaderBytecodeView TestTrianglePS()
+{
+    static const char data[] = "// null shader";
+    return { data, sizeof(data) };
+}
+
+} // namespace mercury::ll::graphics::embedded_shaders
 
 #endif

@@ -3,6 +3,7 @@
 #include "mercury_utils.h"
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 
 namespace mercury {
 namespace logging {
@@ -34,7 +35,15 @@ namespace logging {
         if (severity == Severity::Fatal)
         {
             // Optional: abort or breakpoint
+#if defined(MERCURY_LL_OS_WIN32)
             __debugbreak();
+#elif defined(MERCURY_LL_OS_EMSCRIPTEN)
+            // Emscripten doesn't support debugbreak, use abort instead
+            std::abort();
+#else
+            // Other platforms
+            std::abort();
+#endif
         }
     }
 }

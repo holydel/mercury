@@ -101,7 +101,7 @@ if(VULKAN_AVAILABLE)
         src/ll/graphics/vulkan/vk_instance.cpp
         src/ll/graphics/vulkan/vk_device.cpp
         src/ll/graphics/vulkan/vk_adapter.cpp
-        src/ll/graphics/vulkan/vk_swapchain.cpp
+        src/ll/graphics/vulkan/embedded_shaders_spirv.cpp
     )
 endif()
 
@@ -109,9 +109,9 @@ endif()
 if(D3D12_AVAILABLE)
     list(APPEND SOURCES
         third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp
-
         src/ll/graphics/d3d12/d3d12_graphics.cpp
         src/ll/graphics/d3d12/d3d12_utils.cpp
+        src/ll/graphics/d3d12/embedded_shaders_dxil.cpp
     )
 endif()
 
@@ -119,11 +119,50 @@ if(WEBGPU_AVAILABLE)
     list(APPEND SOURCES
         src/ll/graphics/webgpu/webgpu_graphics.cpp
         src/ll/graphics/webgpu/webgpu_utils.cpp
+        src/ll/graphics/webgpu/embedded_shaders_wgsl.cpp
     )
 endif()
 
 # Create library
 add_library(mercury_engine STATIC ${SOURCES})
+
+# Add compile definitions based on configuration
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(mercury_engine PUBLIC _DEBUG)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_definitions(mercury_engine PUBLIC NDEBUG)
+    if(WIN32)
+        target_compile_definitions(mercury_engine PUBLIC MERCURY_RETAIL)
+    endif()
+endif()
+
+# Platform-specific defines
+if(WIN32)
+    target_compile_definitions(mercury_engine PUBLIC _CONSOLE)
+    if(VULKAN_AVAILABLE)
+        target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
+    endif()
+    if(D3D12_AVAILABLE)
+        target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_D3D12)
+    endif()
+    if(WEBGPU_AVAILABLE)
+        target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_WEBGPU)
+    endif()
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_WIN32)
+elseif(EMSCRIPTEN)
+    # Use WebGPU with emdawnwebgpu for Emscripten
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_WEBGPU)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_EMSCRIPTEN)
+elseif(UNIX AND NOT APPLE)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_LINUX)
+elseif(APPLE)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_MACOS)
+elseif(ANDROID)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
+    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_ANDROID)
+endif()
 
 if(EMSCRIPTEN)
 
@@ -221,7 +260,6 @@ configure_file(
 target_include_directories(mercury_engine PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/Vulkan-Headers/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/VulkanMemoryAllocator/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/DirectX-Headers/include
@@ -229,6 +267,13 @@ target_include_directories(mercury_engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/glm
     ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/imgui
 )
+
+# Add WebGPU include directory only for native platforms (not Emscripten)
+if(NOT EMSCRIPTEN)
+    target_include_directories(mercury_engine PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webgpu/include
+    )
+endif()
 
 target_include_directories(mercury_engine PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/generated

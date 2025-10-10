@@ -27,11 +27,11 @@ int mercury::utils::string::utf16_to_utf8(const c16 *utf16_str,
   return 0; // TODO: Implement proper UTF-16 to UTF-8 conversion
 }
 
-void mercury::utils::debug::output_debug_string_to_ide(const c8 *str) {
+void mercury::utils::debug::output_debug_string_to_ide(logging::Severity severity, const c8 *str) {
     logToConsole((const char*)str);
 }
 
-void mercury::utils::debug::output_debug_string_to_console(const c8 *str)
+void mercury::utils::debug::output_debug_string_to_console(logging::Severity severity, const c8 *str)
 {
     std::cout << (const char*)str << std::endl;
 }

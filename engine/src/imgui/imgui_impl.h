@@ -12,6 +12,18 @@
 #include <backends/imgui_impl_android.h>
 #endif
 
+#if defined(MERCURY_LL_OS_EMSCRIPTEN)
+#include <backends/imgui_impl_emscripten.h>
+#endif
+
+#if defined(ALLOW_XCB_SURFACE) || defined(ALLOW_XLIB_SURFACE)
+#include <backends/imgui_impl_x11.h>
+#endif
+
+#if defined(ALLOW_WAYLAND_SURFACE)
+#include <backends/imgui_impl_wayland.h>
+#endif
+
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
 #include "../ll/graphics/vulkan/mercury_vulkan.h"
 #define VOLK_H_
@@ -23,16 +35,9 @@
 #endif
 
 #ifdef MERCURY_LL_GRAPHICS_WEBGPU
-#if defined(MERCURY_LL_OS_WIN32)
 #define IMGUI_IMPL_WEBGPU_BACKEND_DAWN
-#endif
 #include <backends/imgui_impl_wgpu.h>
 #endif
 
-#if defined(ALLOW_XCB_SURFACE) || defined(ALLOW_XLIB_SURFACE)
-#include <backends/imgui_impl_x11.h>
-#endif
 
-#if defined(ALLOW_WAYLAND_SURFACE)
-#include <backends/imgui_impl_wayland.h>
-#endif
+

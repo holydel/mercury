@@ -1,0 +1,1 @@
+D:\SDKs\emsdk\upstream\emscripten\emrun.bat D:\Projects\mercury\build-emsdk\bin\testbed.html

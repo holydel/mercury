@@ -8,6 +8,18 @@
 #include <backends/imgui_impl_android.cpp>
 #endif
 
+#if defined(MERCURY_LL_OS_EMSCRIPTEN)
+#include <backends/imgui_impl_emscripten.cpp>
+#endif
+
+#if defined(ALLOW_XCB_SURFACE) || defined(ALLOW_XLIB_SURFACE)
+#include <backends/imgui_impl_x11.cpp>
+#endif
+
+#if defined(ALLOW_WAYLAND_SURFACE)
+#include <backends/imgui_impl_wayland.cpp>
+#endif
+
 #ifdef MERCURY_LL_GRAPHICS_VULKAN
 #include <backends/imgui_impl_vulkan.cpp>
 #endif
@@ -20,10 +32,3 @@
 #include <backends/imgui_impl_wgpu.cpp>
 #endif
 
-#if defined(ALLOW_XCB_SURFACE) || defined(ALLOW_XLIB_SURFACE)
-#include <backends/imgui_impl_x11.cpp>
-#endif
-
-#if defined(ALLOW_WAYLAND_SURFACE)
-#include <backends/imgui_impl_wayland.cpp>
-#endif

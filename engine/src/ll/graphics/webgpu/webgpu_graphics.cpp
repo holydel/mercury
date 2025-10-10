@@ -40,7 +40,7 @@ wgpu::Device wgpuDevice;
 void *gWebGPUSurface = nullptr; // for emscripten os GetCurrentNativeWindowHandle
 wgpu::Surface wgpuSurface;
 wgpu::SurfaceTexture wgpuCurrentSwapchainTexture;
-wgpu::TextureFormat wgpuSwapchainFormat = wgpu::TextureFormat::RGBA8Unorm;
+wgpu::TextureFormat wgpuSwapchainFormat = wgpu::TextureFormat::BGRA8Unorm;
 
 // State tracking
 bool adapterRequested = false;
@@ -57,41 +57,6 @@ int gCurrentCanvasHeight = 0;
 std::vector<wgpu::ShaderModule> gAllShaderModules;
 std::vector<wgpu::RenderPipeline> gAllPSOs;
 
-// Function to get canvas surface
-/*
-* MOVE to Emscripten OS
-wgpu::Surface GetCanvasSurface()
-{
-    MLOG_DEBUG(u8"Getting canvas surface...");
-
-    // Get the canvas element
-    EMSCRIPTEN_RESULT result = emscripten_get_canvas_element_size("#canvas", &gInitialCanvasWidth, &gInitialCanvasHeight);
-    if (result != EMSCRIPTEN_RESULT_SUCCESS)
-    {
-        MLOG_ERROR(u8"Failed to get canvas element");
-        return nullptr;
-    }
-
-    // Create surface from canvas using Emscripten-specific types
-    wgpu::EmscriptenSurfaceSourceCanvasHTMLSelector canvasDesc;
-    canvasDesc.selector = "canvas";
-
-    wgpu::SurfaceDescriptor surfaceDesc = {};
-    surfaceDesc.nextInChain = &canvasDesc;
-
-    wgpu::Surface surface = wgpuInstance.CreateSurface(&surfaceDesc);
-    if (surface)
-    {
-        MLOG_DEBUG(u8"Canvas surface created successfully");
-    }
-    else
-    {
-        MLOG_ERROR(u8"Failed to create canvas surface");
-    }
-
-    return surface;
-}
-*/
 
 void Instance::Initialize()
 {
@@ -109,6 +74,7 @@ void Instance::Initialize()
     instanceDesc.capabilities.timedWaitAnyEnable = true;
     instanceDesc.capabilities.timedWaitAnyMaxCount = 64;
 
+#ifndef MERCURY_LL_OS_EMSCRIPTEN
     wgpu::DawnTogglesDescriptor togglesDesc = {};
     const char* enabledToggles[] = { "allow_unsafe_apis" };
     togglesDesc.nextInChain = nullptr;
@@ -116,6 +82,7 @@ void Instance::Initialize()
     togglesDesc.enabledToggleCount = 1;
     
     instanceDesc.nextInChain = &togglesDesc;
+#endif
 
     wgpuInstance = wgpu::CreateInstance(&instanceDesc);
 
@@ -412,6 +379,7 @@ void Device::Tick()
 
 void Device::ImguiInitialize()
 {
+    MLOG_DEBUG(u8"Initialize ImGui (WEBGPU)");
     ImGui_ImplWGPU_InitInfo initInfo = {};
     initInfo.Device = wgpuDevice.Get();
     initInfo.RenderTargetFormat = (WGPUTextureFormat)wgpuSwapchainFormat;
@@ -650,6 +618,7 @@ void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 
 PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
 {
+    MLOG_DEBUG(u8"Create Rasterize Pipeline (WEBGPU)");
     PsoHandle result;
     result.handle = static_cast<u32>(gAllPSOs.size());
 
@@ -667,16 +636,17 @@ PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& des
 
     // Fragment stage
     wgpu::FragmentState fragmentState{};
+    wgpu::ColorTargetState colorTarget{};
+    colorTarget.format = wgpuSwapchainFormat;
+
     if (desc.fragmentShader.isValid())
     {
         fragmentState.module = gAllShaderModules[desc.fragmentShader.handle];
         fragmentState.entryPoint = "main";
-
-        wgpu::ColorTargetState colorTarget{};
-        colorTarget.format = wgpuSwapchainFormat;
         fragmentState.targets = &colorTarget;
         fragmentState.targetCount = 1;
     }
+
     pipelineDesc.fragment = &fragmentState;
 
     // Primitive state
