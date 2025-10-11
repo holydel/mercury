@@ -73,12 +73,19 @@ namespace mercury::ll::os
   }
 
   void OS::GetActualWindowSize(unsigned int& width, unsigned int& height) {
-    // Get canvas size from browser
-    int widthValue = 0;
-    int heightValue = 0;
-    emscripten_get_canvas_element_size("#canvas", &widthValue, &heightValue);
-    width = widthValue;
-    height = heightValue;
+    // Get actual canvas display size from browser
+    EM_ASM({
+      var canvas = document.getElementById('canvas');
+      if (canvas) {
+        var rect = canvas.getBoundingClientRect();
+        setValue($0, rect.width, 'i32');
+        setValue($1, rect.height, 'i32');
+      } else {
+        // Fallback to viewport size
+        setValue($0, window.innerWidth, 'i32');
+        setValue($1, window.innerHeight, 'i32');
+      }
+    }, &width, &height);
   }
 
   void OS::ImguiInitialize() {

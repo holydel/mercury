@@ -61,15 +61,15 @@ std::vector<wgpu::RenderPipeline> gAllPSOs;
 void Instance::Initialize()
 {
     MLOG_DEBUG(u8"Initialize Graphics System (WEBGPU)");
-
+    
     #ifdef MERCURY_LL_OS_WIN32
     // Set up Dawn procedure table before creating any WebGPU objects
     SetDllDirectoryA("C:\\Windows\\System32");
     // dawnProcSetProcs(&dawn::native::GetProcs());
     #endif  // __EMSCRIPTEN__
 
-    wgpu::InstanceDescriptor instanceDesc = {};
-    instanceDesc.nextInChain = nullptr;
+        wgpu::InstanceDescriptor instanceDesc = {};
+        instanceDesc.nextInChain = nullptr;
     instanceDesc.capabilities.nextInChain = nullptr;
     instanceDesc.capabilities.timedWaitAnyEnable = true;
     instanceDesc.capabilities.timedWaitAnyMaxCount = 64;
@@ -84,11 +84,11 @@ void Instance::Initialize()
     instanceDesc.nextInChain = &togglesDesc;
 #endif
 
-    wgpuInstance = wgpu::CreateInstance(&instanceDesc);
+        wgpuInstance = wgpu::CreateInstance(&instanceDesc);
 
     wgpuSurface = *(wgpu::Surface*)os::gOS->GetWebGPUNativeWindowHandle();
     gWebGPUSurface = wgpuSurface.Get();
-
+    
     if (wgpuInstance)
     {
         MLOG_DEBUG(u8"WebGPU instance created successfully");
@@ -102,14 +102,14 @@ void Instance::Initialize()
 void Instance::Shutdown()
 {
     MLOG_DEBUG(u8"Shutdown Graphics System (WEBGPU)");
-
+    
     wgpuDevice = nullptr;
     wgpuAdapter = nullptr;
     wgpuInstance = nullptr;
 
     gAllShaderModules.clear();
     gAllPSOs.clear();
-
+    
     adapterRequested = false;
     adapterReady = false;
     deviceRequested = false;
@@ -142,7 +142,7 @@ void Adapter::Initialize()
     if (!adapterRequested)
     {
         MLOG_DEBUG(u8"Starting WebGPU adapter request...");
-
+        
         wgpu::RequestAdapterOptions adapterOptions = {};
         adapterOptions.nextInChain = nullptr;
         adapterOptions.compatibleSurface = wgpuSurface;
@@ -152,29 +152,29 @@ void Adapter::Initialize()
         //adapterOptions.powerPreference = graphicsConfig.adapterPreference == Config::Graphics::AdapterTypePreference::HighPerformance ? wgpu::PowerPreference::HighPerformance : wgpu::PowerPreference::LowPower;
         // Try with surface first
        
-        wgpuInstance.RequestAdapter(&adapterOptions,
+        wgpuInstance.RequestAdapter(&adapterOptions, 
                                     wgpu::CallbackMode::AllowSpontaneous,
                                     [this](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView)
                                     {
-                                        MLOG_DEBUG(u8"RequestAdapter callback called with status: %d", (int)status);
+                MLOG_DEBUG(u8"RequestAdapter callback called with status: %d", (int)status);
                                         if (status == wgpu::RequestAdapterStatus::Success)
                                         {
-                                            wgpuAdapter = adapter;
-                                            MLOG_DEBUG(u8"WebGPU adapter acquired successfully");
-
-                                            // Log adapter info
-                                            wgpu::AdapterInfo adapterInfo;
+                    wgpuAdapter = adapter;
+                    MLOG_DEBUG(u8"WebGPU adapter acquired successfully");
+                    
+                    // Log adapter info
+                    wgpu::AdapterInfo adapterInfo;
                                             wgpu::Limits limits;
 
-                                            wgpuAdapter.GetInfo(&adapterInfo);
-                                            MLOG_DEBUG(u8"WebGPU adapter info:");
+                    wgpuAdapter.GetInfo(&adapterInfo);
+                    MLOG_DEBUG(u8"WebGPU adapter info:");
 
                                             MLOG_DEBUG(u8"  - Device: %s", adapterInfo.device.data);
                                             MLOG_DEBUG(u8"  - Vendor: %s", adapterInfo.vendor.data);
                                             MLOG_DEBUG(u8"  - Description: %s", adapterInfo.description.data);
 
-                                            MLOG_DEBUG(u8"  - Device ID: %u", adapterInfo.deviceID);
-                                            MLOG_DEBUG(u8"  - Vendor ID: %u", adapterInfo.vendorID);
+                    MLOG_DEBUG(u8"  - Device ID: %u", adapterInfo.deviceID);
+                    MLOG_DEBUG(u8"  - Vendor ID: %u", adapterInfo.vendorID);
 
                                             MLOG_DEBUG(u8"  - Backend type: %s (%d)", wgpu_utils::GetBackendTypeString(adapterInfo.backendType), (int)adapterInfo.backendType);
                                             MLOG_DEBUG(u8"  - Adapter type: %s (%d)", wgpu_utils::GetAdapterTypeString(adapterInfo.adapterType), (int)adapterInfo.adapterType);
@@ -240,18 +240,18 @@ void Adapter::Initialize()
                                             {
                                                 MLOG_DEBUG(u8"    - %s", wgpu_utils::GetCompositeAlphaModeString(surfaceCapabilities.alphaModes[i]));
                                             }
-                                            adapterReady = true;
+                    adapterReady = true;
                                         }
                                         else
                                         {
-                                            MLOG_ERROR(u8"Failed to acquire WebGPU adapter");
-                                        }
-                                    });
-
+                    MLOG_ERROR(u8"Failed to acquire WebGPU adapter");
+                }
+            });
+        
         MLOG_DEBUG(u8"RequestAdapter call completed, setting adapterRequested = true");
         adapterRequested = true;
     }
-
+    
     // Wait for adapter to be ready
     MLOG_DEBUG(u8"Waiting for WebGPU adapter...");
     int waitCount = 0;
@@ -284,11 +284,11 @@ void Device::Initialize()
     if (!deviceRequested)
     {
         MLOG_DEBUG(u8"Starting WebGPU device request...");
-
+        
         wgpu::DeviceDescriptor deviceDesc = {};
         deviceDesc.nextInChain = nullptr;
         deviceDesc.label = "Mercury WebGPU Device";
-
+        
         deviceDesc.SetDeviceLostCallback(
             wgpu::CallbackMode::AllowSpontaneous,
             [](const wgpu::Device&, wgpu::DeviceLostReason reason, wgpu::StringView message) {
@@ -334,25 +334,25 @@ void Device::Initialize()
                                   wgpu::CallbackMode::AllowSpontaneous,
                                   [](wgpu::RequestDeviceStatus status, wgpu::Device device, wgpu::StringView message)
                                   {
-                                      MLOG_DEBUG(u8"RequestDevice callback called with status: %d", (int)status);
+                MLOG_DEBUG(u8"RequestDevice callback called with status: %d", (int)status);
                                       if (status == wgpu::RequestDeviceStatus::Success)
                                       {
-                                          wgpuDevice = device;
-                                          MLOG_DEBUG(u8"WebGPU device created successfully");
-
-                                          MLOG_DEBUG(u8"WebGPU device configured");
-                                          deviceReady = true;
+                    wgpuDevice = device;
+                    MLOG_DEBUG(u8"WebGPU device created successfully");
+                    
+                    MLOG_DEBUG(u8"WebGPU device configured");
+                    deviceReady = true;
                                       }
                                       else
                                       {
-                                          MLOG_ERROR(u8"Failed to create WebGPU device");
-                                      }
-                                  });
-
+                    MLOG_ERROR(u8"Failed to create WebGPU device");
+                }
+            });
+        
         MLOG_DEBUG(u8"RequestDevice call completed, setting deviceRequested = true");
         deviceRequested = true;
     }
-
+    
     // Wait for device to be ready
     MLOG_DEBUG(u8"Waiting for WebGPU device...");
     int waitCount = 0;
@@ -418,6 +418,19 @@ void Device::ShutdownSwapchain()
     gSwapchain->Shutdown();
     delete gSwapchain;
     gSwapchain = nullptr;
+}
+
+void Swapchain::ReInitIfNeeded()
+{
+    unsigned int currentWidth, currentHeight;
+    ll::os::gOS->GetActualWindowSize(currentWidth, currentHeight);
+    
+    if (currentWidth != gCurrentCanvasWidth || currentHeight != gCurrentCanvasHeight)
+    {
+        MLOG_DEBUG(u8"Canvas size changed from %dx%d to %dx%d, resizing swapchain", 
+                   gCurrentCanvasWidth, gCurrentCanvasHeight, currentWidth, currentHeight);
+        Resize(currentWidth, currentHeight);
+    }
 }
 
 void Swapchain::Initialize()
@@ -486,6 +499,9 @@ wgpu::RenderPassEncoder gCurrentFinalRenderPass;
 
 CommandList Swapchain::AcquireNextImage()
 {
+    // Check if swapchain needs to be resized
+    ReInitIfNeeded();
+    
     wgpuSurface.GetCurrentTexture(&wgpuCurrentSwapchainTexture);
 
     gCurrentCommandEncoder = wgpuDevice.CreateCommandEncoder();

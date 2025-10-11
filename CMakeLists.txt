@@ -97,6 +97,11 @@ if(EMSCRIPTEN)
         OUTPUT_NAME "testbed"
     )
     
+    # Use custom HTML shell for better canvas size and styling
+    target_link_options(testbed PRIVATE
+        --shell-file "${CMAKE_SOURCE_DIR}/build-emsdk/bin/testbed_es6.html"
+    )
+    
     # Set HTML output name
     set_target_properties(testbed PROPERTIES
         OUTPUT_NAME_DEBUG "testbed"
