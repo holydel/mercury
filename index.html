@@ -1,1 +1,11 @@
-<!doctypehtml><html lang=en><head><meta charset=utf-8><meta content="width=device-width,initial-scale=1"name=viewport><title>Mercury Engine</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;overflow:hidden;font-family:monospace}#canvas{display:block;width:100vw;height:100vh;background:#000}.loading{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:18px;text-align:center}.hidden{display:none}</style></head><body><canvas id=canvas tabindex=-1></canvas><div class=loading id=loading>Loading Mercury Engine...</div><script>function resizeCanvas(){const e=document.getElementById("canvas"),n=e.clientWidth,t=e.clientHeight;e.width=n,e.height=t}window.addEventListener("load",resizeCanvas),window.addEventListener("resize",resizeCanvas),window.addEventListener("DOMContentLoaded",resizeCanvas);var Module={canvas:document.getElementById("canvas"),print:function(...e){console.log(...e)},setStatus:function(e){console.log("Status:",e)},monitorRunDependencies:function(e){this.totalDependencies=Math.max(this.totalDependencies,e)},totalDependencies:0,onRuntimeInitialized:function(){document.getElementById("loading").classList.add("hidden"),resizeCanvas()}};Module.canvas.addEventListener("webglcontextlost",(e=>{alert("WebGL context lost. Reload the page."),e.preventDefault()}),!1),Module.canvas.addEventListener("webgpucontextlost",(e=>{alert("WebGPU context lost. Reload the page."),e.preventDefault()}),!1),window.onerror=function(e){console.error("Error:",e)}</script><script type=module>import initModule from"./testbed.js";initModule(Module)</script><script type=module>import initModule from"./testbed.js";initModule(Module)</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World</title>
+</head>
+<body>
+    <h1>Hello, World!</h1>
+</body>
+</html>
