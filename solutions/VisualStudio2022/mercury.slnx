@@ -1,0 +1,30 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Dev" />
+    <BuildType Name="Retail" />
+    <Platform Name="Android-arm64-v8a" />
+    <Platform Name="Emscripten" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="../../README.md" />
+  </Folder>
+  <Project Path="../../TestBedUWP/TestBedUWP.vcxproj" Id="90ec6e76-f839-4654-a818-4c35127095c8">
+    <BuildDependency Project="mercury.vcxproj" />
+    <BuildType Solution="Dev|*" Project="Release" />
+    <BuildType Solution="Retail|Android-arm64-v8a" Project="Release" />
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <BuildType Solution="Retail|x64" Project="Release" />
+    <Platform Solution="*|Android-arm64-v8a" Project="ARM64" />
+    <Platform Solution="*|Emscripten" Project="x64" />
+    <Deploy />
+  </Project>
+  <Project Path="mercury.vcxproj" Id="e65014e2-0ef6-48fa-b05c-f54ae0611aa8">
+    <BuildType Solution="Dev|Emscripten" Project="Retail" />
+  </Project>
+  <Project Path="testbed.vcxproj" Id="6d9ead10-16d1-4773-a025-89f3a6e40cb2">
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <Platform Solution="*|Emscripten" Project="x64" />
+  </Project>
+</Solution>

@@ -56,3 +56,12 @@ TestBedUWP/x64
 engine/shaders/.vs
 engine/third_party_prebuilt/win64/release/lib/cmake
 engine/third_party_prebuilt/win64/debug/lib/cmake/Dawn
+solutions/VisualStudio2022/.vs
+solutions/VisualStudio2022/intermediate
+solutions/VisualStudio2022/Debug
+solutions/VisualStudio2022/x64/Release
+solutions/VisualStudio2022/out
+solutions/VisualStudio2022/x64
+solutions/VisualStudio2022/testbed_apk/.agde
+TestBedUWP/ARM64
+solutions/VisualStudio2022/testbed_apk/.gradle

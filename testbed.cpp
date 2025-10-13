@@ -1,4 +1,5 @@
-#include "engine/include/mercury.h"
+﻿#include "mercury.h"
+#include "mercury_entry_point.h"
 #include <stdio.h>
 
 #include "ll/os.h"

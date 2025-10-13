@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <type_traits>
 #include <concepts>
@@ -23,7 +23,7 @@
 #endif
 
 #ifndef MERCURY_LL_OS_LINUX
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__ANDROID__)
 #define MERCURY_LL_OS_LINUX
 #endif
 #endif
@@ -35,7 +35,7 @@
 #endif
 
 // SIMD support includes
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if defined(__aarch64__)
 #include <arm_neon.h>
 #elif defined(MERCURY_LL_OS_EMSCRIPTEN)
 // Emscripten WebAssembly SIMD support
@@ -49,12 +49,11 @@
 #ifndef MERCURY_LL_GRAPHICS_NULL
 //#define MERCURY_LL_GRAPHICS_NULL
 #endif
-//#define MERCURY_LL_GRAPHICS_VULKAN
+#define MERCURY_LL_GRAPHICS_VULKAN
 //#define MERCURY_LL_GRAPHICS_D3D12
 //#define MERCURY_LL_GRAPHICS_METAL
-#ifndef MERCURY_LL_GRAPHICS_WEBGPU
+//#ifndef MERCURY_LL_GRAPHICS_WEBGPU
 //#define MERCURY_LL_GRAPHICS_WEBGPU
-#endif
 
 #define MERCURY_LL_SOUND_NONE
 // #define MERCURY_LL_SOUND_MINIAUDIO
@@ -83,8 +82,8 @@ namespace mercury
     typedef double f64;
 
 // SIMD vector types
-#if defined(__ARM_NEON)
-    // ARM NEON SIMD types
+#if defined(__aarch64__)
+    // ARM64 NEON SIMD types
     typedef float32x4_t f32x4;
     typedef int32x4_t i32x4;
     typedef uint32x4_t u32x4;

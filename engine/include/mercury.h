@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "mercury_api.h"
 #include "mercury_simd.h"

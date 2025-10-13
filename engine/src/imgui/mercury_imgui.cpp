@@ -1,4 +1,4 @@
-#include "mercury_imgui.h"
+﻿#include "mercury_imgui.h"
 #include "imgui_impl.h"
 #include <mercury_input.h>
 #include <mercury_ui.h>
@@ -36,8 +36,8 @@ void mercury_imgui::Initialize()
 	//ImGui_ImplX11_Init(connection, win);
 #endif
 #ifdef MERCURY_LL_OS_ANDROID
-	ImGui_ImplAndroid_Init(static_cast<ANativeWindow*>(os::GetNativeWindowHandle()));
-	ImGui::GetIO().FontGlobalScale = 2.0f;
+	//ImGui_ImplAndroid_Init(static_cast<ANativeWindow*>(os::GetNativeWindowHandle()));
+	//ImGui::GetIO().FontGlobalScale = 2.0f;
 #endif
 #ifdef MERCURY_LL_OS_MACOS
 	void* view = mercury::platform::getAppInstanceHandle(); //view

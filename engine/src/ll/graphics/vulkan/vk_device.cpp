@@ -1,4 +1,4 @@
-#include "ll/graphics.h"
+﻿#include "ll/graphics.h"
 
 #if defined(MERCURY_LL_GRAPHICS_VULKAN)
 
@@ -475,8 +475,8 @@ void Device::ImguiInitialize()
 	init_info.MinImageCount = 3;
 	init_info.ImageCount = 3;
 	init_info.CheckVkResultFn = mercury_imgui_check_vk_result;
-	init_info.MSAASamples = gVKSurfaceSamples;
-	init_info.RenderPass = gVKFinalRenderPass;
+	init_info.PipelineInfoMain.MSAASamples = gVKSurfaceSamples;
+	init_info.PipelineInfoMain.RenderPass = gVKFinalRenderPass;
 	init_info.MinAllocationSize = 1024 * 1024;
 
 	init_info.UseDynamicRendering = gVKConfig.useDynamicRendering;
@@ -485,7 +485,7 @@ void Device::ImguiInitialize()
 		VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
 		pipeline_rendering_create_info.colorAttachmentCount = 1;
 		pipeline_rendering_create_info.pColorAttachmentFormats = &gVKSurfaceFormat;
-		init_info.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
+		init_info.PipelineInfoMain.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
 	}
 	VkDescriptorPoolSize pool_sizes[] =
 	{
@@ -516,7 +516,7 @@ void Device::ImguiInitialize()
 
 void Device::ImguiRegenerateFontAtlas()
 {
-	ImGui_ImplVulkan_CreateFontsTexture();
+	//ImGui_ImplVulkan_CreateFontsTexture();
 }
 
 void Device::ImguiNewFrame()

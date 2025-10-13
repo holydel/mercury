@@ -1,0 +1,461 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Android-arm64-v8a">
+      <Configuration>Debug</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Emscripten">
+      <Configuration>Debug</Configuration>
+      <Platform>Emscripten</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Dev|Android-arm64-v8a">
+      <Configuration>Dev</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Dev|Emscripten">
+      <Configuration>Dev</Configuration>
+      <Platform>Emscripten</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Dev|x64">
+      <Configuration>Dev</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Retail|Android-arm64-v8a">
+      <Configuration>Retail</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Retail|Emscripten">
+      <Configuration>Retail</Configuration>
+      <Platform>Emscripten</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Retail|x64">
+      <Configuration>Retail</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{e65014e2-0ef6-48fa-b05c-f54ae0611aa8}</ProjectGuid>
+    <RootNamespace>mercury</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Emscripten'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+    <AndroidNdkVersion>27.0.12077973</AndroidNdkVersion>
+    <CLanguageStandard>c17</CLanguageStandard>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
+    <UseOfStl>cpp_shared</UseOfStl>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Emscripten'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+    <AndroidNdkVersion>27.0.12077973</AndroidNdkVersion>
+    <CLanguageStandard>c17</CLanguageStandard>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Emscripten'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+    <AndroidNdkVersion>27.0.12077973</AndroidNdkVersion>
+    <CLanguageStandard>c17</CLanguageStandard>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Emscripten'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Emscripten'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Retail|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Emscripten'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>intermediate/$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\out\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
+    <IntDir>intermediate/$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\out\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+    <IntDir>intermediate/$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\out\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <OutDir>$(SolutionDir)\out\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>intermediate\$(MSBuildProjectName)\$(Platform)\$(Configuration)\$(PlatformTarget)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>false</ExceptionHandling>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\debug\bin\*.dll" "$(OutDir)" /y /d /i
+xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\debug\bin\*.pdb" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\engine\third_party_prebuilt\win64\debug\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Emscripten'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\release\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\engine\third_party_prebuilt\win64\release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Emscripten'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>MERCURY_RETAIL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <PostBuildEvent>
+      <Command>xcopy "$(ProjectDir)..\..\engine\third_party_prebuilt\win64\release\bin\*.dll" "$(OutDir)" /y /d /i</Command>
+    </PostBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>..\..\engine\third_party_prebuilt\win64\release\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Emscripten'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\engine\src\application.cpp" />
+    <ClCompile Include="..\..\engine\src\graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\imgui\imgui_impl.cpp" />
+    <ClCompile Include="..\..\engine\src\imgui\mercury_imgui.cpp" />
+    <ClCompile Include="..\..\engine\src\input.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_utils.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\embedded_shaders_dxil.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\mercury_swapchain.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\null\null_graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\embedded_shaders_spirv.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_adapter.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_device.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_instance.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.cpp" />
+    <ClCompile Include="..\..\engine\src\ll\os\android\android_input.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\os\android\android_os.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\os\android\android_utils.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\os\win32\win32_input.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\os\win32\win32_os.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\ll\os\win32\win32_utils.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\engine\src\mercury_log.cpp" />
+    <ClCompile Include="..\..\engine\src\mercury_memory.cpp" />
+    <ClCompile Include="..\..\engine\src\mercury_string_utils.cpp" />
+    <ClCompile Include="..\..\engine\third_party\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\third_party\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\engine\include\ll\graphics.h" />
+    <ClInclude Include="..\..\engine\include\ll\os.h" />
+    <ClInclude Include="..\..\engine\include\ll\physic.h" />
+    <ClInclude Include="..\..\engine\include\ll\sound.h" />
+    <ClInclude Include="..\..\engine\include\ll\xr.h" />
+    <ClInclude Include="..\..\engine\include\mercury.h" />
+    <ClInclude Include="..\..\engine\include\mercury_api.h" />
+    <ClInclude Include="..\..\engine\include\mercury_application.h" />
+    <ClInclude Include="..\..\engine\include\mercury_embedded_shaders.h" />
+    <ClInclude Include="..\..\engine\include\mercury_entry_point.h" />
+    <ClInclude Include="..\..\engine\include\mercury_framegraph.h" />
+    <ClInclude Include="..\..\engine\include\mercury_input.h" />
+    <ClInclude Include="..\..\engine\include\mercury_log.h" />
+    <ClInclude Include="..\..\engine\include\mercury_material.h" />
+    <ClInclude Include="..\..\engine\include\mercury_memory.h" />
+    <ClInclude Include="..\..\engine\include\mercury_shader.h" />
+    <ClInclude Include="..\..\engine\include\mercury_simd.h" />
+    <ClInclude Include="..\..\engine\include\mercury_utils.h" />
+    <ClInclude Include="..\..\engine\src\application.h" />
+    <ClInclude Include="..\..\engine\src\graphics.h" />
+    <ClInclude Include="..\..\engine\src\imgui\imgui_impl.h" />
+    <ClInclude Include="..\..\engine\src\imgui\mercury_imgui.h" />
+    <ClInclude Include="..\..\engine\src\input.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\mercury_swapchain.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_device.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_graphics.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.h" />
+    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h" />
+    <ClInclude Include="..\..\engine\src\ll\os\android\android_input.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\engine\src\ll\os\win32\win32_input.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dev|Android-arm64-v8a'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Retail|Android-arm64-v8a'">true</ExcludedFromBuild>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="testbed_apk\fix_jni_libs.ps1" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

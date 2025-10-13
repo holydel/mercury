@@ -63,6 +63,14 @@ elseif(APPLE)
     set(VULKAN_AVAILABLE TRUE)
     
     list(APPEND SOURCES src/ll/os/macos/macos_os.cpp)
+
+elseif(ANDROID)
+    message(STATUS "Autodetected Android build")
+    set(VULKAN_AVAILABLE TRUE)
+
+    list(APPEND SOURCES src/ll/os/android/android_os.cpp)
+    list(APPEND SOURCES src/ll/os/android/android_input.cpp)
+    list(APPEND SOURCES src/ll/os/android/android_utils.cpp)
 elseif(UNIX AND NOT APPLE)
 
     option(ALLOW_XCB_SURFACE "Allow uisng XCB surfaces" ON)
@@ -82,11 +90,6 @@ elseif(UNIX AND NOT APPLE)
     src/ll/os/linux/linux_wayland.cpp
     src/ll/os/linux/xdg-shell-protocol.c
     src/ll/os/linux/xdg-decoration.c) 
-elseif(ANDROID)
-    message(STATUS "Autodetected Android build")
-    set(VULKAN_AVAILABLE TRUE)
-
-    list(APPEND SOURCES src/ll/os/android/android_os.cpp)
 else()
     message(FATAL_ERROR "Unsupported OS")
 endif()
@@ -136,33 +139,6 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     endif()
 endif()
 
-# Platform-specific defines
-if(WIN32)
-    target_compile_definitions(mercury_engine PUBLIC _CONSOLE)
-    if(VULKAN_AVAILABLE)
-        target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
-    endif()
-    if(D3D12_AVAILABLE)
-        target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_D3D12)
-    endif()
-    if(WEBGPU_AVAILABLE)
-        target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_WEBGPU)
-    endif()
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_WIN32)
-elseif(EMSCRIPTEN)
-    # Use WebGPU with emdawnwebgpu for Emscripten
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_WEBGPU)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_EMSCRIPTEN)
-elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_LINUX)
-elseif(APPLE)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_MACOS)
-elseif(ANDROID)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_GRAPHICS_VULKAN)
-    target_compile_definitions(mercury_engine PUBLIC MERCURY_LL_OS_ANDROID)
-endif()
 
 if(EMSCRIPTEN)
 
@@ -170,7 +146,7 @@ elseif(WIN32)
 
 elseif(APPLE)
 
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE AND NOT ANDROID)
 find_package(PkgConfig REQUIRED)
     pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
     # Also, if you need wayland-egl and wayland-cursor, you can add them:

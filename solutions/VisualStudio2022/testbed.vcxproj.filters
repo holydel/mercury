@@ -1,0 +1,159 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="testbed_apk">
+      <UniqueIdentifier>{9dbc1f6b-e1c2-4546-8ff9-b8837d091816}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\gradle">
+      <UniqueIdentifier>{a56d689b-3a99-4f84-a312-ff6afab0583f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\gradle\wrapper">
+      <UniqueIdentifier>{2313d257-dff9-4350-a2c8-e20708d4ff3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app">
+      <UniqueIdentifier>{ab74e242-a54c-4506-9e79-341b1ffd8072}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src">
+      <UniqueIdentifier>{83d56557-9c2b-4046-96e1-8749f224019a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main">
+      <UniqueIdentifier>{1c4d3f7c-cd02-49c8-8128-3810ae25f8c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res">
+      <UniqueIdentifier>{ba48fcdb-7a6f-4010-ab47-d060b8576ed9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\drawable">
+      <UniqueIdentifier>{bd57b551-c2b6-416f-8399-9032eb5750a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\drawable-v24">
+      <UniqueIdentifier>{794b2d18-5264-450f-a195-d6a935bad78f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\layout">
+      <UniqueIdentifier>{be2839da-3c9d-48ec-82ac-7ea094984da2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\mipmap-anydpi-v26">
+      <UniqueIdentifier>{414364f1-8628-4a52-a344-61ddc16b6f28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\mipmap-hdpi">
+      <UniqueIdentifier>{c17d77f8-dd29-448d-b980-20043310a6d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\mipmap-mdpi">
+      <UniqueIdentifier>{b21e30f4-59bf-40f2-9c21-b4250e0605ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\mipmap-xhdpi">
+      <UniqueIdentifier>{652c2f67-6a3b-492c-9542-eb37d05ed8b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\mipmap-xxhdpi">
+      <UniqueIdentifier>{fddb81cb-81db-439b-a5cf-cacdea897ec5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\mipmap-xxxhdpi">
+      <UniqueIdentifier>{4ca95c9f-9ec3-4c28-82d9-eaad1c98285f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="testbed_apk\app\src\main\res\values">
+      <UniqueIdentifier>{4fcc606d-53b5-49f9-9a97-dc01298846d3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\testbed.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="testbed_apk\gradle\wrapper\gradle-wrapper.jar">
+      <Filter>testbed_apk\gradle\wrapper</Filter>
+    </None>
+    <None Include="testbed_apk\gradle\wrapper\gradle-wrapper.properties">
+      <Filter>testbed_apk\gradle\wrapper</Filter>
+    </None>
+    <None Include="testbed_apk\build.gradle">
+      <Filter>testbed_apk</Filter>
+    </None>
+    <None Include="testbed_apk\gradle.properties">
+      <Filter>testbed_apk</Filter>
+    </None>
+    <None Include="testbed_apk\gradlew">
+      <Filter>testbed_apk</Filter>
+    </None>
+    <None Include="testbed_apk\gradlew.bat">
+      <Filter>testbed_apk</Filter>
+    </None>
+    <None Include="testbed_apk\settings.gradle">
+      <Filter>testbed_apk</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\drawable\ic_launcher_background.xml">
+      <Filter>testbed_apk\app\src\main\res\drawable</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\drawable-v24\ic_launcher_foreground.xml">
+      <Filter>testbed_apk\app\src\main\res\drawable-v24</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\layout\activity_main.xml">
+      <Filter>testbed_apk\app\src\main\res\layout</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml">
+      <Filter>testbed_apk\app\src\main\res\mipmap-anydpi-v26</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml">
+      <Filter>testbed_apk\app\src\main\res\mipmap-anydpi-v26</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-hdpi\ic_launcher.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-hdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-hdpi\ic_launcher_round.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-hdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-mdpi\ic_launcher.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-mdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-mdpi\ic_launcher_round.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-mdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-xhdpi\ic_launcher.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-xhdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-xhdpi\ic_launcher_round.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-xhdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-xxhdpi\ic_launcher.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-xxhdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-xxhdpi\ic_launcher_round.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-xxhdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-xxxhdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\mipmap-xxxhdpi\ic_launcher_round.png">
+      <Filter>testbed_apk\app\src\main\res\mipmap-xxxhdpi</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\values\colors.xml">
+      <Filter>testbed_apk\app\src\main\res\values</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\values\strings.xml">
+      <Filter>testbed_apk\app\src\main\res\values</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\res\values\styles.xml">
+      <Filter>testbed_apk\app\src\main\res\values</Filter>
+    </None>
+    <None Include="testbed_apk\app\src\main\AndroidManifest.xml">
+      <Filter>testbed_apk\app\src\main</Filter>
+    </None>
+    <None Include="testbed_apk\app\build.gradle">
+      <Filter>testbed_apk\app</Filter>
+    </None>
+    <None Include="testbed_apk\app\proguard-rules.pro">
+      <Filter>testbed_apk\app</Filter>
+    </None>
+  </ItemGroup>
+</Project>
