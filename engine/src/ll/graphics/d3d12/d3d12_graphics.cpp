@@ -333,16 +333,22 @@ static BackbufferResourceInfo& GetCurrentBackbufferResourceInfo()
 
 void Swapchain::Initialize()
 {
-    HWND hwnd = static_cast<HWND>(os::gOS->GetCurrentNativeWindowHandle());
+    void* windowHandle = os::gOS->GetCurrentNativeWindowHandle();
 
 #ifndef MERCURY_UWP
+    auto hwnd = static_cast<HWND>(windowHandle);
     RECT clientRect = {};
     GetClientRect(hwnd, (LPRECT)&clientRect);
 
 
     gNewWidth = gCurWidth = clientRect.right - clientRect.left;
     gNewHeight = gCurHeight = clientRect.bottom - clientRect.top;
+#else
+    //implement for uwp
+	gNewWidth = gCurWidth = 1280;
+	gNewHeight = gCurHeight = 720;
 #endif
+    IDXGISwapChain1* swapchain1 = nullptr;
 
     // Create swapchain
     DXGI_SWAP_CHAIN_DESC1 sdesc = {};
@@ -358,8 +364,24 @@ void Swapchain::Initialize()
     sdesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     sdesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 
-    IDXGISwapChain1* swapchain1 = nullptr;
+#ifndef MERCURY_UWP
     D3D_CALL(gD3DFactory->CreateSwapChainForHwnd(gD3DCommandQueue, hwnd, &sdesc, nullptr, nullptr, &swapchain1));
+#else
+
+    HRESULT hr = gD3DFactory->CreateSwapChainForCoreWindow(
+        gD3DCommandQueue,
+        reinterpret_cast<IUnknown*>(windowHandle),  // Use CoreWindow directly!
+        &sdesc,
+        nullptr,
+        &swapchain1
+    );
+#endif
+
+    
+
+
+
+
     D3D_CALL(swapchain1->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&gSwapChain));
     swapchain1->Release();
 
