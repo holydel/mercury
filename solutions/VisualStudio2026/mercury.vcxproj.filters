@@ -1,258 +1,37 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\imgui">
-      <UniqueIdentifier>{184ee089-268f-403b-a16f-09fcb731c33c}</UniqueIdentifier>
+    <Filter Include="src">
+      <UniqueIdentifier>{656cf923-f0d0-4264-a542-a3697c67b773}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ll">
-      <UniqueIdentifier>{f7d0323c-59e1-4715-b1b0-ccc5bf3c2e8e}</UniqueIdentifier>
+    <Filter Include="src\ll">
+      <UniqueIdentifier>{9fdb4512-b935-4f8f-9c13-e1b5d7c2f697}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ll\graphics">
-      <UniqueIdentifier>{12f33112-5892-41ca-9c3f-f97fadd7d5ae}</UniqueIdentifier>
+    <Filter Include="src\ll\os">
+      <UniqueIdentifier>{dde75787-cc2a-4faf-8d15-0cfe94724313}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\ll\os">
-      <UniqueIdentifier>{b983fc93-acd1-4fbb-a19d-9f93aa31ac8e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\platforms">
-      <UniqueIdentifier>{e71ab995-f8f8-48e7-b2b1-3f5c7da83609}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\graphics\d3d12">
-      <UniqueIdentifier>{c5112fa5-9cb9-4f20-995b-fcf9e620c995}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\graphics\null">
-      <UniqueIdentifier>{67be02ec-520e-41f8-a0a2-23269c44eae2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\graphics\vulkan">
-      <UniqueIdentifier>{3a3cbe80-15cc-4db1-86ef-8414ec435bcc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\os\win32">
-      <UniqueIdentifier>{8fee0d4e-47e5-480e-b609-e10b617b4f54}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\ll">
-      <UniqueIdentifier>{f871461a-4b38-49a5-aa12-d94fbad2cfd5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\third_party">
-      <UniqueIdentifier>{9f5d325b-7256-4007-b100-3610b7266a03}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\third_party\imgui">
-      <UniqueIdentifier>{2f848b45-a6ab-4b80-b576-3e50d5e8c696}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\graphics\webgpu">
-      <UniqueIdentifier>{f936fb2e-5242-438d-98db-3df76b98efc9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\ll\graphics\d3d12\third_party">
-      <UniqueIdentifier>{fec682c0-433e-4cd2-85f7-01085fadec07}</UniqueIdentifier>
+    <Filter Include="src\ll\os\win32">
+      <UniqueIdentifier>{62fde2c4-bb86-4098-861e-9078cccabde8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\engine\src\application.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\input.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\mercury_log.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\mercury_memory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\mercury_string_utils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\imgui\imgui_impl.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\imgui\mercury_imgui.cpp">
-      <Filter>Source Files\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_input.cpp">
-      <Filter>Source Files\ll\os\win32</Filter>
+      <Filter>src\ll\os\win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_os.cpp">
-      <Filter>Source Files\ll\os\win32</Filter>
+      <Filter>src\ll\os\win32</Filter>
     </ClCompile>
     <ClCompile Include="..\..\engine\src\ll\os\win32\win32_utils.cpp">
-      <Filter>Source Files\ll\os\win32</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.cpp">
-      <Filter>Source Files\ll\graphics\d3d12</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\d3d12_utils.cpp">
-      <Filter>Source Files\ll\graphics\d3d12</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_adapter.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_device.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_graphics.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_instance.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\null\null_graphics.cpp">
-      <Filter>Source Files\ll\graphics\null</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\mercury_swapchain.cpp">
-      <Filter>Source Files\ll\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\third_party\imgui\imgui.cpp">
-      <Filter>Source Files\third_party\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\third_party\imgui\imgui_demo.cpp">
-      <Filter>Source Files\third_party\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\third_party\imgui\imgui_draw.cpp">
-      <Filter>Source Files\third_party\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\third_party\imgui\imgui_tables.cpp">
-      <Filter>Source Files\third_party\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp">
-      <Filter>Source Files\third_party\imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\vulkan\embedded_shaders_spirv.cpp">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\d3d12\embedded_shaders_dxil.cpp">
-      <Filter>Source Files\ll\graphics\d3d12</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp">
-      <Filter>Source Files\ll\graphics\webgpu</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\third_party\D3D12MemoryAllocator\src\D3D12MemAlloc.cpp">
-      <Filter>Source Files\ll\graphics\d3d12\third_party</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.cpp">
-      <Filter>Source Files\ll\graphics\webgpu</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.cpp">
-      <Filter>Source Files\ll\graphics\webgpu</Filter>
+      <Filter>src\ll\os\win32</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\engine\src\application.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\graphics.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\input.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\imgui\imgui_impl.h">
-      <Filter>Source Files\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\imgui\mercury_imgui.h">
-      <Filter>Source Files\imgui</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\engine\src\ll\os\win32\win32_input.h">
-      <Filter>Source Files\ll\os\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.h">
-      <Filter>Source Files\ll\graphics\d3d12</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.h">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_device.h">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_graphics.h">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_swapchain.h">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\vulkan\vk_utils.h">
-      <Filter>Source Files\ll\graphics\vulkan</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\mercury_swapchain.h">
-      <Filter>Source Files\ll\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_application.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_framegraph.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_input.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_log.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_simd.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\ll\graphics.h">
-      <Filter>Header Files\ll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\ll\os.h">
-      <Filter>Header Files\ll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\ll\physic.h">
-      <Filter>Header Files\ll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\ll\sound.h">
-      <Filter>Header Files\ll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\ll\xr.h">
-      <Filter>Header Files\ll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_shader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_material.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\include\mercury_embedded_shaders.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h">
-      <Filter>Source Files\ll\graphics\webgpu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.h">
-      <Filter>Source Files\ll\graphics\webgpu</Filter>
+      <Filter>src\ll\os\win32</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

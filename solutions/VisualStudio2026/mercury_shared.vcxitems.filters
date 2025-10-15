@@ -1,0 +1,234 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{026af5ac-3d3e-4a1a-bfeb-f2148c6c83d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{9fe5a34d-7e95-4853-a8e2-63c0a2f7f82b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\ll">
+      <UniqueIdentifier>{df347aab-16a7-41d5-b9a0-39f2110c5734}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\imgui">
+      <UniqueIdentifier>{aeeab084-c0e8-4a76-9703-cca4afca71bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll">
+      <UniqueIdentifier>{8235e436-0d7e-49c5-ba3d-29ba55b3d93a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\third_party">
+      <UniqueIdentifier>{9552deb3-0fa2-493c-814a-544fc9cb6911}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\third_party\imgui">
+      <UniqueIdentifier>{aa2bc286-b41c-4d0c-a8a3-81d793161c76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\graphics">
+      <UniqueIdentifier>{95519490-d566-4965-8742-0a61ce04d4a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\os">
+      <UniqueIdentifier>{97a7b0fe-bdf6-4ab4-8327-e7f1de8b8e55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\os\win32">
+      <UniqueIdentifier>{aa97a1d2-a24a-4d7b-b70b-50ff35f38c72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\platforms">
+      <UniqueIdentifier>{386c3e04-8a35-47eb-b9e2-ae075ba3238c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\graphics\d3d12">
+      <UniqueIdentifier>{cb4df967-853d-4010-85a4-53d22963bd96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\graphics\null">
+      <UniqueIdentifier>{0c7c7818-9a0d-444a-a74e-ff02890142af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\graphics\vulkan">
+      <UniqueIdentifier>{8d81abf9-9488-4cb8-8bb3-abbd00f677a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\graphics\webgpu">
+      <UniqueIdentifier>{1a5d8ba2-c605-4861-82ef-36cae09a3a49}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\graphics.h">
+      <Filter>include\ll</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\os.h">
+      <Filter>include\ll</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\physic.h">
+      <Filter>include\ll</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\sound.h">
+      <Filter>include\ll</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\xr.h">
+      <Filter>include\ll</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_api.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_application.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_embedded_shaders.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_framegraph.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_input.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_log.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_material.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_memory.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_shader.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_simd.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_utils.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\input.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl.h">
+      <Filter>src\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.h">
+      <Filter>src\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.h">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.h">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_device.h">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_graphics.h">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_swapchain.h">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_utils.h">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.h">
+      <Filter>src\ll\graphics\webgpu</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h">
+      <Filter>src\ll\graphics\webgpu</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.h">
+      <Filter>src\ll\graphics</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\input.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_log.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_memory.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_string_utils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl.cpp">
+      <Filter>src\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.cpp">
+      <Filter>src\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui.cpp">
+      <Filter>src\third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_demo.cpp">
+      <Filter>src\third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_draw.cpp">
+      <Filter>src\third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_tables.cpp">
+      <Filter>src\third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_widgets.cpp">
+      <Filter>src\third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.cpp">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_utils.cpp">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\embedded_shaders_dxil.cpp">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\null\null_graphics.cpp">
+      <Filter>src\ll\graphics\null</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\embedded_shaders_spirv.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_adapter.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_device.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_graphics.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_instance.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_swapchain.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_utils.cpp">
+      <Filter>src\ll\graphics\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp">
+      <Filter>src\ll\graphics\webgpu</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.cpp">
+      <Filter>src\ll\graphics\webgpu</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_utils.cpp">
+      <Filter>src\ll\graphics\webgpu</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.cpp">
+      <Filter>src\ll\graphics</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

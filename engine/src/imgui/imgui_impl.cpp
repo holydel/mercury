@@ -1,7 +1,11 @@
 #include "imgui_impl.h"
 
 #ifdef MERCURY_LL_OS_WIN32
+#ifndef MERCURY_UWP
 #include <backends/imgui_impl_win32.cpp>
+#else
+#include <backends/imgui_impl_uwp.cpp>
+#endif
 #endif
 
 #ifdef MERCURY_LL_OS_ANDROID

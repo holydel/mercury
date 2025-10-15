@@ -36,6 +36,9 @@
 
 #include "../../../imgui/imgui_impl.h"
 
+#include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <game-activity/GameActivity.h>
+
 ANativeWindow* gMainWindow = nullptr;
 ANativeActivity* gMainActivity = nullptr;
 extern int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event);
@@ -44,7 +47,7 @@ static AInputQueue* gMainInputQueue = nullptr;
 namespace mercury::ll::os
 {
     const OSInfo& OS::GetInfo() {
-        static OSInfo info{ OSType::Windows, OSArchitecture::x64 };
+        static OSInfo info{ OSType::Android, OSArchitecture::x64 };
         return info;
     }
 
@@ -441,20 +444,108 @@ void onConfigurationChanged(ANativeActivity* activity)
 void onLowMemory(ANativeActivity* activity)
 {
     MLOG_DEBUG(u8"onLowMemory");
+
+}
+
+void handle_cmd(android_app *pApp, int32_t cmd) {
+    switch (cmd) {
+        case APP_CMD_INIT_WINDOW:
+            // A new window is created, associate a renderer with it. You may replace this with a
+            // "game" class if that suits your needs. Remember to change all instances of userData
+            // if you change the class here as a reinterpret_cast is dangerous this in the
+            // android_main function and the APP_CMD_TERM_WINDOW handler case.
+            gMainWindow = pApp->window;
+            MLOG_INFO(u8"APP_CMD_INIT_WINDOW");
+            break;
+        case APP_CMD_TERM_WINDOW:
+            // The window is being destroyed. Use this to clean up your userData to avoid leaking
+            // resources.
+            //
+            // We have to check if userData is assigned just in case this comes in really quickly
+            gMainWindow = nullptr;
+            MLOG_INFO(u8"APP_CMD_TERM_WINDOW");
+            break;
+        default:
+            break;
+    }
+}
+
+bool motion_event_filter_func(const GameActivityMotionEvent *motionEvent) {
+    auto sourceClass = motionEvent->source & AINPUT_SOURCE_CLASS_MASK;
+    return (sourceClass == AINPUT_SOURCE_CLASS_POINTER ||
+            sourceClass == AINPUT_SOURCE_CLASS_JOYSTICK);
+}
+
+std::thread *gMainThread = nullptr;
+
+void MainThread()
+{
+    MLOG_INFO(u8"Android main thread started");
+
+    InitializeCurrentApplication();
+
+    while(mercury::Application::GetCurrentApplication()->IsRunning())
+    {
+        TickCurrentApplication();
+    }
+
+    ShutdownCurrentApplication();
 }
 
 extern "C" {
 void android_main(struct android_app *pApp) {
    // sleep(5);
     MLOG_INFO(u8"Start from GameActivity");
+    pApp->onAppCmd = handle_cmd;
+    android_app_set_motion_event_filter(pApp, motion_event_filter_func);
 
+    gMainThread = new std::thread(MainThread);
+
+    do {
+        // Process all pending events before running game logic.
+        bool done = false;
+        while (!done) {
+            // 0 is non-blocking.
+            int timeout = 0;
+            int events;
+            android_poll_source *pSource;
+            int result = ALooper_pollOnce(timeout, nullptr, &events,
+                                          reinterpret_cast<void**>(&pSource));
+            switch (result) {
+                case ALOOPER_POLL_TIMEOUT:
+                    [[clang::fallthrough]];
+                case ALOOPER_POLL_WAKE:
+                    // No events occurred before the timeout or explicit wake. Stop checking for events.
+                    done = true;
+                    break;
+                case ALOOPER_EVENT_ERROR:
+                    MLOG_ERROR(u8"ALooper_pollOnce returned an error");
+                    break;
+                case ALOOPER_POLL_CALLBACK:
+                    break;
+                default:
+                    if (pSource) {
+                        pSource->process(pApp, pSource);
+                    }
+            }
+        }
+
+        // Check if any user data is associated. This is assigned in handle_cmd
+        if (pApp->userData) {
+            //update engine
+        }
+    } while (!pApp->destroyRequested);
+
+    if (gMainThread)
+        gMainThread->join();
+    delete gMainThread;
+    gMainThread = nullptr;
 }
 }
 
 extern "C" JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity,
     void* savedState, size_t savedStateSize)
 {
-    //sleep(5);
     gMainActivity = activity;
 
 

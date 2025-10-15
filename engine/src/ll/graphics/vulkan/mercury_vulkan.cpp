@@ -21,10 +21,10 @@ using namespace mercury;
 
 #ifdef MERCURY_LL_OS_WIN32
 constexpr const c8* gVulkanRuntimeLibraryName = u8"vulkan-1.dll";
-#endif
-
-#if defined(MERCURY_LL_OS_LINUX) || defined(MERCURY_LL_OS_ANDROID)
+#elif defined(MERCURY_LL_OS_LINUX)
 constexpr const c8* gVulkanRuntimeLibraryName = u8"libvulkan.so.1";
+#elif defined(MERCURY_LL_OS_ANDROID)
+constexpr const c8* gVulkanRuntimeLibraryName = u8"libvulkan.so";
 #endif
 
 #define VK_DEFINE_FUNCTION( fun ) PFN_##fun fun = nullptr;

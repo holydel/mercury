@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{eb3e2ac3-f516-45dd-b0c6-329da7deec79}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\graphics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\os.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\physic.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\sound.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\xr.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_api.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_application.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_embedded_shaders.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_framegraph.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_input.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_log.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_material.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_memory.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_shader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_simd.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_utils.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\input.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_device.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_graphics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_swapchain.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_utils.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\input.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_utils.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\embedded_shaders_dxil.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\null\null_graphics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\embedded_shaders_spirv.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_adapter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_device.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_graphics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_instance.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_swapchain.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_utils.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\embedded_shaders_wgsl.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_graphics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\webgpu\webgpu_utils.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_log.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_memory.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_string_utils.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_widgets.cpp" />
+  </ItemGroup>
+</Project>

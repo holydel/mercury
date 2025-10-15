@@ -5,7 +5,11 @@
 
 #ifdef MERCURY_LL_OS_WIN32
 #include <Windows.h>
+#ifndef MERCURY_UWP
 #include <backends/imgui_impl_win32.h>
+#else
+#include <backends/imgui_impl_uwp.h>
+#endif
 #endif
 
 #ifdef MERCURY_LL_OS_ANDROID

@@ -189,7 +189,12 @@ pkg_check_modules(LIBXKBCOMMON REQUIRED xkbcommon)
         target_compile_definitions(mercury_engine PUBLIC ALLOW_DIRECTFB_SURFACE)
     endif()
 elseif(ANDROID)
-
+    find_package(game-activity REQUIRED CONFIG)
+    target_link_libraries(mercury_engine PUBLIC
+        android
+        log
+        game-activity::game-activity_static
+    )
 else()
     message(FATAL_ERROR "Unsupported OS")
 endif()

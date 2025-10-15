@@ -335,11 +335,14 @@ void Swapchain::Initialize()
 {
     HWND hwnd = static_cast<HWND>(os::gOS->GetCurrentNativeWindowHandle());
 
+#ifndef MERCURY_UWP
     RECT clientRect = {};
     GetClientRect(hwnd, (LPRECT)&clientRect);
 
+
     gNewWidth = gCurWidth = clientRect.right - clientRect.left;
     gNewHeight = gCurHeight = clientRect.bottom - clientRect.top;
+#endif
 
     // Create swapchain
     DXGI_SWAP_CHAIN_DESC1 sdesc = {};
@@ -430,10 +433,13 @@ CommandList Swapchain::AcquireNextImage()
     // Check if resize is needed
     RECT clientRect = {};
     HWND hwnd = static_cast<HWND>(os::gOS->GetCurrentNativeWindowHandle());
+
+#ifndef MERCURY_UWP
     GetClientRect(hwnd, (LPRECT)&clientRect);
     
     gNewWidth = clientRect.right - clientRect.left;
     gNewHeight = clientRect.bottom - clientRect.top;
+#endif
 
     if (gNewWidth != gCurWidth || gCurHeight != gNewHeight && gNewWidth > 0 && gNewHeight > 0)
     {
