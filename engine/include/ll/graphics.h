@@ -274,9 +274,9 @@ struct AdapterInfo
     u8 barycentric_coords_in_fragment_shader : 1;
   } supported_features = {};
 
-  std::u8string name; // Device name, e.g. "NVIDIA GeForce RTX 3080"
-  std::u8string driver_version; // Driver version, e.g. "460.
-  std::u8string vendor_name; // Vendor name, e.g. "NVIDIA Corporation"
+  c8string name; // Device name, e.g. "NVIDIA GeForce RTX 3080"
+  c8string driver_version; // Driver version, e.g. "460.
+  c8string vendor_name; // Vendor name, e.g. "NVIDIA Corporation"
 };
 
 class Instance {

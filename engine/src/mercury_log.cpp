@@ -10,14 +10,14 @@ namespace logging {
 
     void write_message(Severity severity, const c8* format, ...)
     {
-        char8_t textBuff[1024];
+        c8 textBuff[1024];
         va_list args;
         va_start(args, format);
         vsnprintf((char*)textBuff, sizeof(textBuff), (const char*)format, args);
         va_end(args);
 
         // Compose final line (prefix + message)
-        char8_t finalBuff[1200];
+        c8 finalBuff[1200];
         snprintf((char*)finalBuff, sizeof(finalBuff), "%s", (const char*)textBuff);
 
         auto& loggerInfo = Application::GetCurrentApplication()->GetConfig().logger;

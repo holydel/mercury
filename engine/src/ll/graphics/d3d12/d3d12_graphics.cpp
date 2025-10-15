@@ -615,7 +615,8 @@ void CommandList::Destroy()
 
 CommandList CommandPool::AllocateCommandList()
 {
-    CommandList result;
+    CommandList result = {};
+	result.nativePtr = nullptr;
     // In D3D12, command lists are managed per-frame, not via pools
     return result;
 }
@@ -789,7 +790,7 @@ void Device::DestroyRasterizePipeline(PsoHandle psoID)
 
 CommandPool Device::CreateCommandPool(QueueType queue_type)
 {
-    CommandPool pool;
+    CommandPool pool = {};
     // In D3D12, command pools are managed per-frame, not explicitly created
     return pool;
 }

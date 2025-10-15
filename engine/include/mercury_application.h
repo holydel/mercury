@@ -9,47 +9,91 @@ namespace mercury
   {
     struct Logger
     {
-      u8 logToConsole : 1 = true;
-      u8 logToIDE : 1 = true;
-      u8 logToFile : 1 = false;
+      u8 logToConsole : 1;
+      u8 logToIDE : 1;
+      u8 logToFile : 1;
+
+      Logger()
+      {
+          logToConsole = true;
+          logToIDE = true;
+          logToFile = true;
+      }
     } logger;
 
     struct Window
     {
-      u16 width = 800;
-      u16 height = 600;
+      u16 width;
+      u16 height;
 
       // flags
-      bool headlessMode : 1 = false;
-      bool resizable : 1 = false;
-      bool fullscreen : 1 = false;
-      bool maximized : 1 = false;
-      bool borderless : 1 = false;
-      bool alwaysOnTop : 1 = false;
+      bool headlessMode : 1;
+      bool resizable : 1;
+      bool fullscreen : 1;
+      bool maximized : 1;
+      bool borderless : 1;
+      bool alwaysOnTop : 1;
+
+      Window()
+      {
+          width = 800;
+          height = 600;
+
+          headlessMode = false;
+          resizable = false;
+          fullscreen = false;
+          maximized = false;
+          borderless = false;
+          alwaysOnTop = false;
+      }
     } window;
 
     struct EngineConfig
     {
-      bool EnableIMGUI : 1 = false;
-      bool EnableSound : 1 = false;
-      bool EnableBulletPhysics : 1 = false;
-      bool EnableXR : 1 = false;
-      bool EnableXRMirroring : 1 = false;
+      bool EnableIMGUI : 1;
+      bool EnableSound : 1;
+      bool EnableBulletPhysics : 1;
+      bool EnableXR : 1;
+      bool EnableXRMirroring : 1;
+
+      EngineConfig()
+      {
+          EnableIMGUI = false;
+          EnableSound = false;
+          EnableBulletPhysics = false;
+          EnableXR = false;
+          EnableXRMirroring = false;
+      }
     };
 
     struct D3D12Config
     {
-      bool useWorkGraphs = false;
+      bool useWorkGraphs : 1;
+
+      D3D12Config()
+      {
+		  useWorkGraphs = false;
+      }
     };
 
     struct VKConfig
     {
-      bool useDynamicRendering = false;
+      bool useDynamicRendering : 1;
+
+      VKConfig()
+      {
+          useDynamicRendering = false;
+	  }
     };
 
     struct XRConfig
     {
-      bool useDebugLayers = true;
+      bool useDebugLayers : 1;
+
+      XRConfig()
+      {
+          useDebugLayers = true;
+      }
     };
 
     struct InputConfig
@@ -59,9 +103,16 @@ namespace mercury
 
     struct ImguiConfig
     {
-      bool enable : 1 = true;
-      bool enableDocking : 1 = false;
-	  bool enableViewports : 1 = false;
+      bool enable : 1;
+      bool enableDocking : 1;
+	  bool enableViewports : 1;
+
+      ImguiConfig()
+      {
+          enable = true;
+		  enableDocking = false;
+          enableViewports = false; 
+      }
     } imgui;
     struct Graphics
     {
@@ -81,18 +132,34 @@ namespace mercury
         Any
       } adapterPreference = AdapterTypePreference::Any;
 
-      u8 enableValidationLayers : 1 = true; // Ignored in retail builds
+      u8 enableValidationLayers : 1; // Ignored in retail builds
 
-      bool enableRaytracing : 1 = false;
-      bool enableBarycentricFS : 1 = false;
-      bool enableMeshShader : 1 = false;
-      bool enableSamplerFeedback : 1 = false;
-      bool enableVariableRateShading : 1 = false;
-      bool enableGeometryShader : 1 = false;
-      bool enableTessellation : 1 = false;
-      bool enableSamplerYCbCr : 1 = false;
-      bool enablePartialResidencyTextures : 1 = false;
-      bool enablePartialResidencyBuffers : 1 = false;
+      bool enableRaytracing : 1;
+      bool enableBarycentricFS : 1;
+      bool enableMeshShader : 1;
+      bool enableSamplerFeedback : 1;
+      bool enableVariableRateShading : 1;
+      bool enableGeometryShader : 1;
+      bool enableTessellation : 1;
+      bool enableSamplerYCbCr : 1;
+      bool enablePartialResidencyTextures : 1;
+      bool enablePartialResidencyBuffers : 1;
+
+      Graphics()
+      {
+          enableValidationLayers = true;
+
+          enableRaytracing = false;
+          enableBarycentricFS = false;
+          enableMeshShader = false;
+          enableSamplerFeedback = false;
+          enableVariableRateShading = false;
+          enableGeometryShader = false;
+          enableTessellation = false;
+          enableSamplerYCbCr = false;
+          enablePartialResidencyTextures = false;
+          enablePartialResidencyBuffers = false;
+      }
     } graphics;
 
     struct SwapchainConfig
@@ -135,12 +202,18 @@ namespace mercury
 
       VSyncMode vsync = VSyncMode::AlwaysVSync;
 
-      bool useAlpha : 1 = false;
-      bool tripleBuffering : 1 = true; // for VR - use double buffering
+      bool useAlpha : 1;
+      bool tripleBuffering : 1; // for VR - use double buffering
+
+      SwapchainConfig()
+      {
+		  useAlpha = false;
+		  tripleBuffering = true;
+      }
     } swapchain;
 
-    const c8 *appName = u8"Mercury Application";
-    const c8 *appID = u8"com.company-name.test-mercury-app-name";
+    const c8 *appName = MSTR("Mercury Application");
+    const c8 *appID = MSTR("com.company-name.test-mercury-app-name");
     struct Version
     {
       union

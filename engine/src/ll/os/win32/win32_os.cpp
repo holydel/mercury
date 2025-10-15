@@ -228,7 +228,7 @@ namespace mercury::ll::os
 
   }
 
-  void OS::SetNativeWindowTitle(const std::u8string &title)
+  void OS::SetNativeWindowTitle(const c8string &title)
   {
 
   }
@@ -269,11 +269,11 @@ namespace mercury::ll::os
   }
 
 
-  void* OS::LoadSharedLibrary(const char8_t* utf8libname)
+  void* OS::LoadSharedLibrary(const c8* utf8libname)
   {
     wchar_t libnameW[1024] = {0};
-    utils::string::utf8_to_utf16(utf8libname, (char16_t*)libnameW, 1024);
-    
+    utils::string::utf8_to_utf16(utf8libname, (c16*)libnameW, 1024);
+
     HMODULE libHandle = ::LoadLibraryW(libnameW);
     if (libHandle == nullptr)
     {
@@ -285,11 +285,11 @@ namespace mercury::ll::os
     return libHandle;
   }
 
-	std::u8string OS::GetSharedLibraryFullFilename(void* libHandle)
+	c8string OS::GetSharedLibraryFullFilename(void* libHandle)
   {
     if (libHandle == nullptr)
     {
-      return std::u8string();
+      return c8string();
     }
 
     HMODULE hModule = static_cast<HMODULE>(libHandle);
@@ -298,7 +298,7 @@ namespace mercury::ll::os
 
     c8 filenameU8[1024] = { 0 };
     utils::string::utf16_to_utf8((const char16_t*)filename, filenameU8, 1024);
-    return std::u8string(filenameU8);
+    return c8string(filenameU8);
   }
 
 	bool OS::UnloadSharedLibrary(void* library)

@@ -44,7 +44,7 @@ public:
   void* GetCurrentNativeWindowHandle();
 
   struct NativeWindowDescriptor {
-    std::u8string title;
+    c8string title;
     int width;
     int height;
 
@@ -55,7 +55,7 @@ public:
 
   void CreateNativeWindow(NativeWindowDescriptor &desc);
   void DestroyNativeWindow();
-  void SetNativeWindowTitle(const std::u8string &title);
+  void SetNativeWindowTitle(const c8string &title);
   void SetNativeWindowSize(int width, int height);
   void SetNativeWindowFullscreen(bool fullscreen);  
   bool IsNativeWindowFullscreen();
@@ -64,8 +64,8 @@ public:
 
   void FatalFail(const char* reason);
 
-  void* LoadSharedLibrary(const char8_t* utf8libname);
-	std::u8string GetSharedLibraryFullFilename(void* libHandle);
+  void* LoadSharedLibrary(const c8* utf8libname);
+	c8string GetSharedLibraryFullFilename(void* libHandle);
 	bool UnloadSharedLibrary(void* library);
 
 	void* GetFuncPtrImpl(void* library, const char* funcName);

@@ -1,7 +1,19 @@
 ﻿#pragma once
 
 #include <type_traits>
+#include <string>
+
+// Feature availability macros
+#if MERCURY_UWP
+#define MERCURY_USE_CPP20_FEATURES 0
+#else
+#define MERCURY_USE_CPP20_FEATURES 1
+#endif
+
+// Conditional includes
+#if MERCURY_USE_CPP20_FEATURES
 #include <concepts>
+#endif
 
 // Platform detection
 #ifndef MERCURY_LL_OS_EMSCRIPTEN
@@ -101,8 +113,13 @@ namespace mercury
     typedef __m128i u32x4;
     typedef __m128d f64x2;
 #endif
+    #if MERCURY_USE_CPP20_FEATURES
+    typedef char8_t c8;    
+    #else
+    typedef char c8;
+    #endif
 
-    typedef char8_t c8;
+	typedef std::basic_string<c8> c8string;
     typedef char16_t c16;
     typedef char32_t c32;
 
@@ -123,40 +140,76 @@ namespace mercury
         }
     }
 
-	template<std::unsigned_integral T>
-	struct Handle
-	{
-		static constexpr T InvalidValue = (T)-1;
+#if MERCURY_USE_CPP20_FEATURES
+    // C++20 version with concepts
+    template<std::unsigned_integral T>
+    struct Handle
+    {
+        static constexpr T InvalidValue = (T)-1;
+        T handle = InvalidValue;
 
-		T handle = InvalidValue;
+        bool isValid() const { return handle != InvalidValue; }
+        T Value() const { return handle; }
+        void Invalidate() { handle = InvalidValue; }
 
-		bool isValid() const
-		{
-			return handle != InvalidValue;
-		}
-		
-		T Value() const
-		{
-			return handle;
-		}
-		
-		void Invalidate()
-		{
-			handle = InvalidValue;
-		}
-
-        template<typename U> 
+        template<typename U>
         Handle<T>& operator=(U value) requires std::is_convertible_v<U, T>
         {
             handle = static_cast<T>(value);
             return *this;
-		}
-	};
+        }
+    };
+#else
+    // C++17 version with SFINAE
+    template<typename T, typename = std::enable_if_t<
+        std::is_unsigned_v<T>&& std::is_integral_v<T>>>
+        struct Handle
+    {
+        static constexpr T InvalidValue = (T)-1;
+        T handle = InvalidValue;
+
+        bool isValid() const { return handle != InvalidValue; }
+        T Value() const { return handle; }
+        void Invalidate() { handle = InvalidValue; }
+
+        template<typename U, typename = std::enable_if_t<
+            std::is_convertible_v<U, T>>>
+            Handle<T>& operator=(U value)
+        {
+            handle = static_cast<T>(value);
+            return *this;
+        }
+    };
+#endif
 
     // Ensure N is an exact multiple of E (and E > 0)
-    template<std::size_t E, std::size_t N>
-    concept multiple_of = (E > 0) && (N % E == 0);
+    #if MERCURY_USE_CPP20_FEATURES
+        template<std::size_t E, std::size_t N>
+        concept multiple_of = (E > 0) && (N % E == 0);
+    #else
+        // C++17: Use static_assert at usage site instead
+    #define MERCURY_ASSERT_MULTIPLE_OF(E, N) \
+            static_assert((E) > 0 && (N) % (E) == 0, \
+                          "N must be a multiple of E")
+#endif
 } // namespace mercury
 
+#if MERCURY_USE_CPP20_FEATURES
+#define MSTR(str) u8##str
+#else
+#define MSTR(str) reinterpret_cast<const mercury::c8*>(u8##str)
+#endif
+
+#if MERCURY_USE_CPP20_FEATURES
 #define IF_LIKELY(x) [[likely]] if (x)
 #define IF_UNLIKELY(x) [[unlikely]] if (x)
+#elif defined(_MSC_VER)
+#define IF_LIKELY(x) if (x)
+#define IF_UNLIKELY(x) if (x)
+#elif defined(__GNUC__) || defined(__clang__)
+#define IF_LIKELY(x) if (__builtin_expect(!!(x), 1))
+#define IF_UNLIKELY(x) if (__builtin_expect(!!(x), 0))
+#else
+#define IF_LIKELY(x) if (x)
+#define IF_UNLIKELY(x) if (x)
+#endif

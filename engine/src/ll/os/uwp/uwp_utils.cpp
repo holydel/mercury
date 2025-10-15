@@ -8,13 +8,13 @@
 using namespace mercury;
 
 // (unchanged) UTF conversions...
-int utils::string::utf8_to_utf16(const char8_t *utf8_str,
-                                          char16_t *utf16_str, int max_length) {
+int utils::string::utf8_to_utf16(const c8 *utf8_str,
+                                          c16 *utf16_str, int max_length) {
   return MultiByteToWideChar(CP_UTF8, 0, (const char *)utf8_str, -1,
                              (wchar_t *)utf16_str, max_length);
 }
-int utils::string::utf16_to_utf8(const char16_t *utf16_str,
-                                          char8_t *utf8_str, int max_length) {
+int utils::string::utf16_to_utf8(const c16 *utf16_str,
+                                          c8 *utf8_str, int max_length) {
   return WideCharToMultiByte(CP_UTF8, 0, (const wchar_t *)utf16_str, -1,
                              (char *)utf8_str, max_length, nullptr, nullptr);
 }
@@ -41,7 +41,7 @@ static WORD mapSeverityToColor(logging::Severity s)
     }
 }
 
-void utils::debug::output_debug_string_to_ide(logging::Severity severity, const char8_t *str) {
+void utils::debug::output_debug_string_to_ide(logging::Severity severity, const c8 *str) {
   // Convert UTF-8 to UTF-16 for OutputDebugStringW
   char16_t buff[1024] = {0};
   int lastChar = string::utf8_to_utf16(str, buff, 1024);
@@ -50,7 +50,7 @@ void utils::debug::output_debug_string_to_ide(logging::Severity severity, const 
   OutputDebugStringW((const wchar_t *)buff);
 }
 
-void utils::debug::output_debug_string_to_console(logging::Severity severity, const char8_t *str)
+void utils::debug::output_debug_string_to_console(logging::Severity severity, const c8 *str)
 {
 
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);

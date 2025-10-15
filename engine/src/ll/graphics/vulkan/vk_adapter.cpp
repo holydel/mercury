@@ -258,13 +258,13 @@ mercury::ll::graphics::AdapterInfo GetInfoFromPhysicalDevice(VkPhysicalDevice ph
         info.type = mercury::ll::graphics::AdapterInfo::Type::Unknown;
     }
 
-    info.name = std::u8string(reinterpret_cast<const char8_t*>(properties2.properties.deviceName));
-    info.vendor_name = std::u8string(reinterpret_cast<const char8_t*>(driverProperties.driverName));
+    info.name = c8string(reinterpret_cast<const char8_t*>(properties2.properties.deviceName));
+    info.vendor_name = c8string(reinterpret_cast<const char8_t*>(driverProperties.driverName));
     info.device_id = properties2.properties.deviceID;
     info.vendor_id = properties2.properties.vendorID;
     info.vendor = GetVendorFromVkVendorID(properties2.properties.vendorID);
     info.api_version = properties2.properties.apiVersion;
-    info.driver_version = std::u8string(reinterpret_cast<const char8_t*>(driverProperties.driverInfo));
+    info.driver_version = c8string(reinterpret_cast<const char8_t*>(driverProperties.driverInfo));
 
     MLOG_INFO(u8"Adapter Info: %s, Vendor: %s, Device ID: 0x%04X, Vendor ID: 0x%04X, API Version: %u.%u.%u, Driver Version: %s",
              info.name.c_str(), info.vendor_name.c_str(), info.device_id, info.vendor_id,
