@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - -DMERCURY_LL_OS_MACOS
+    - -x
+    - objective-c++
+    - -fobjc-arc
+    - -fobjc-weak
+    - -std=c++20
+  Remove:
+    - -W*
+    - -w

@@ -12,6 +12,10 @@
 #endif
 #endif
 
+#ifdef MERCURY_LL_OS_MACOS
+#include <backends/imgui_impl_osx.h>
+#endif
+
 #ifdef MERCURY_LL_OS_ANDROID
 #include <backends/imgui_impl_android.h>
 #endif
@@ -43,5 +47,8 @@
 #include <backends/imgui_impl_wgpu.h>
 #endif
 
+#ifdef MERCURY_LL_GRAPHICS_METAL
+#include <backends/imgui_impl_metal.h>
+#endif
 
 

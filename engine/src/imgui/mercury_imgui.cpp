@@ -29,34 +29,12 @@ void mercury_imgui::Initialize()
 
 	mercury::ll::graphics::gDevice->ImguiInitialize();
 	mercury::ll::os::gOS->ImguiInitialize();
-
-#ifdef MERCURY_LL_OS_LINUX
-	//auto win = static_cast<xcb_window_t*>(mercury::platform::getMainWindowHandle());
-	//auto connection = static_cast<xcb_connection_t*>(mercury::platform::getAppInstanceHandle());
-	//ImGui_ImplX11_Init(connection, win);
-#endif
-#ifdef MERCURY_LL_OS_ANDROID
-	//ImGui_ImplAndroid_Init(static_cast<ANativeWindow*>(os::GetNativeWindowHandle()));
-	//ImGui::GetIO().FontGlobalScale = 2.0f;
-#endif
-#ifdef MERCURY_LL_OS_MACOS
-	void* view = mercury::platform::getAppInstanceHandle(); //view
-	ImGui_ImplOSX_Init(view);
-#endif
 }
 
 void mercury_imgui::Shutdown()
 {
 	mercury::ll::graphics::gDevice->ImguiShutdown();
 	mercury::ll::os::gOS->ImguiShutdown();
-
-#ifdef MERCURY_LL_OS_ANDROID
-		ImGui_ImplAndroid_Shutdown();
-#endif
-#ifdef MERCURY_LL_OS_EMSCRIPTEN
-		// ImGui temporarily disabled for Emscripten
-		// ImGui_ImplEmscripten_Shutdown();
-#endif
 
 	ImGui::DestroyContext();
 }
@@ -68,17 +46,6 @@ void mercury_imgui::BeginFrame(mercury::ll::graphics::CommandList cmdList)
 	graphics::gDevice->ImguiNewFrame();
 	os::gOS->ImguiNewFrame();
 
-#ifdef MERCURY_LL_OS_LINUX
-
-	//ImGui_ImplX11_NewFrame();
-#endif
-#ifdef MERCURY_LL_OS_ANDROID
-	ImGui_ImplAndroid_NewFrame();
-#endif
-#ifdef MERCURY_LL_OS_MACOS
-	void* view = mercury::platform::getAppInstanceHandle(); //view
-	ImGui_ImplOSX_NewFrame(view);
-#endif
 	ImGui::NewFrame();
 }
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(mercury_testbed)
+project(mercury_testbed LANGUAGES C CXX OBJCXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -12,27 +12,35 @@ if(NOT EMSCRIPTEN)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
     if(ipo_supported)
         message(STATUS "IPO/LTO is supported")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        # Only enable whole-program optimizations for Release builds; they
+        # interfere with debugging (inlining, symbol movement) when enabled
+        # for Debug. Keep Debug builds full of symbols and without LTO.
+        if(CMAKE_BUILD_TYPE STREQUAL "Release")
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message(STATUS "Skipping IPO/LTO for non-Release build (current: ${CMAKE_BUILD_TYPE})")
+        endif()
     else()
         message(WARNING "IPO/LTO is not supported: ${ipo_output}")
     endif()
 
-    # Platform-specific LTO flags - only for native builds
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        # GCC and Clang LTO flags
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto")
-        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto")
-        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
-        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto")
-        set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} -flto")
-          
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        # MSVC LTO flags
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
-        set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /GL")
-        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
-        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
-        set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+    # Platform-specific LTO flags - only enable in Release
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            # GCC and Clang LTO flags
+            set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto")
+            set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto")
+            set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
+            set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto")
+            set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} -flto")
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+            # MSVC LTO flags
+            set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+            set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /GL")
+            set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+            set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+            set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+        endif()
     endif()
 
     if(MSVC)
@@ -67,7 +75,10 @@ endif()
 # Add subdirectories
 add_subdirectory(engine)
 
-add_subdirectory(editor)
+# Editor is Windows-specific due to C++20 modules and prebuilt libraries
+if(WIN32)
+    add_subdirectory(editor)
+endif()
 # Test bed executable
 add_executable(testbed 
     testbed.cpp

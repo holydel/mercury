@@ -46,5 +46,26 @@
             "program": "${workspaceFolder}/dummy.js",
             "preLaunchTask": "Run Emscripten Server"
         }
+        ,
+        {
+            "name": "Debug macOS Testbed",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/bin/testbed",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "Build macOS Debug",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for lldb",
+                    "text": "settings set target.max-children-count 256",
+                    "ignoreFailures": true
+                }
+            ]
+        }
     ]
 }

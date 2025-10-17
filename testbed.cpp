@@ -226,7 +226,11 @@ public:
        void Tick() override;
        void Shutdown() override;
        void OnFinalPass(mercury::ll::graphics::CommandList& finalCL) override;
-       bool IsRunning() override { return m_running; }
+       void OnClose() override { m_running = false; }
+       bool IsRunning() override { 
+           MLOG_DEBUG(u8"TestBedApplication::IsRunning - returning %s", m_running ? "true" : "false");
+           return m_running; 
+       }
 };
 
 TestBedApplication gApplication;

@@ -7,6 +7,7 @@
 #include "ll/xr.h"
 #include "input.h"
 #include "graphics.h"
+#include "mercury_log.h"
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -79,6 +80,7 @@ void ShutdownCurrentApplication() {
 }
 
 Application *Application::GetCurrentApplication() { return g_currentApplication; }
+
 
 void ProcessApplication()
 {

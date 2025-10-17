@@ -12,6 +12,12 @@
 #include <backends/imgui_impl_android.cpp>
 #endif
 
+#ifdef MERCURY_LL_OS_MACOS
+#ifndef MERCURY_LL_GRAPHICS_METAL
+#include <backends/imgui_impl_osx.mm>
+#endif
+#endif
+
 #if defined(MERCURY_LL_OS_EMSCRIPTEN)
 #include <backends/imgui_impl_emscripten.cpp>
 #endif
@@ -36,3 +42,8 @@
 #include <backends/imgui_impl_wgpu.cpp>
 #endif
 
+#ifdef MERCURY_LL_GRAPHICS_METAL
+#ifndef MERCURY_LL_OS_MACOS
+#include <backends/imgui_impl_metal.mm>
+#endif
+#endif

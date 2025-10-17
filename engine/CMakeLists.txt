@@ -60,9 +60,15 @@ elseif(WIN32)
 elseif(APPLE)
     message(STATUS "Autodetected macOS build")
 
-    set(VULKAN_AVAILABLE TRUE)
+    set(METAL_AVAILABLE TRUE)
+    #set(WEBGPU_AVAILABLE TRUE)
+    #set(VULKAN_AVAILABLE TRUE)
     
-    list(APPEND SOURCES src/ll/os/macos/macos_os.cpp)
+    list(APPEND SOURCES 
+        src/ll/os/macos/macos_os.mm
+        src/ll/os/macos/macos_utils.cpp
+        src/ll/os/macos/macos_input.cpp
+    )
 
 elseif(ANDROID)
     message(STATUS "Autodetected Android build")
@@ -126,8 +132,19 @@ if(WEBGPU_AVAILABLE)
     )
 endif()
 
+if(METAL_AVAILABLE)
+    add_definitions(-DMERCURY_LL_GRAPHICS_METAL)
+    list(APPEND SOURCES
+        src/ll/graphics/metal/metal_impl.mm
+        src/ll/graphics/metal/embedded_shaders_metal.cpp
+    )
+endif()
+
 # Create library
 add_library(mercury_engine STATIC ${SOURCES})
+
+# Generate compile_commands.json for better IntelliSense
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Add compile definitions based on configuration
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -145,6 +162,34 @@ if(EMSCRIPTEN)
 elseif(WIN32)
 
 elseif(APPLE)
+    # Enable Objective-C++ compilation
+    set(CMAKE_OBJCXX_STANDARD 20)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+    
+    # Add compile definitions for macOS
+    target_compile_definitions(mercury_engine PRIVATE MERCURY_LL_OS_MACOS)
+    
+    # Set Objective-C++ language for the specific file
+    set_source_files_properties(src/ll/os/macos/macos_os.mm PROPERTIES LANGUAGE OBJCXX)
+    
+    # Add Objective-C++ specific compile flags for IntelliSense
+    target_compile_options(mercury_engine PRIVATE 
+        -x objective-c++
+        -fobjc-arc
+        -fobjc-weak
+    )
+    
+    # Link macOS frameworks
+    target_link_libraries(mercury_engine PRIVATE
+        "-framework Cocoa"
+        "-framework Metal"
+        "-framework MetalKit"
+        "-framework QuartzCore"
+        "-framework IOKit"
+        "-framework CoreFoundation"
+        "-framework GameController"
+        "-framework Carbon"
+    )
 
 elseif(UNIX AND NOT APPLE AND NOT ANDROID)
 find_package(PkgConfig REQUIRED)
