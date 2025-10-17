@@ -141,6 +141,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.h">
       <Filter>src\ll\graphics</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_canvas.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp">

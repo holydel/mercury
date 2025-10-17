@@ -578,6 +578,7 @@ void CommandList::SetViewport(float x, float y, float width, float height, float
 void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
 {
     gCurrentFinalRenderPass.SetScissorRect(x, y, width, height);
+
 }
 
 // Device implementations
