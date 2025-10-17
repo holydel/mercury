@@ -26,7 +26,7 @@ public:
         config.window.width = 1600;
         config.window.height = 900;
         config.window.resizable = true;
-        config.graphics.enableValidationLayers = true; // Enable validation layers for testing
+        config.graphics.enableValidationLayers = false; // Enable validation layers for testing
         config.graphics.adapterPreference = Config::Graphics::AdapterTypePreference::HighPerformance;
     }
     void Initialize() override;

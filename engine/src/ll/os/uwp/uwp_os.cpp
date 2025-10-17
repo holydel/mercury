@@ -30,6 +30,9 @@ constexpr const wchar_t* winClassName = L"MercuryWindow";
 
 #include <ppltasks.h>
 
+unsigned int gCurrentWindowWidth = 1280;
+unsigned int gCurrentWindowHeight = 720;
+
 using namespace concurrency;
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Core;
@@ -191,8 +194,8 @@ namespace mercury::ll::os
 
   void OS::GetActualWindowSize(unsigned int& widthOut, unsigned int& heightOut)
   {
-          widthOut = 0;
-          heightOut = 0;
+          widthOut = gCurrentWindowWidth;
+          heightOut = gCurrentWindowHeight;
   }
 
   void OS::ImguiInitialize()
@@ -357,8 +360,21 @@ void MercuryUWPApp::SetWindow(CoreWindow^ window)
 	DisplayInformation::DisplayContentsInvalidated +=
 		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &MercuryUWPApp::OnDisplayContentsInvalidated);
 
+    Windows::UI::Core::SystemNavigationManager::GetForCurrentView()->BackRequested +=
+        ref new EventHandler<Windows::UI::Core::BackRequestedEventArgs^>(
+            [this](Platform::Object^ sender, Windows::UI::Core::BackRequestedEventArgs^ args)
+            {
+                args->Handled = true;
+                m_windowClosed = true;
+
+                // Clean shutdown
+                CoreApplication::Exit();
+            });
+
     gMainWindow = reinterpret_cast<IUnknown*>(window);
 
+	gCurrentWindowHeight = window->Bounds.Height;
+	gCurrentWindowWidth = window->Bounds.Width;
     InitializeCurrentApplication();
 }
 
@@ -371,21 +387,33 @@ void MercuryUWPApp::Load(Platform::String^ entryPoint)
 // This method is called after the window becomes active.
 void MercuryUWPApp::Run()
 {
-	while (!m_windowClosed)
-	{       
-		if (m_windowVisible)
-		{
-			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
-           
-            //Todo app tick
-		}
-		else
-		{
-			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
-		}
-
-        TickCurrentApplication();
-	}
+    while (!m_windowClosed)
+    {       
+        if (m_windowVisible)
+        {
+            CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+            
+            // Tick the application
+            TickCurrentApplication();
+        }
+        else
+        {
+            CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+            
+            // Still tick even when not visible (but at lower frequency)
+            ::Sleep(16); // ~60 FPS when hidden
+            TickCurrentApplication();
+        }
+        
+        // Check if window was closed during tick
+        if (m_windowClosed)
+        {
+            break;
+        }
+    }
+    
+    // Ensure proper shutdown when loop exits
+    MLOG_INFO("Application run loop exiting, performing cleanup...");
 }
 
 // Required for IFrameworkView.
@@ -432,6 +460,9 @@ void MercuryUWPApp::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 
 void MercuryUWPApp::OnWindowSizeChanged(CoreWindow^ sender, WindowSizeChangedEventArgs^ args)
 {
+	gCurrentWindowWidth = sender->Bounds.Width;
+	gCurrentWindowHeight = sender->Bounds.Height;
+
 	//GetDeviceResources()->SetLogicalSize(Size(sender->Bounds.Width, sender->Bounds.Height));
 	//m_main->OnWindowSizeChanged();
 }

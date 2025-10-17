@@ -22,6 +22,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_api.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_application.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_canvas.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_embedded_shaders.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_framegraph.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_input.h" />

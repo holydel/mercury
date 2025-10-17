@@ -58,14 +58,11 @@
 #endif
 
 // Graphics API selection
-#ifndef MERCURY_LL_GRAPHICS_NULL
 //#define MERCURY_LL_GRAPHICS_NULL
-#endif
 //#define MERCURY_LL_GRAPHICS_VULKAN
-#define MERCURY_LL_GRAPHICS_D3D12
+//#define MERCURY_LL_GRAPHICS_D3D12
 //#define MERCURY_LL_GRAPHICS_METAL
-//#ifndef MERCURY_LL_GRAPHICS_WEBGPU
-//#define MERCURY_LL_GRAPHICS_WEBGPU
+#define MERCURY_LL_GRAPHICS_WEBGPU
 
 #define MERCURY_LL_SOUND_NONE
 // #define MERCURY_LL_SOUND_MINIAUDIO
@@ -140,6 +137,22 @@ namespace mercury
         }
     }
 
+    struct PackedColor
+    {
+        union
+        {
+            struct
+            {
+                u8 r, g, b, a;
+            };
+			u32 rgba = 0xffffffff;
+        };
+        
+        PackedColor() = default;
+        PackedColor(u8 red, u8 green, u8 blue, u8 alpha = 255)
+			: r(red), g(green), b(blue), a(alpha) {
+		}
+    };
 #if MERCURY_USE_CPP20_FEATURES
     // C++20 version with concepts
     template<std::unsigned_integral T>

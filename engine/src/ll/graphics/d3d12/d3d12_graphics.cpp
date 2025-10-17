@@ -377,11 +377,6 @@ void Swapchain::Initialize()
     );
 #endif
 
-    
-
-
-
-
     D3D_CALL(swapchain1->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&gSwapChain));
     swapchain1->Release();
 
@@ -456,12 +451,7 @@ CommandList Swapchain::AcquireNextImage()
     RECT clientRect = {};
     HWND hwnd = static_cast<HWND>(os::gOS->GetCurrentNativeWindowHandle());
 
-#ifndef MERCURY_UWP
-    GetClientRect(hwnd, (LPRECT)&clientRect);
-    
-    gNewWidth = clientRect.right - clientRect.left;
-    gNewHeight = clientRect.bottom - clientRect.top;
-#endif
+	ll:os::gOS->GetActualWindowSize((unsigned int&)gNewWidth, (unsigned int&)gNewHeight);
 
     if (gNewWidth != gCurWidth || gCurHeight != gNewHeight && gNewWidth > 0 && gNewHeight > 0)
     {
