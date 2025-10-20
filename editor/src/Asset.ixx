@@ -48,6 +48,13 @@ export struct FolderAsset : public FileAsset {
     FolderAsset() { type = AssetType::Folder; }
     std::vector<Asset*> assets;
     std::vector<FolderAsset*> subfolders;
+	bool isSystemFolder = false;
+
+    void SetSystemFolder(const char* name)
+    {
+        isSystemFolder = true;
+		assetName = name;
+    }
 };
 
 // Shader-related asset types (declarations only; heavy logic implemented in another TU)

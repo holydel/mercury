@@ -5,6 +5,7 @@ module;
 #include <slang.h>
 #include <slang-com-helper.h>
 #include <slang-com-ptr.h>
+
 #include <vector>
 #include <mercury_shader.h>
 #include <string>
@@ -15,6 +16,7 @@ module;
 #include <cctype>
 
 #include <mercury_log.h>
+#include <mercury_utils.h>
 
 export module ShaderCompiler;
 
@@ -87,6 +89,7 @@ export namespace ShaderCompiler
 	export void Shutdown();	
 
 	export CompileResult CompileShader(const std::filesystem::path& slangFile, CompileTarget selectedTargets = CompileTarget::ALL);
+	export CompileResult CompileShaderOld(const std::filesystem::path& slangFile, CompileTarget selectedTargets = CompileTarget::ALL);
 
 	export void RebuildEmbeddedShaders(const RebuildShaderDesc& desc);
 	
@@ -265,7 +268,139 @@ static ShaderCompiler::CompileTarget FromSlangFormat(SlangCompileTarget fmt)
 	}
 }
 
+void diagnoseIfNeeded(slang::IBlob* diagnosticsBlob)
+{
+	if (diagnosticsBlob != nullptr)
+	{
+		MLOG_ERROR(u8"%s", (const char*)diagnosticsBlob->getBufferPointer());
+	}
+}
+
 ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesystem::path& slangFile, CompileTarget requestedTargets)
+{
+	using namespace mercury;
+	using namespace Slang;
+
+	ComPtr<ISession> slangSession = nullptr;
+
+	TargetDesc selectedTargets[4] = {};
+	int numSelectedTargets = 0;
+
+	for (auto& st : gSupportedTargets)
+	{
+		u32 supportedFormat = (u32)FromSlangFormat(st.format);
+		u32 requestedFormat = (u32)requestedTargets;
+
+		if (supportedFormat & requestedFormat)
+		{
+			selectedTargets[numSelectedTargets++] = st;
+		}
+	}
+
+	SessionDesc desc = {};
+	desc.targetCount = numSelectedTargets;// gSupportedTargets.size();
+	desc.targets = selectedTargets;
+
+	std::filesystem::path engineShadersPath = EditorOptions::GetMercuryEngineShadersPath();
+	if (!engineShadersPath.empty())
+	{
+		static std::u8string u8EngineShadersPath = engineShadersPath.u8string();
+
+		desc.searchPathCount = 1;
+		static const char* searchPaths[] = { (const char*)u8EngineShadersPath.c_str() };
+		desc.searchPaths = searchPaths;
+	}
+	SlangResult res = gSlangGlobalSession->createSession(desc, slangSession.writeRef());
+
+	ComPtr<slang::IModule> module;
+	ComPtr<slang::IBlob> diagnostics;
+	module = slangSession->loadModule(slangFile.string().c_str(), diagnostics.writeRef());
+	diagnoseIfNeeded(diagnostics);
+
+	std::vector<ComPtr<slang::IComponentType>> componentsToLink;
+
+	for (auto decl : module->getModuleReflection()->getChildren())
+	{
+		if (auto varDecl = decl->asVariable(); varDecl &&
+			varDecl->findModifier(slang::Modifier::Const) &&
+			varDecl->findModifier(slang::Modifier::Static))
+		{
+			MLOG_DEBUG(u8"Found static const variable: %s", varDecl->getName());
+		}
+	}
+
+	//key("defined entry points");
+	int definedEntryPointCount = module->getDefinedEntryPointCount();
+	//WITH_ARRAY()
+		for (int i = 0; i < definedEntryPointCount; i++)
+		{
+			ComPtr<slang::IEntryPoint> entryPoint;
+			module->getDefinedEntryPoint(i, entryPoint.writeRef());
+			auto epReflection = entryPoint->getFunctionReflection();
+			MLOG_DEBUG(u8"Found entry point: %s", epReflection->getName());
+
+			for(int j = 0; j < epReflection->getParameterCount(); ++j)
+			{
+				auto param = epReflection->getParameterByIndex(j);
+				MLOG_DEBUG(u8"  Param %d: %s", j, param->getName());
+			}
+
+			componentsToLink.push_back(ComPtr<slang::IComponentType>(entryPoint.get()));
+		}
+
+	// ### Composing and Linking
+	//
+
+	ComPtr<slang::IComponentType> composed;
+	res = slangSession->createCompositeComponentType(
+		(slang::IComponentType**)componentsToLink.data(),
+		componentsToLink.size(),
+		composed.writeRef(),
+		diagnostics.writeRef());
+	diagnoseIfNeeded(diagnostics);
+
+	ComPtr<slang::IComponentType> program;
+	res = composed->link(program.writeRef(), diagnostics.writeRef());
+	diagnoseIfNeeded(diagnostics);
+
+
+	for (int targetIndex = 0; targetIndex < numSelectedTargets; ++targetIndex)
+	{
+		slang::ProgramLayout* programLayout =
+			program->getLayout(targetIndex, diagnostics.writeRef());
+		diagnoseIfNeeded(diagnostics);
+		if (!programLayout)
+		{
+			continue;
+		}
+
+		auto entrypoointsCount = programLayout->getEntryPointCount();
+
+		for (int j = 0; j < entrypoointsCount; ++j)
+		{
+			auto epLayout = programLayout->getEntryPointByIndex(j);
+			auto stage = epLayout->getStage();
+			auto name = epLayout->getName();			
+			auto stageName = mercury::utils::string::from(TranslateShaderStage(stage));
+
+			MLOG_DEBUG(u8"Program layout entry point %d: %s (stage %s)", j, name, stageName.c_str());
+		}
+
+
+
+	//	SLANG_RETURN_ON_FAIL(
+	//		collectEntryPointMetadata(program, targetIndex, definedEntryPointCount));
+
+	//	_programLayout = programLayout;
+		//auto targetFormat = kTargets[targetIndex].format;
+		//printProgramLayout(programLayout, targetFormat);
+	}
+
+	CompileResult compileResult;
+	return compileResult;
+}
+
+ShaderCompiler::CompileResult ShaderCompiler::CompileShaderOld(const std::filesystem::path& slangFile, CompileTarget requestedTargets)
 {
 	using namespace mercury;
 
@@ -344,10 +479,14 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 
 	int numEntryPoints = spReflection_getEntryPointCount(reflection);
 
+	slang::ProgramLayout* programLayout = linkedProgram->getLayout(0);
+
 
 	for (int i = 0; i < numEntryPoints; ++i)
 	{
-		
+		auto epReflection = programLayout->getEntryPointByIndex(i);
+		auto name = epReflection->getName();
+
 		auto entryPointInfo = spReflection_getEntryPointByIndex(reflection, i);
 		const char* eName = spReflectionEntryPoint_getName(entryPointInfo);
 		auto eStage = spReflectionEntryPoint_getStage(entryPointInfo);

@@ -80,15 +80,15 @@ void MercuryGraphicsShutdown()
 
 void MercuryGraphicsTick()
 {
-    MLOG_DEBUG(u8"MercuryGraphicsTick - Starting");
+    //MLOG_DEBUG(u8"MercuryGraphicsTick - Starting");
     
     IF_LIKELY(gDevice)
     {
-        MLOG_DEBUG(u8"MercuryGraphicsTick - Device available");
+       // MLOG_DEBUG(u8"MercuryGraphicsTick - Device available");
         
         IF_UNLIKELY(ll::os::gOS->GetCurrentNativeWindowHandle() == nullptr)
         {
-            MLOG_DEBUG(u8"MercuryGraphicsTick - No window handle, shutting down swapchain");
+            //MLOG_DEBUG(u8"MercuryGraphicsTick - No window handle, shutting down swapchain");
             if (gSwapchain != nullptr)
             {
                 gDevice->ShutdownSwapchain();
@@ -96,7 +96,7 @@ void MercuryGraphicsTick()
         }
         else
         {
-            MLOG_DEBUG(u8"MercuryGraphicsTick - Window handle available");
+           // MLOG_DEBUG(u8"MercuryGraphicsTick - Window handle available");
             if (gSwapchain == nullptr)
             {
                 MLOG_DEBUG(u8"MercuryGraphicsTick - Initializing swapchain");
@@ -106,7 +106,7 @@ void MercuryGraphicsTick()
 
         IF_LIKELY(gSwapchain)
         {
-            MLOG_DEBUG(u8"MercuryGraphicsTick - Swapchain available, acquiring next image");
+            //MLOG_DEBUG(u8"MercuryGraphicsTick - Swapchain available, acquiring next image");
             auto finalCmdList = gSwapchain->AcquireNextImage();
 
 			finalCmdList.SetViewport(0, 0, (float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight());
@@ -118,7 +118,7 @@ void MercuryGraphicsTick()
             mercury::Application::GetCurrentApplication()->OnImgui();
             mercury_imgui::EndFrame(finalCmdList);
             // do all graphics job here
-            MLOG_DEBUG(u8"MercuryGraphicsTick - Presenting swapchain");
+           // MLOG_DEBUG(u8"MercuryGraphicsTick - Presenting swapchain");
             gSwapchain->Present();
         }
         else

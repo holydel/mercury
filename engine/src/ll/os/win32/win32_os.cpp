@@ -18,6 +18,10 @@
 #include "ll/graphics/webgpu/webgpu_graphics.h"
 #endif
 
+#ifdef MERCURY_LL_GRAPHICS_D3D12
+#include "ll/graphics/d3d12/d3d12_graphics.h"
+#endif
+
 #include "../../../imgui/imgui_impl.h"
 
 #pragma comment(lib, "xinput.lib")
@@ -434,6 +438,29 @@ namespace mercury::ll::os
   {
       if (gWebGPUSurfacePtr)
           gWebGPUSurfacePtr->Present();
+  }
+#endif
+
+#ifdef MERCURY_LL_GRAPHICS_D3D12
+  void OS::CreateSwapchainForD3D12(void* dxgiSwapChainDesc1, void* iDxgiSwapChain1Ptr)
+  {
+      IDXGISwapChain1** swapChainPtr = static_cast<IDXGISwapChain1**>(iDxgiSwapChain1Ptr);
+      HRESULT hr = gD3DFactory->CreateSwapChainForHwnd(
+          static_cast<IUnknown*>(gD3DCommandQueue),
+          gMainWindow,
+          static_cast<DXGI_SWAP_CHAIN_DESC1*>(dxgiSwapChainDesc1),
+          nullptr,
+          nullptr,
+          swapChainPtr
+      );
+      if (FAILED(hr))
+      {
+          MLOG_ERROR(u8"Failed to create DXGI Swap Chain for D3D12. HRESULT: 0x%X", hr);
+      }
+      else
+      {
+          MLOG_DEBUG(u8"DXGI Swap Chain for D3D12 created successfully.");
+      }
   }
 #endif
   OS* gOS = nullptr;

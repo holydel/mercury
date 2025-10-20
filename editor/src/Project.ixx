@@ -11,6 +11,7 @@ export module Project;
 
 import Asset;
 import ShellOS;
+import EditorOptions;
 
 export class Project {
 	std::filesystem::path rootPath;
@@ -234,13 +235,31 @@ public:
 	{
 		rootShadersFolder = new FolderAsset();
 		rootShadersFolder->path = shadersPath;
+		rootShadersFolder->ResolveAssetName();
+
+		auto engineSystemShaders = new FolderAsset();
+		engineSystemShaders->path = EditorOptions::GetMercuryEngineShadersPath();
+
+		auto editorSystemShaders = new FolderAsset();
+		editorSystemShaders->path = EditorOptions::GetMercuryEditorShadersPath();
+
+		rootShadersFolder->subfolders.push_back(engineSystemShaders);
+		rootShadersFolder->subfolders.push_back(editorSystemShaders);
+
+		ScanFolderForShader(engineSystemShaders);
+		ScanFolderForShader(editorSystemShaders);
 		ScanFolderForShader(rootShadersFolder);
+
+		engineSystemShaders->SetSystemFolder("Engine Internal");
+		editorSystemShaders->SetSystemFolder("Editor Internal");
+
 	}
 
 	void RescanAssets()
 	{
 		rootAssetsFolder = new FolderAsset();
 		rootAssetsFolder->path = assetsPath;
+		rootAssetsFolder->ResolveAssetName();
 		ScanFolderForAssets(rootAssetsFolder);
 	}
 };

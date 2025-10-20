@@ -152,10 +152,15 @@ void AssetsBrowserWindow::RenderFolder(FolderAsset* folder)
     if (folder->subfolders.empty()) flags |= ImGuiTreeNodeFlags_Leaf;
 
     std::string iconString = folder->subfolders.empty() ? ICON_FA_FOLDER : ICON_FA_FOLDER_OPEN;
+	if (folder->isSystemFolder)
+	{
+		iconString = ICON_FA_TOOLBOX;
+	}
+
     if (folder->type == AssetType::ShadersSet) iconString = ICON_FA_SHAPES;
 
-    bool isOpen = ImGui::TreeNodeEx(folder->path.filename().string().c_str(), flags, "%s %s",
-        iconString.c_str(), folder->path.filename().string().c_str());
+    bool isOpen = ImGui::TreeNodeEx(folder->GetAssetNameCStr(), flags, "%s %s",
+        iconString.c_str(), folder->GetAssetNameCStr());
 
     if (ImGui::IsItemClicked()) {
         selectedFolder = folder;

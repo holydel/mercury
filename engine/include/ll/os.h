@@ -99,6 +99,10 @@ public:
   void* GetWebGPUNativeWindowHandle(); //return EmscriptenWebGPUContext*
   void WebGPUPresent();
 #endif
+
+#ifdef MERCURY_LL_GRAPHICS_D3D12
+  void CreateSwapchainForD3D12(void* dxgiSwapChainDesc1, void* iDxgiSwapChain1Ptr);
+#endif
 };
 
 extern OS *gOS;
