@@ -4,6 +4,7 @@
 #include <mercury_ui.h>
 #include <ll/os.h>
 #include <ll/graphics.h>
+#include "mercury_log.h"
 
 #include "../application.h"
 #include <mercury_input.h>
@@ -45,6 +46,18 @@ void mercury_imgui::BeginFrame(mercury::ll::graphics::CommandList cmdList)
 
 	graphics::gDevice->ImguiNewFrame();
 	os::gOS->ImguiNewFrame();
+
+	// Update ImGui display size from the current swapchain (if available)
+	ImGuiIO& io = ImGui::GetIO();
+	if (graphics::gSwapchain) {
+		io.DisplaySize.x = (float)graphics::gSwapchain->GetWidth();
+		io.DisplaySize.y = (float)graphics::gSwapchain->GetHeight();
+	} else {
+		unsigned int w = 0, h = 0;
+		os::gOS->GetActualWindowSize(w, h);
+		io.DisplaySize.x = (float)w;
+		io.DisplaySize.y = (float)h;
+	}
 
 	ImGui::NewFrame();
 }
@@ -276,6 +289,30 @@ void mercury_imgui::EndFrame(mercury::ll::graphics::CommandList cmdList)
 
 	ImGui::Render();
 
+	// Defensive: only call into the renderer backend if we have meaningful draw data
+	// and a native command encoder/handle provided by the CommandList. This prevents
+	// calling into backend code when the low-level GPU objects are not ready which
+	// can cause crashes (e.g. nil MTLBuffer contents on some runtimes).
+	ImDrawData* draw_data = ImGui::GetDrawData();
+	if (draw_data == nullptr)
+	{
+		return;
+	}
+
+	// If there are no command lists to render, skip the backend call
+	if (draw_data->CmdLists.Size == 0)
+	{
+		return;
+	}
+
+	// Ensure the command list has a native pointer (set by AcquireNextImage when a render encoder exists)
+	if (cmdList.nativePtr == nullptr)
+	{
+		MLOG_WARNING(u8"mercury_imgui::EndFrame - cmdList has no native encoder, skipping ImGui render");
+		return;
+	}
+
+	// Finally call into the renderer (this will use the global Metal command buffer/encoder)
 	cmdList.RenderImgui();
 }
 

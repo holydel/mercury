@@ -221,16 +221,19 @@ public:
               config.window.resizable = true;
               config.graphics.enableValidationLayers = true; // Enable validation layers for testing
               config.graphics.adapterPreference = Config::Graphics::AdapterTypePreference::HighPerformance;
+
+              config.logger.logToConsole = true;
+              config.logger.logToIDE = false;
        }
        void Initialize() override;
        void Tick() override;
        void Shutdown() override;
        void OnFinalPass(mercury::ll::graphics::CommandList& finalCL) override;
        void OnClose() override { m_running = false; }
-       bool IsRunning() override { 
-           MLOG_DEBUG(u8"TestBedApplication::IsRunning - returning %s", m_running ? "true" : "false");
-           return m_running; 
-       }
+          bool IsRunning() override { 
+                 // Return running flag without verbose logging
+                 return m_running; 
+          }
 };
 
 TestBedApplication gApplication;
@@ -286,6 +289,8 @@ void TestBedApplication::Tick() {
        if(input::gMouse->IsButtonPressed(input::MouseButton::X2)) {
                 MLOG_DEBUG(u8"Mouse X2 button pressed");
        }
+
+       //m_running = false;
 }
 
 void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL)

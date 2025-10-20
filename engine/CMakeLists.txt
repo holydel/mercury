@@ -20,7 +20,8 @@ set(SOURCES
     src/ll/graphics/mercury_swapchain.cpp
     #IMGUI
     src/imgui/mercury_imgui.cpp
-    src/imgui/imgui_impl.cpp
+    src/imgui/imgui_impl_os.cpp
+    src/imgui/imgui_impl_graphics.cpp
     ../third_party/imgui/imgui.cpp
     ../third_party/imgui/imgui_draw.cpp
     ../third_party/imgui/imgui_widgets.cpp
@@ -137,6 +138,7 @@ if(METAL_AVAILABLE)
     list(APPEND SOURCES
         src/ll/graphics/metal/metal_impl.mm
         src/ll/graphics/metal/embedded_shaders_metal.cpp
+        ../third_party/imgui/backends/imgui_impl_metal.mm
     )
 endif()
 

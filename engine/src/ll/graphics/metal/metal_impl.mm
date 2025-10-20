@@ -10,6 +10,7 @@
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
 #import <QuartzCore/CAMetalLayer.h>
+#include "../../../imgui/imgui_impl.h"
 
 using namespace mercury::ll::graphics;
 
@@ -19,6 +20,8 @@ static id<MTLCommandQueue> gMetalCommandQueue = nil;
 static id<MTLCommandBuffer> gMetalCommandBuffer = nil;
 static id<MTLRenderCommandEncoder> gMetalRenderEncoder = nil;
 static id<MTLRenderCommandEncoder> gMetalRenderPassEncoder = nil;
+static MTLRenderPassColorAttachmentDescriptor *gMetalRenderPassColorAttachment = nil;
+static MTLRenderPassDescriptor *gMetalRenderPassDescriptor = nil;
 static CAMetalLayer* gMetalLayer = nil;
 static id<CAMetalDrawable> gMetalCurrentDrawable = nil;
 
@@ -244,6 +247,15 @@ void Adapter::CreateDevice() {
         gDevice = new Device();
 
     MLOG_DEBUG(u8"Metal Device created successfully");
+
+    // Ensure any existing CAMetalLayer has its device set early so that
+    // nextDrawable() won't return nil if the layer was created before the
+    // device. This avoids races where the view/layer exists but device is
+    // assigned later during swapchain init.
+    if (gMetalLayer && [gMetalLayer respondsToSelector:@selector(setDevice:)]) {
+        gMetalLayer.device = gMetalDevice;
+        MLOG_DEBUG(u8"Early-assigned gMetalDevice to CAMetalLayer.device in Adapter::CreateDevice: %s", [gMetalDevice.name UTF8String]);
+    }
 }
 
 // Device implementation
@@ -319,6 +331,31 @@ void Device::InitializeSwapchain() {
     gMetalLayer.pixelFormat = ConvertFormatToMetal(Format::BGRA8_UNORM);
     gMetalLayer.framebufferOnly = YES;
     gMetalLayer.drawableSize = CGSizeMake(width, height);
+
+    // Ensure the CAMetalLayer has a Metal device assigned. If our selected
+    // Metal device is available, use it. Otherwise try to fall back to the
+    // system default device. A nil layer.device causes nextDrawable to return
+    // nil on macOS (observed as "[CAMetalLayer nextDrawable] returning nil because device is nil").
+    if ([gMetalLayer respondsToSelector:@selector(setDevice:)]) {
+        if (gMetalDevice) {
+            gMetalLayer.device = gMetalDevice;
+            MLOG_DEBUG(u8"Assigned gMetalDevice to CAMetalLayer.device: %s", [gMetalDevice.name UTF8String]);
+        } else {
+            id<MTLDevice> sysDevice = MTLCreateSystemDefaultDevice();
+            if (sysDevice) {
+                gMetalLayer.device = sysDevice;
+                // If we didn't already have a global device, adopt the system device
+                if (!gMetalDevice) {
+                    gMetalDevice = sysDevice;
+                    MLOG_DEBUG(u8"No selected Metal device found; using system default device: %s", [sysDevice.name UTF8String]);
+                } else {
+                    MLOG_DEBUG(u8"No selected Metal device found; system default device available: %s", [sysDevice.name UTF8String]);
+                }
+            } else {
+                MLOG_WARNING(u8"Failed to obtain system Metal device while initializing swapchain; CAMetalLayer.device remains nil");
+            }
+        }
+    }
     
     MLOG_DEBUG(u8"Metal Swapchain initialized successfully");
 
@@ -336,18 +373,55 @@ void Device::ShutdownSwapchain() {
     gMetalLayer = nil;
 }
 
+// IMGUI_IMPL_API bool ImGui_ImplMetal_Init(MTL::Device* device);
+// IMGUI_IMPL_API void ImGui_ImplMetal_Shutdown();
+// IMGUI_IMPL_API void ImGui_ImplMetal_NewFrame(MTL::RenderPassDescriptor* renderPassDescriptor);
+// IMGUI_IMPL_API void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data,
+//                                                    MTL::CommandBuffer* commandBuffer,
+//                                                    MTL::RenderCommandEncoder* commandEncoder);
 void Device::ImguiInitialize() {
     MLOG_DEBUG(u8"Metal ImGui initialization placeholder");
+
+    // Ensure Metal device and command queue are available before initializing ImGui Metal backend
+    if (!gMetalDevice) {
+        MLOG_WARNING(u8"Metal ImGui initialization skipped: no Metal device available yet");
+        return;
+    }
+    if (!gMetalCommandQueue) {
+        MLOG_WARNING(u8"Metal ImGui initialization skipped: no Metal command queue available yet");
+        return;
+    }
+
+    // Safe to initialize ImGui Metal backend
+    ImGui_ImplMetal_Init(gMetalDevice);
     // TODO: Implement Metal ImGui initialization
 }
 
 void Device::ImguiNewFrame() {
-    MLOG_DEBUG(u8"Metal ImGui new frame placeholder");
+    // ImGui new frame (Metal)
+
+    // Only call NewFrame if we have a valid render pass descriptor and command buffer
+    if (!gMetalRenderPassDescriptor) {
+        MLOG_WARNING(u8"Metal ImGui NewFrame skipped: no render pass descriptor available");
+        return;
+    }
+    if (!gMetalCommandBuffer) {
+        MLOG_WARNING(u8"Metal ImGui NewFrame skipped: no command buffer available");
+        return;
+    }
+
+    ImGui_ImplMetal_NewFrame(gMetalRenderPassDescriptor);
     // TODO: Implement Metal ImGui new frame
 }
 
 void Device::ImguiShutdown() {
     MLOG_DEBUG(u8"Metal ImGui shutdown placeholder");
+
+    // Only shutdown backend if it was initialized (ImGui_ImplMetal_Shutdown is safe to call
+    // even if not initialized, but check to reduce log noise)
+    if (gMetalDevice || gMetalCommandQueue) {
+        ImGui_ImplMetal_Shutdown();
+    }
     // TODO: Implement Metal ImGui shutdown
 }
 
@@ -430,8 +504,22 @@ int Swapchain::GetHeight() const {
     return 0;
 }
 
+void Swapchain::Resize(mercury::u16 width, mercury::u16 height) {
+    if (!gMetalLayer) {
+        MLOG_ERROR(u8"Metal Swapchain - No Metal layer available for resize");
+        return;
+    }
+
+    // Update the layer's drawable size. GetWidth/GetHeight read this value
+    // directly from the CAMetalLayer, so we don't need to maintain separate
+    // width/height members on the Swapchain object.
+    gMetalLayer.drawableSize = CGSizeMake((CGFloat)width, (CGFloat)height);
+
+    // Layer drawable size updated
+}
+
 CommandList Swapchain::AcquireNextImage() {
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Starting");
+    // Acquire next image (Metal)
     CommandList cmdList;
     cmdList.nativePtr = nullptr;
     
@@ -440,75 +528,78 @@ CommandList Swapchain::AcquireNextImage() {
         return cmdList;
     }
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Getting next drawable");
     gMetalCurrentDrawable = [gMetalLayer nextDrawable];
     if (!gMetalCurrentDrawable) {
         MLOG_ERROR(u8"Metal AcquireNextImage - Failed to get drawable");
         return cmdList;
     }
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Drawable obtained successfully");
+    // Drawable obtained
     
     if (!gMetalCommandQueue) {
         MLOG_ERROR(u8"Metal AcquireNextImage - No command queue available");
         return cmdList;
     }
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Creating command buffer");
+    // Creating command buffer
     gMetalCommandBuffer = [gMetalCommandQueue commandBuffer];
     if (!gMetalCommandBuffer) {
         MLOG_ERROR(u8"Metal AcquireNextImage - Failed to create command buffer");
         return cmdList;
     }
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Creating render pass descriptor");
-    MTLRenderPassDescriptor* renderPassDesc = [MTLRenderPassDescriptor renderPassDescriptor];
-    if (!renderPassDesc) {
+    // Creating render pass descriptor
+    gMetalRenderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+    if (!gMetalRenderPassDescriptor) {
         MLOG_ERROR(u8"Metal AcquireNextImage - Failed to create render pass descriptor");
         return cmdList;
     }
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Setting up color attachment");
-    MTLRenderPassColorAttachmentDescriptor* colorAttachment = renderPassDesc.colorAttachments[0];
-    colorAttachment.texture = gMetalCurrentDrawable.texture;
-    colorAttachment.loadAction = MTLLoadActionClear;
-    colorAttachment.storeAction = MTLStoreActionStore;
-    
+    // Setting up color attachment
+    gMetalRenderPassColorAttachment = gMetalRenderPassDescriptor.colorAttachments[0];
+    gMetalRenderPassColorAttachment.texture = gMetalCurrentDrawable.texture;
+    gMetalRenderPassColorAttachment.loadAction = MTLLoadActionClear;
+    gMetalRenderPassColorAttachment.storeAction = MTLStoreActionStore;
+
     // Set clear color from swapchain
-    colorAttachment.clearColor = MTLClearColorMake(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Clear color set to R:%.2f G:%.2f B:%.2f A:%.2f", 
-               clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+    gMetalRenderPassColorAttachment.clearColor = MTLClearColorMake(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+    // Clear color set
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Creating render pass encoder");
-    gMetalRenderPassEncoder = [gMetalCommandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+    // Creating render pass encoder
+    gMetalRenderPassEncoder = [gMetalCommandBuffer renderCommandEncoderWithDescriptor:gMetalRenderPassDescriptor];
     if (!gMetalRenderPassEncoder) {
         MLOG_ERROR(u8"Metal AcquireNextImage - Failed to create render pass encoder");
-        return cmdList;
+        return cmdList;     
     }
     
-    MLOG_DEBUG(u8"Metal AcquireNextImage - Render pass encoder created successfully");
+    // Render pass encoder created
     cmdList.nativePtr = (__bridge void*)gMetalRenderPassEncoder;
     
     return cmdList;
 }
 
 void Swapchain::Present() {
-    MLOG_DEBUG(u8"Metal Present - Starting");
     
+    // End any active render encoders. There are two encoder globals used in
+    // the engine/renderer: gMetalRenderPassEncoder (primary frame encoder)
+    // and gMetalRenderEncoder (legacy/auxiliary). Ensure both are ended
+    // to avoid Metal runtime assertions about encoders being deallocated
+    // without endEncoding having been called.
     if (gMetalRenderPassEncoder) {
-        MLOG_DEBUG(u8"Metal Present - Ending render pass encoder");
         [gMetalRenderPassEncoder endEncoding];
         gMetalRenderPassEncoder = nil;
     } else {
-        MLOG_WARNING(u8"Metal Present - No render pass encoder to end");
+        // No render pass encoder to end
+    }
+    if (gMetalRenderEncoder) {
+        [gMetalRenderEncoder endEncoding];
+        gMetalRenderEncoder = nil;
     }
     
     if (gMetalCommandBuffer && gMetalCurrentDrawable) {
-        MLOG_DEBUG(u8"Metal Present - Presenting drawable and committing command buffer");
         [gMetalCommandBuffer presentDrawable:gMetalCurrentDrawable];
         [gMetalCommandBuffer commit];
         [gMetalCommandBuffer waitUntilCompleted];
-        MLOG_DEBUG(u8"Metal Present - Command buffer completed");
         gMetalCommandBuffer = nil;
         gMetalCurrentDrawable = nil;
     } else {
@@ -535,32 +626,36 @@ void CommandList::Destroy() {
 }
 
 void CommandList::RenderImgui() {
-    MLOG_DEBUG(u8"Metal ImGui render placeholder");
+    // ImGui render (Metal)
+
+    // IMGUI_IMPL_API void ImGui_ImplMetal_RenderDrawData(ImDrawData* draw_data,
+//                                                    MTL::CommandBuffer* commandBuffer,
+//                                                    MTL::RenderCommandEncoder* commandEncoder);
+
+    ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), gMetalCommandBuffer, gMetalRenderPassEncoder);
     // TODO: Implement Metal ImGui rendering
 }
 
 void CommandList::SetPSO(Handle<u32> psoID) {
-    MLOG_DEBUG(u8"Metal SetPSO placeholder - PSO ID: %u", psoID.handle);
+    // Set PSO placeholder
     // TODO: Implement Metal PSO setting
     // This would set the render pipeline state on the render pass encoder
 }
 
 void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance) {
-    MLOG_DEBUG(u8"Metal Draw placeholder - Vertices: %u, Instances: %u, FirstVertex: %u, FirstInstance: %u", 
-               vertexCount, instanceCount, firstVertex, firstInstance);
+    // Draw placeholder
     // TODO: Implement Metal draw calls
     // This would call drawPrimitives on the render pass encoder
 }
 
 void CommandList::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) {
-    MLOG_DEBUG(u8"Metal SetViewport placeholder - X: %.2f, Y: %.2f, W: %.2f, H: %.2f, MinDepth: %.2f, MaxDepth: %.2f", 
-               x, y, width, height, minDepth, maxDepth);
+    // Set viewport placeholder
     // TODO: Implement Metal viewport setting
     // This would call setViewport on the render pass encoder
 }
 
 void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height) {
-    MLOG_DEBUG(u8"Metal SetScissor placeholder - X: %d, Y: %d, W: %u, H: %u", x, y, width, height);
+    // Set scissor placeholder
     // TODO: Implement Metal scissor setting
     // This would call setScissorRect on the render pass encoder
 }

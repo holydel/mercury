@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <mach/mach.h>
 #include <mach/vm_map.h>
+#include <algorithm>
 
 // macOS specific includes
 #import <Cocoa/Cocoa.h>
@@ -60,6 +61,22 @@ bool gApplicationRunning = true;
 @implementation MercuryWindowDelegate
 - (void)windowDidResize:(NSNotification *)notification {
     MLOG_DEBUG(u8"Window did resize");
+    // Notify graphics layer about the resize so the swapchain drawable size
+    // and ImGui display size can be updated accordingly.
+    if (mercury::ll::graphics::gSwapchain) {
+        unsigned int w = mercury::ll::graphics::gSwapchain->GetWidth();
+        unsigned int h = mercury::ll::graphics::gSwapchain->GetHeight();
+        // Query actual view size and pass to swapchain resize
+        if (gMainView) {
+            NSRect bounds = gMainView.bounds;
+            w = static_cast<unsigned int>(bounds.size.width);
+            h = static_cast<unsigned int>(bounds.size.height);
+        }
+        // Swapchain::Resize expects u16 values. Clamp to a safe range.
+        mercury::u16 rw = (mercury::u16)std::min<unsigned int>(w, 0xFFFFu);
+        mercury::u16 rh = (mercury::u16)std::min<unsigned int>(h, 0xFFFFu);
+        mercury::ll::graphics::gSwapchain->Resize(rw, rh);
+    }
 }
 
 - (void)windowDidMove:(NSNotification *)notification {
@@ -76,7 +93,6 @@ bool gApplicationRunning = true;
 
 - (void)windowWillClose:(NSNotification *)notification {
     MLOG_DEBUG(u8"Window will close");
-    gMainWindow = nullptr;
     gMainView = nullptr;
     gMetalLayer = nullptr;
     gWindowReady = false;
@@ -327,10 +343,14 @@ namespace mercury::ll::os
         }
     }
 
+// IMGUI_IMPL_API bool     ImGui_ImplOSX_Init(NSView* _Nonnull view);
+// IMGUI_IMPL_API void     ImGui_ImplOSX_Shutdown();
+// IMGUI_IMPL_API void     ImGui_ImplOSX_NewFrame(NSView* _Nullable view);
     void OS::ImguiInitialize() {
         // ImGui macOS implementation would go here
         // For now, this is a placeholder
         MLOG_DEBUG(u8"ImGui macOS initialization placeholder");
+        ImGui_ImplOSX_Init(gMainView);
         // Note: For Metal, ImGui initialization is handled in the graphics layer
     }
 
@@ -338,12 +358,15 @@ namespace mercury::ll::os
         // ImGui macOS new frame would go here
         // For now, this is a placeholder
         // Note: For Metal, ImGui new frame is handled in the graphics layer
+        ImGui_ImplOSX_NewFrame(gMainView);
+
     }
 
     void OS::ImguiShutdown() {
         // ImGui macOS shutdown would go here
         // For now, this is a placeholder
         MLOG_DEBUG(u8"ImGui macOS shutdown placeholder");
+        ImGui_ImplOSX_Shutdown();
         // Note: For Metal, ImGui shutdown is handled in the graphics layer
     }
 

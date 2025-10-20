@@ -102,6 +102,7 @@
         "queue": "cpp",
         "semaphore": "cpp",
         "variant": "cpp",
-        "text_encoding": "cpp"
+        "text_encoding": "cpp",
+        "*.mm": "cpp"
     }
 }
