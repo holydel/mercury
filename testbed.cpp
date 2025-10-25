@@ -8,6 +8,8 @@
 #include "mercury_embedded_shaders.h"
 #include "mercury_shader.h"
 
+#include <mercury_canvas.h>
+
 using namespace mercury;
 
 //void test_simd() {
@@ -203,7 +205,9 @@ using namespace mercury;
 //       //allocator.DumpStatsPerBucketTotal();
 //}
 
+
 class TestBedApplication : public Application {
+
        bool m_running = true;
        int frameCount = 0;
        float t = 0;
@@ -243,15 +247,17 @@ void TestBedApplication::Initialize() {
        //test_simd();
        //test_memory();
 
-       //memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
-       testTriangleVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTriangleVS());
+       memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
+       testTriangleVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTriangleRotatedVS());
        testTriangleFS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTrianglePS());
 
-	   ll::graphics::RasterizePipelineDescriptor psoDesc = {};
-	   psoDesc.vertexShader = testTriangleVS;
-	   psoDesc.fragmentShader = testTriangleFS;
+	   //ll::graphics::RasterizePipelineDescriptor psoDesc = {};
+	   //psoDesc.vertexShader = testTriangleVS;
+	   //psoDesc.fragmentShader = testTriangleFS;
 
-	   testTrianglePSO = ll::graphics::gDevice->CreateRasterizePipeline(psoDesc);
+    //   psoDesc.pushConstantSize = 4; //float angle
+
+	   //testTrianglePSO = ll::graphics::gDevice->CreateRasterizePipeline(psoDesc);
 }
 
 void TestBedApplication::Tick() {
@@ -290,13 +296,35 @@ void TestBedApplication::Tick() {
                 MLOG_DEBUG(u8"Mouse X2 button pressed");
        }
 
-       //m_running = false;
+       
+       float x = 300 + sin(t * 0.1f) * 100;
+       float y = 400 + cos(t * 0.1f) * 150;
+       canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
+    //m_running = false;
 }
 
 void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL)
 {
-    finalCL.SetPSO(testTrianglePSO);
-	finalCL.Draw(3, 1, 0, 0);
+    struct MyPc
+            {
+        float angle;
+	} pc;
+
+    pc.angle = t * 0.1f;
+
+   // finalCL.SetPSO(testTrianglePSO);
+	//finalCL.PushConstants(pc);    
+	//finalCL.Draw(3, 1, 0, 0);
+
+	//finalCL.SetPSO(testDedicatedSpritePSO);
+	//DedicatedSpriteParameters spriteParams;
+	//spriteParams.position = glm::vec2(100.0f, 100.0f);
+	//spriteParams.size = glm::vec2(200.0f, 200.0f);
+	//spriteParams.uvs = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+	//spriteParams.angle = t * 0.2f;
+	//spriteParams.colorPacked = 0xFFFFFFFF; // White color
+	//finalCL.PushConstants(spriteParams);
+	//finalCL.Draw(4, 1, 0, 0);
 }
 void TestBedApplication::Shutdown() {
        MLOG_DEBUG(u8"TestBedApplication::Shutdown");

@@ -17,7 +17,6 @@ static bool g_previousMouseStates[5] = {false};
 static bool g_mouseDoubleClicked[5] = {false};
 static c32 g_lastChar = 0;
 static CursorType g_currentCursorType = CursorType::Arrow;
-static POINT g_mousePosition = {0, 0};
 static DWORD g_lastClickTime[5] = {0};
 static POINT g_lastClickPosition[5] = {{0, 0}};
 
@@ -143,8 +142,8 @@ void HandleMouseDoubleClick(UINT message, WPARAM wParam, LPARAM lParam) {
 }
 
 void HandleMouseMove(WPARAM wParam, LPARAM lParam) {
-    g_mousePosition.x = GET_X_LPARAM(lParam);
-    g_mousePosition.y = GET_Y_LPARAM(lParam);
+    gMousePosition.x = GET_X_LPARAM(lParam);
+    gMousePosition.y = GET_Y_LPARAM(lParam);
 }
 
 
@@ -249,4 +248,21 @@ CursorType Mouse::GetCursorType() const {
   bool Gamepad::IsConnected() const
   {
     return false;
+  }
+
+  glm::ivec2 gMousePosition = {};
+
+  glm::vec2 Mouse::GetPosition() const
+  {
+    return glm::vec2(static_cast<float>(gMousePosition.x), static_cast<float>(gMousePosition.y));
+  }
+
+  glm::vec2 Mouse::GetRawDelta() const
+  {
+    return glm::vec2(0.0f, 0.0f);
+  }
+
+void Mouse::SetPosition(const glm::vec2& position)
+  {
+	  SetCursorPos(static_cast<int>(position.x), static_cast<int>(position.y));
   }

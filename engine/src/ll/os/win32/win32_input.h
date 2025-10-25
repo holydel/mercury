@@ -13,3 +13,5 @@ void HandleMouseMove(WPARAM wParam, LPARAM lParam);
 void RegisterWin32InputCallbacks();
 void MercuryInputPreTick();
 void MercuryInputPostTick();
+
+extern glm::ivec2 gMousePosition;

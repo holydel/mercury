@@ -101,5 +101,4 @@ void CommandPool::Reset()
     VK_CALL(vkResetCommandPool(gVKDevice, static_cast<VkCommandPool>(nativePtr), 0));
 }
 
-
 #endif

@@ -249,6 +249,7 @@ std::vector<T> BlobToVector(ISlangBlob* blob)
 		const char* data = static_cast<const char*>(blob->getBufferPointer());
 		size_t elementCount = size / sizeof(T);
 		result.resize(elementCount);
+		
 		memset(result.data(), 0, size);
 		memcpy(result.data(), data, size);
 	}
@@ -273,6 +274,62 @@ void diagnoseIfNeeded(slang::IBlob* diagnosticsBlob)
 	if (diagnosticsBlob != nullptr)
 	{
 		MLOG_ERROR(u8"%s", (const char*)diagnosticsBlob->getBufferPointer());
+	}
+}
+
+
+std::string ParameterCategoryToString(slang::ParameterCategory category)
+{
+	//None = SLANG_PARAMETER_CATEGORY_NONE,
+	//Mixed = SLANG_PARAMETER_CATEGORY_MIXED,
+	//ConstantBuffer = SLANG_PARAMETER_CATEGORY_CONSTANT_BUFFER,
+	//ShaderResource = SLANG_PARAMETER_CATEGORY_SHADER_RESOURCE,
+	//UnorderedAccess = SLANG_PARAMETER_CATEGORY_UNORDERED_ACCESS,
+	//VaryingInput = SLANG_PARAMETER_CATEGORY_VARYING_INPUT,
+	//VaryingOutput = SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT,
+	//SamplerState = SLANG_PARAMETER_CATEGORY_SAMPLER_STATE,
+	//Uniform = SLANG_PARAMETER_CATEGORY_UNIFORM,
+	//DescriptorTableSlot = SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT,
+	//SpecializationConstant = SLANG_PARAMETER_CATEGORY_SPECIALIZATION_CONSTANT,
+	//PushConstantBuffer = SLANG_PARAMETER_CATEGORY_PUSH_CONSTANT_BUFFER,
+	//RegisterSpace = SLANG_PARAMETER_CATEGORY_REGISTER_SPACE,
+	//GenericResource = SLANG_PARAMETER_CATEGORY_GENERIC,
+
+	//RayPayload = SLANG_PARAMETER_CATEGORY_RAY_PAYLOAD,
+	//HitAttributes = SLANG_PARAMETER_CATEGORY_HIT_ATTRIBUTES,
+	//CallablePayload = SLANG_PARAMETER_CATEGORY_CALLABLE_PAYLOAD,
+
+	//ShaderRecord = SLANG_PARAMETER_CATEGORY_SHADER_RECORD,
+
+	//ExistentialTypeParam = SLANG_PARAMETER_CATEGORY_EXISTENTIAL_TYPE_PARAM,
+	//ExistentialObjectParam = SLANG_PARAMETER_CATEGORY_EXISTENTIAL_OBJECT_PARAM,
+
+	//SubElementRegisterSpace = SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE,
+
+	//InputAttachmentIndex = SLANG_PARAMETER_CATEGORY_SUBPASS,
+
+	//MetalBuffer = SLANG_PARAMETER_CATEGORY_CONSTANT_BUFFER,
+	//MetalTexture = SLANG_PARAMETER_CATEGORY_METAL_TEXTURE,
+	//MetalArgumentBufferElement = SLANG_PARAMETER_CATEGORY_METAL_ARGUMENT_BUFFER_ELEMENT,
+	//MetalAttribute = SLANG_PARAMETER_CATEGORY_METAL_ATTRIBUTE,
+	//MetalPayload = SLANG_PARAMETER_CATEGORY_METAL_PAYLOAD,
+
+	//// DEPRECATED:
+	//VertexInput = SLANG_PARAMETER_CATEGORY_VERTEX_INPUT,
+	//FragmentOutput = SLANG_PARAMETER_CATEGORY_FRAGMENT_OUTPUT,
+
+	switch (category)
+	{
+	case slang::ParameterCategory::ConstantBuffer: return "ConstantBuffer";
+	case slang::ParameterCategory::ShaderResource: return "ShaderResource";
+	case slang::ParameterCategory::UnorderedAccess: return "UnorderedAccess";
+	case slang::ParameterCategory::SamplerState: return "SamplerState";
+	case slang::ParameterCategory::Uniform: return "Uniform";
+	case slang::ParameterCategory::SpecializationConstant: return "SpecializationConstant";
+	case slang::ParameterCategory::PushConstantBuffer: return "PushConstantBuffer";
+	case slang::ParameterCategory::RegisterSpace: return "RegisterSpace";
+	case slang::ParameterCategory::GenericResource: return "GenericResource";
+	default: return "Unknown";
 	}
 }
 
@@ -337,12 +394,40 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 			ComPtr<slang::IEntryPoint> entryPoint;
 			module->getDefinedEntryPoint(i, entryPoint.writeRef());
 			auto epReflection = entryPoint->getFunctionReflection();
+
 			MLOG_DEBUG(u8"Found entry point: %s", epReflection->getName());
+
 
 			for(int j = 0; j < epReflection->getParameterCount(); ++j)
 			{
 				auto param = epReflection->getParameterByIndex(j);
-				MLOG_DEBUG(u8"  Param %d: %s", j, param->getName());
+				
+				auto varType = param->getType();
+				IBlob* typeNameBlob = nullptr;
+				varType->getFullName(&typeNameBlob);
+
+				auto resShape = varType->getResourceShape();
+				auto resAccess = varType->getResourceAccess();
+				auto resResultType = varType->getResourceResultType();
+				
+				char const* typeName = static_cast<char const*>(typeNameBlob->getBufferPointer());			
+				auto reflKind = varType->getKind();
+				const char* varName = param->getName();
+
+				//MLOG_DEBUG(u8"  Param %d: %s Type: %s", j, varName,typeName);
+
+				if (strcmp(varName, "perFrame") == 0)
+				{
+					//parameter block
+					MLOG_DEBUG(u8"[PER FRAME]  Param %d: %s Type: %s", j, varName, typeName);
+				}
+
+				if (strcmp(varName, "perObject") == 0)
+				{
+					MLOG_DEBUG(u8"[PER OBJECT]  Param %d: %s Type: %s", j, varName, typeName);
+					//Push constant
+				}
+
 			}
 
 			componentsToLink.push_back(ComPtr<slang::IComponentType>(entryPoint.get()));
@@ -363,6 +448,9 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 	res = composed->link(program.writeRef(), diagnostics.writeRef());
 	diagnoseIfNeeded(diagnostics);
 
+	CompileResult compileResult;
+
+	compileResult.entryPoints.resize(definedEntryPointCount);
 
 	for (int targetIndex = 0; targetIndex < numSelectedTargets; ++targetIndex)
 	{
@@ -374,9 +462,9 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 			continue;
 		}
 
-		auto entrypoointsCount = programLayout->getEntryPointCount();
+		auto entryPointsCount = programLayout->getEntryPointCount();
 
-		for (int j = 0; j < entrypoointsCount; ++j)
+		for (int j = 0; j < entryPointsCount; ++j)
 		{
 			auto epLayout = programLayout->getEntryPointByIndex(j);
 			auto stage = epLayout->getStage();
@@ -384,6 +472,62 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 			auto stageName = mercury::utils::string::from(TranslateShaderStage(stage));
 
 			MLOG_DEBUG(u8"Program layout entry point %d: %s (stage %s)", j, name, stageName.c_str());
+
+			for (int k = 0; k < epLayout->getParameterCount(); ++k)
+			{
+				auto param = epLayout->getParameterByIndex(k);
+				auto varType = param->getType();
+				const char* varName = param->getName();
+				
+				// Get binding info
+				//if (auto bindingInfo = )
+				{
+					int registerIndex = param->getBindingIndex();
+					int registerSpace = param->getBindingSpace();
+					auto category = ParameterCategoryToString(param->getCategory());
+
+					MLOG_DEBUG(u8"Parameter %s '%s': b%d, space%d",
+						category.c_str(), varName, registerIndex, registerSpace);
+				}
+			}
+
+			Slang::ComPtr<IBlob> kernelBlob;
+			program->getEntryPointCode(
+				j,
+				targetIndex,
+				kernelBlob.writeRef(),
+				diagnostics.writeRef());
+
+			diagnoseIfNeeded(diagnostics);
+
+			if (kernelBlob)
+			{
+				size_t codeSize = kernelBlob->getBufferSize();
+				MLOG_DEBUG(u8"  Compiled code size: %zu bytes", codeSize);
+			}
+
+			auto& compiledEntry = compileResult.entryPoints[j];
+			compiledEntry.entryPoint = name;
+			compiledEntry.stage = TranslateShaderStage(stage);
+
+			auto target = gSupportedTargets[targetIndex];
+
+			if (target.format == SlangCompileTarget::SLANG_SPIRV)
+			{
+				compiledEntry.spirv = BlobToVector<mercury::u8>(kernelBlob);
+			}
+			else if (target.format == SlangCompileTarget::SLANG_METAL)
+			{
+				compiledEntry.metal = BlobToVector<char>(kernelBlob);
+			}
+			else if (target.format == SlangCompileTarget::SLANG_WGSL)
+			{
+				compiledEntry.wgsl = BlobToVector<char>(kernelBlob);
+			}
+			else if (target.format == SlangCompileTarget::SLANG_DXIL)
+			{
+				compiledEntry.dxil = BlobToVector<mercury::u8>(kernelBlob);
+			}
 		}
 
 
@@ -396,7 +540,7 @@ ShaderCompiler::CompileResult ShaderCompiler::CompileShader(const std::filesyste
 		//printProgramLayout(programLayout, targetFormat);
 	}
 
-	CompileResult compileResult;
+
 	return compileResult;
 }
 
@@ -774,7 +918,18 @@ void ShaderCompiler::RebuildEmbeddedShaders(const RebuildShaderDesc& desc)
 			if (shader.wgsl.empty()) continue;
 
 			wgsl << "mercury::ll::graphics::ShaderBytecodeView " << shader.functionName << "()\n{\n";
+
+			std::string replaceStrFind = "fn " + shader.functionName + "(";
+			std::string replaceStrReplace = "fn main(";
+
+
 			std::string wgslStr(shader.wgsl.begin(), shader.wgsl.end());
+
+			size_t pos = wgslStr.find(replaceStrFind);
+			if (pos != std::string::npos)
+			{
+				wgslStr.replace(pos, replaceStrFind.length(), replaceStrReplace);
+			}
 			wgsl << "\tstatic const char data[] = R\"(" << wgslStr << ")\";\n";
 			wgsl << "\treturn { data, sizeof(data) };\n";
 			wgsl << "}\n\n";

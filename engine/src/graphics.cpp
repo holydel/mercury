@@ -4,6 +4,7 @@
 #include "mercury_log.h"
 #include "ll/graphics/mercury_swapchain.h"
 #include "imgui/mercury_imgui.h"
+#include "canvas.h"
 
 using namespace mercury;
 using namespace ll::graphics;
@@ -13,6 +14,14 @@ Instance *mercury::ll::graphics::gInstance = nullptr;
 Device *mercury::ll::graphics::gDevice = nullptr;
 Adapter *mercury::ll::graphics::gAdapter = nullptr;
 Swapchain *mercury::ll::graphics::gSwapchain = nullptr;
+
+struct FrameResources
+{
+};
+
+constexpr int gNumFramesInFlight = 2;
+std::array<FrameResources, gNumFramesInFlight> gPerFrameResources;
+int gCurrentFrameInFlightIndex = 0;
 
 void MercuryGraphicsInitialize()
 {
@@ -46,12 +55,16 @@ void MercuryGraphicsInitialize()
     }                
 
     mercury_imgui::Initialize();
+
+    MercuryCanvasInitialize(gNumFramesInFlight);
 }
 
 void MercuryGraphicsShutdown()
 {
     MLOG_DEBUG(u8"MercuryGraphicsShutdown - Starting");
     
+    MercuryCanvasShutdown();
+
     mercury_imgui::Shutdown();
     
     if (gDevice) {
@@ -76,6 +89,7 @@ void MercuryGraphicsShutdown()
     }
     
     MLOG_DEBUG(u8"MercuryGraphicsShutdown - Complete");
+
 }
 
 void MercuryGraphicsTick()
@@ -106,11 +120,16 @@ void MercuryGraphicsTick()
 
         IF_LIKELY(gSwapchain)
         {
+            gCurrentFrameInFlightIndex++;
+            gCurrentFrameInFlightIndex = gCurrentFrameInFlightIndex % gNumFramesInFlight;
+
             // Swapchain available, acquiring next image
             auto finalCmdList = gSwapchain->AcquireNextImage();
 
 			finalCmdList.SetViewport(0, 0, (float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight());
 			finalCmdList.SetScissor(0, 0, (u32)gSwapchain->GetWidth(), (u32)gSwapchain->GetHeight());
+
+            MercuryCanvasTick(finalCmdList, gCurrentFrameInFlightIndex);
 
             mercury::Application::GetCurrentApplication()->OnFinalPass(finalCmdList);
 

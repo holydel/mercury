@@ -66,6 +66,12 @@
     <ClCompile Include="..\..\editor\src\AssetShaderSetImpl.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\src\graphics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\editor\include\editor_main_window.h">
@@ -76,6 +82,12 @@
     </ClInclude>
     <ClInclude Include="..\..\editor\third_party\IconsFontAwesome7.h">
       <Filter>Source Files\third_party</Filter>
+    </ClInclude>
+    <ClInclude Include="simple_example.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\include\ll\graphics.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

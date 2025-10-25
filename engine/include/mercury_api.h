@@ -90,6 +90,40 @@ namespace mercury
     typedef float f32;
     typedef double f64;
 
+    struct PackedColor
+    {
+        union
+        {
+            struct Packed
+            {
+                u8 r;
+                u8 g;
+                u8 b;
+                u8 a;
+            } packed;
+
+			u32 rgba = 0;
+        };
+        
+
+        PackedColor() = default;
+        constexpr PackedColor(u32 packed)
+        {
+			rgba = packed;
+        }
+
+        constexpr PackedColor(u8 red, u8 green, u8 blue, u8 alpha = 255)
+        {
+            packed.r = red;
+            packed.g = green;
+            packed.b = blue;
+            packed.a = alpha;
+		}
+    };
+    
+    // Define color constants
+    inline constexpr PackedColor ColorWhite{0xFFFFFFFF};
+    
 // SIMD vector types
 #if defined(__aarch64__)
     // ARM64 NEON SIMD types

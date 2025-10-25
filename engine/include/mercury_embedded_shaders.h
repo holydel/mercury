@@ -4,19 +4,22 @@
 
 namespace mercury::ll::graphics::embedded_shaders {
 
+	// dedicated_sprite - VS
+	mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteVS();
+
+	// dedicated_sprite - PS
+	mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteColorPS();
+
+	// dedicated_sprite - PS
+	mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS();
+
 	// mercury - VS
 	mercury::ll::graphics::ShaderBytecodeView TestTriangleVS();
 
+	// mercury - VS
+	mercury::ll::graphics::ShaderBytecodeView TestTriangleRotatedVS();
+
 	// mercury - PS
 	mercury::ll::graphics::ShaderBytecodeView TestTrianglePS();
-
-	// mercury - VS
-	mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteVS();
-
-	// mercury - PS
-	mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteColorPS();
-
-	// mercury - PS
-	mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS();
 
 } // namespace mercury::ll::graphics::embedded_shaders

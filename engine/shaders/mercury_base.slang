@@ -2,7 +2,11 @@ module mercury_base;
 
 public struct MercuryScene
 {
-    public float4 canvasSize; // xy = size, zw = 1/size
+    public float4 prerptationMatrix;
+    public float4 canvasSize; // xy = size, zw = 1/half_size
+
+    public float time;
+    public float deltaTime;
 };
 
 public struct PackedColor
@@ -38,5 +42,5 @@ public struct DedicatedSpriteParameters
     public float2 size;
     public float4 uvs;
     public float angle;
-    public PackedColor colorPacked;    
+    public uint32_t colorPacked;
 };

@@ -10,6 +10,12 @@
 #include <system_error>
 #include <ll/os.h>
 
+struct BufferInfo
+{
+	D3D12MA::Allocation* allocation = nullptr;
+	size_t size = 0;
+};
+
 extern IDXGIFactory4* gD3DFactory;
 extern ID3D12Debug1* gDebugController;
 extern IDXGIAdapter1* gD3DAdapter;
@@ -22,8 +28,18 @@ extern ID3D12DescriptorHeap* gDescriptorsHeapDSV;
 extern ID3D12GraphicsCommandList* gCurrentCommandBuffer;
 
 extern std::vector<CD3DX12_SHADER_BYTECODE> gAllShaders;
-extern std::vector<ID3D12RootSignature*> gAllSignatures;
-extern std::vector<ID3D12PipelineState*> gAllPSOs;
+
+struct PSOInfo
+{
+	ID3D12PipelineState* pso = nullptr;
+	ID3D12RootSignature* rootSignature = nullptr;
+	D3D_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+};
+
+extern std::vector<PSOInfo> gAllPSOs;
+
+extern std::vector<ID3D12Resource*> gAllBuffers;
+extern std::vector<BufferInfo> gAllBuffersMeta;
 
 extern D3D12MA::Allocator* gAllocator;
 extern DXGI_FORMAT gD3DSwapChainFormat;

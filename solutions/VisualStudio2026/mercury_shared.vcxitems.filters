@@ -144,6 +144,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_canvas.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\canvas.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp">
@@ -163,9 +166,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\mercury_string_utils.cpp">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl.cpp">
-      <Filter>src\imgui</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.cpp">
       <Filter>src\imgui</Filter>
@@ -232,6 +232,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.cpp">
       <Filter>src\ll\graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl_graphics.cpp">
+      <Filter>src\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl_os.cpp">
+      <Filter>src\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\canvas.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

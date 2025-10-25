@@ -119,6 +119,10 @@ namespace mercury
 
       void SetCursorType(CursorType type) const;
       CursorType GetCursorType() const;
+
+	  glm::vec2 GetPosition() const;
+      void SetPosition(const glm::vec2& position);
+	  glm::vec2 GetRawDelta() const;
     };
 
     class Gamepad

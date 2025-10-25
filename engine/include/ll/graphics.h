@@ -4,6 +4,8 @@
 #include "mercury_shader.h"
 #include <string>
 #include <glm/glm.hpp>
+#include <array>
+
 namespace mercury {
 namespace ll {
 namespace graphics {
@@ -13,6 +15,14 @@ struct ShaderHandle : public Handle<u32>
 };
 
 struct PsoHandle : public Handle<u32>
+{
+};
+
+struct BufferHandle : public Handle<u32>
+{
+};
+
+struct ParameterBlockLayoutHandle : public Handle<u32>
 {
 };
 
@@ -178,13 +188,82 @@ struct ShaderBytecodeView
   size_t size = 0;
 };
 
-struct RasterizePipelineDescriptor
+enum class ShaderResourceType
+{
+	Undefined = 0,
+	UniformBuffer,
+    RWBuffer,
+	ReadOnlyBuffer,
+    RWImage,
+	SampledImage2D,
+};
+
+struct BindingSlotDescriptor
+{
+	u8 bindingSlot = 0;
+	ShaderResourceType resourceType = ShaderResourceType::Undefined;
+};
+
+struct BindingSetLayoutDescriptor
+{
+    std::vector<BindingSlotDescriptor> allSlots;
+
+    BindingSetLayoutDescriptor& AddSlot(u8 bindingSlot, ShaderResourceType resourceType)
+    {
+        allSlots.push_back({ bindingSlot, resourceType });
+        return *this;
+	}
+
+    BindingSetLayoutDescriptor& AddSlot(ShaderResourceType resourceType)
+    {
+		return AddSlot(static_cast<u8>(allSlots.size()), resourceType);
+    }
+};
+
+
+struct PipelineBindingLayoutDescriptor
+{
+	u32 pushConstantSize = 0;
+
+	std::array<BindingSetLayoutDescriptor,4> bindingSetLayouts;
+};
+
+enum class PolygonMode : u8
+{
+    Fill,
+    Line,
+    Point
+};
+
+enum class CullMode : u8
+{
+    None,
+    Front,
+    Back,
+    FrontAndBack
+};
+
+enum class PrimitiveTopology : u8
+{
+    TriangleList,
+    TriangleStrip,
+    LineList,
+    LineStrip,
+    PointList,
+    PatchList
+};
+
+struct RasterizePipelineDescriptor : public PipelineBindingLayoutDescriptor
 {
 	Handle<u32> vertexShader;
 	Handle<u32> tessControlShader;
 	Handle<u32> tessEvalShader;
 	Handle<u32> geometryShader;
 	Handle<u32> fragmentShader;
+
+    PolygonMode polygonMode = PolygonMode::Fill;
+    CullMode cullMode = CullMode::Back;
+	PrimitiveTopology primitiveTopology = PrimitiveTopology::TriangleList;
 };
 
 struct TimelineSemaphore
@@ -206,7 +285,10 @@ struct RenderPass
 
 struct CommandList
 {
-  void* nativePtr;  
+  void* nativePtr = nullptr;  
+  void* currentRenderPassNativePtr = nullptr;
+  void* currentPSOnativePtr = nullptr;
+  void* currentPSOLayoutNativePtr = nullptr;
 
   bool IsExecuted();
   void SetDebugName(const char* utf8_name);
@@ -219,6 +301,18 @@ struct CommandList
 
   void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f);
   void SetScissor(i32 x, i32 y, u32 width, u32 height);
+
+  void PushConstants(const void* data, size_t size);  
+
+  template <typename T>
+  void PushConstants(const T& data)
+  {
+    PushConstants(&data, sizeof(T));
+  }
+
+  void SetUniformBuffer(u8 bindingSslot, BufferHandle bufferID, size_t offset = 0, size_t size = SIZE_MAX);
+
+  void SetParameterBlockLayout(u8 setIndex, ParameterBlockLayoutHandle layoutID);
 };
 
 struct CommandPool
@@ -362,6 +456,13 @@ public:
   PsoHandle CreateRasterizePipeline(const RasterizePipelineDescriptor& desc);
   void UpdatePipelineState(PsoHandle psoID, const RasterizePipelineDescriptor& desc);
   void DestroyRasterizePipeline(PsoHandle psoID);
+
+  BufferHandle CreateBuffer(size_t size);
+  void DestroyBuffer(BufferHandle bufferID);
+  void UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset = 0);
+
+  ParameterBlockLayoutHandle CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex);
+  void DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID);
 };
 
 class Swapchain {
@@ -391,6 +492,8 @@ public:
   void Resize(u16 width, u16 height);
   int GetWidth() const;
   int GetHeight() const;
+
+  u32 GetCurrentFrameIndex() const;
 };
 
 

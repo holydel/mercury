@@ -560,6 +560,21 @@ void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects& out)
 {
 	VkPipelineLayoutCreateInfo layoutCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};	
+
+	std::vector<VkPushConstantRange> pcRanges;
+
+
+	if(desc.pushConstantSize > 0)
+	{
+		VkPushConstantRange& pcr = pcRanges.emplace_back();
+		pcr.offset = 0;
+		pcr.size = desc.pushConstantSize;
+		pcr.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages		
+	}
+
+	layoutCreateInfo.pushConstantRangeCount = static_cast<u32>(pcRanges.size());
+	layoutCreateInfo.pPushConstantRanges = pcRanges.data();
+
 	vkCreatePipelineLayout(gVKDevice, &layoutCreateInfo, gVKGlobalAllocationsCallbacks, &out.pipelineLayout);
 
 
@@ -700,6 +715,9 @@ void CommandList::RenderImgui()
 void CommandList::SetPSO(Handle<u32> psoID)
 {
 	vkCmdBindPipeline(static_cast<VkCommandBuffer>(nativePtr), VK_PIPELINE_BIND_POINT_GRAPHICS, gAllPSOs[psoID.handle].pipeline);
+
+	currentPSOnativePtr = gAllPSOs[psoID.handle].pipeline;
+	currentPSOLayoutNativePtr = gAllPSOs[psoID.handle].pipelineLayout;
 }
 
 void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
@@ -728,4 +746,20 @@ void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
 
 	vkCmdSetScissor(static_cast<VkCommandBuffer>(nativePtr), 0, 1, &scissor);
 }
+
+void CommandList::PushConstants(const void* data, size_t size)
+{
+	auto cmdBuff = static_cast<VkCommandBuffer>(nativePtr);
+
+	vkCmdPushConstants(
+		cmdBuff,
+		/* Assuming pipeline layout is available as 'pipelineLayout' */
+		static_cast<VkPipelineLayout>(currentPSOLayoutNativePtr),
+		VK_SHADER_STAGE_ALL, // or specify particular stages
+		0,
+		static_cast<uint32_t>(size),
+		data
+	);
+}
+
 #endif
