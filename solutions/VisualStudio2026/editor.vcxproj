@@ -299,12 +299,14 @@ xcopy "$(ProjectDir)..\..\editor\media\*.*" "$(OutDir)" /y /d /i</Command>
     <ClCompile Include="..\..\editor\third_party\simdjson\simdjson.cpp" />
     <ClCompile Include="engine\src\graphics.cpp" />
     <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp" />
+    <ClCompile Include="engine\src\ll\graphics\vulkan\vk_device.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\editor\include\editor_main_window.h" />
     <ClInclude Include="..\..\editor\third_party\IconsFontAwesome7.h" />
     <ClInclude Include="..\..\editor\third_party\simdjson\simdjson.h" />
     <ClInclude Include="engine\include\ll\graphics.h" />
+    <ClInclude Include="engine\src\ll\graphics\vulkan\vk_device.h" />
     <ClInclude Include="simple_example.h" />
   </ItemGroup>
   <ItemGroup>

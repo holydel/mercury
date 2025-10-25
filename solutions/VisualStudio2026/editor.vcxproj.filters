@@ -72,6 +72,9 @@
     <ClCompile Include="engine\src\graphics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="engine\src\ll\graphics\vulkan\vk_device.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\editor\include\editor_main_window.h">
@@ -87,6 +90,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="engine\include\ll\graphics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\src\ll\graphics\vulkan\vk_device.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

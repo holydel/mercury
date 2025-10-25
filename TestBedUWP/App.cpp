@@ -7,6 +7,7 @@
 
 #include "mercury_embedded_shaders.h"
 #include "mercury_shader.h"
+#include "mercury_canvas.h"
 
 using namespace mercury;
 
@@ -86,6 +87,8 @@ void TestBedApplication::Tick() {
     if (input::gMouse->IsButtonPressed(input::MouseButton::X2)) {
         MLOG_DEBUG(u8"Mouse X2 button pressed");
     }
+
+    canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
 }
 
 void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL)

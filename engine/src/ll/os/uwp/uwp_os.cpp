@@ -535,4 +535,37 @@ int main(Platform::Array<Platform::String^>^)
 	return 0;
 }
 
+glm::vec2 mercury::input::Mouse::GetPosition() const
+{
+    CoreWindow^ window = CoreWindow::GetForCurrentThread();
+    int x = 0, y = 0;
+
+    if (window != nullptr)
+    {
+        Point position = window->PointerPosition;
+        Rect bounds = window->Bounds;
+
+        // Convert from screen coordinates to client coordinates
+        x = static_cast<int>(position.X - bounds.X);
+        y = static_cast<int>(position.Y - bounds.Y);
+    }
+    else
+    {
+        x = 0;
+        y = 0;
+    }
+
+    return glm::vec2(static_cast<float>(x), static_cast<float>(y));
+}
+
+glm::vec2 mercury::input::Mouse::GetRawDelta() const
+{
+    return glm::vec2(0.0f, 0.0f);
+}
+
+void mercury::input::Mouse::SetPosition(const glm::vec2& position)
+{
+    // SetCursorPos(static_cast<int>(position.x), static_cast<int>(position.y));
+}
+
 #endif

@@ -14,12 +14,11 @@ using namespace mercury::ll::graphics;
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3dcompiler.lib")  // For D3DReflect
-#pragma comment(lib, "dxguid.lib")  
+ 
 #include <dxcapi.h>
-#pragma comment(lib, "dxcompiler.lib")
+
 #include <d3d12shader.h>
-#include <d3dcompiler.h>
+
 #include <wrl/client.h>
 
 // Include D3D12 Memory Allocator implementation in this translation unit
@@ -772,7 +771,8 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 
 	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
-
+	
+	/*
 	// Get the vertex shader bytecode first
 	// Get the vertex shader bytecode first
 	if (desc.vertexShader.isValid())
@@ -870,7 +870,7 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 		}
 	}
 
-
+	*/
 	if (desc.pushConstantSize > 0)
 	{
 		CD3DX12_ROOT_PARAMETER rootParam;
