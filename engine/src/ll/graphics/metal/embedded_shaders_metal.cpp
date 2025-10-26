@@ -91,14 +91,11 @@ BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelCont
 {
 
 
-    float2 _S2 = float2(-1.0, 1.0);
+    float2 _S2 = float2(1.0, 1.0);
 
 #line 10
-    float2 _S3 = float2(1.0, 1.0);
-
-#line 10
-    array<float2, int(4)> positions_ndc_0 = { _S2, _S3, float2(-1.0, -1.0), float2(1.0, -1.0) };
-    array<float2, int(4)> uvs_1 = { float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0), _S3 };
+    array<float2, int(4)> positions_ndc_0 = { float2(-1.0, 1.0), _S2, float2(-1.0, -1.0), float2(1.0, -1.0) };
+    array<float2, int(4)> uvs_1 = { float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0), _S2 };
 
 
 
@@ -109,17 +106,17 @@ BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelCont
     thread BaseVertexOutput_0 output_0;
 
 #line 23
-    (&output_0)->position_0 = float4(((((positions_ndc_0[*vertexID_0] * kernelContext_0->entryPointParams_0->perObject_0.size_0) * (matrix<float,int(2),int(2)> (cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + kernelContext_0->entryPointParams_0->perObject_0.position_1) * kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.zw + _S2, 0.0, 1.0);
+    (&output_0)->position_0 = float4(((((positions_ndc_0[*vertexID_0] * kernelContext_0->entryPointParams_0->perObject_0.size_0) * (matrix<float,int(2),int(2)> (cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + kernelContext_0->entryPointParams_0->perObject_0.position_1) * kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.zw - float2(1.0, float((int(sign((kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.w)))))), 0.0, 1.0);
 
 
     (&output_0)->texcoord_0 = uvs_1[*vertexID_0];
 
 #line 26
-    thread PackedColor_0 _S4 = PackedColor_x24init_0(kernelContext_0->entryPointParams_0->perObject_0.colorPacked_0);
+    thread PackedColor_0 _S3 = PackedColor_x24init_0(kernelContext_0->entryPointParams_0->perObject_0.colorPacked_0);
 
 #line 26
-    float4 _S5 = PackedColor_toFloat4_0(&_S4);
-    (&output_0)->color_1 = _S5;
+    float4 _S4 = PackedColor_toFloat4_0(&_S3);
+    (&output_0)->color_1 = _S4;
 
     return output_0;
 }
@@ -139,28 +136,28 @@ struct DedicatedSpriteVS_Result_0
 {
 
 #line 29
-    thread uint _S6 = vertexID_1;
+    thread uint _S5 = vertexID_1;
 
 #line 29
     thread KernelContext_0 kernelContext_1;
 
 #line 29
-    BaseVertexOutput_0 _S7 = DedicatedSpriteVS_0(&_S6, &kernelContext_1);
+    BaseVertexOutput_0 _S6 = DedicatedSpriteVS_0(&_S5, &kernelContext_1);
 
 #line 29
-    thread DedicatedSpriteVS_Result_0 _S8;
+    thread DedicatedSpriteVS_Result_0 _S7;
 
 #line 29
-    (&_S8)->position_2 = _S7.position_0;
+    (&_S7)->position_2 = _S6.position_0;
 
 #line 29
-    (&_S8)->texcoord_1 = _S7.texcoord_0;
+    (&_S7)->texcoord_1 = _S6.texcoord_0;
 
 #line 29
-    (&_S8)->color_2 = _S7.color_1;
+    (&_S7)->color_2 = _S6.color_1;
 
 #line 29
-    return _S8;
+    return _S7;
 }
 
 )";

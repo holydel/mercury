@@ -62,14 +62,13 @@ struct BaseVertexOutput_0
 @vertex
 fn main(@builtin(vertex_index) vertexID_0 : u32) -> BaseVertexOutput_0
 {
-    const _S2 : vec2<f32> = vec2<f32>(-1.0f, 1.0f);
-    const _S3 : vec2<f32> = vec2<f32>(1.0f, 1.0f);
-    var positions_ndc_0 : array<vec2<f32>, i32(4)> = array<vec2<f32>, i32(4)>( _S2, _S3, vec2<f32>(-1.0f, -1.0f), vec2<f32>(1.0f, -1.0f) );
-    var uvs_1 : array<vec2<f32>, i32(4)> = array<vec2<f32>, i32(4)>( vec2<f32>(0.0f, 0.0f), vec2<f32>(1.0f, 0.0f), vec2<f32>(0.0f, 1.0f), _S3 );
+    const _S2 : vec2<f32> = vec2<f32>(1.0f, 1.0f);
+    var positions_ndc_0 : array<vec2<f32>, i32(4)> = array<vec2<f32>, i32(4)>( vec2<f32>(-1.0f, 1.0f), _S2, vec2<f32>(-1.0f, -1.0f), vec2<f32>(1.0f, -1.0f) );
+    var uvs_1 : array<vec2<f32>, i32(4)> = array<vec2<f32>, i32(4)>( vec2<f32>(0.0f, 0.0f), vec2<f32>(1.0f, 0.0f), vec2<f32>(0.0f, 1.0f), _S2 );
     var cosAngle_0 : f32 = cos(entryPointParams_0.perObject_0.angle_0);
     var sinAngle_0 : f32 = sin(entryPointParams_0.perObject_0.angle_0);
     var output_0 : BaseVertexOutput_0;
-    output_0.position_1 = vec4<f32>(((((positions_ndc_0[vertexID_0] * entryPointParams_0.perObject_0.size_0) * (mat2x2<f32>(cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + entryPointParams_0.perObject_0.position_0) * entryPointParams_perFrame_0.canvasSize_0.zw + _S2, 0.0f, 1.0f);
+    output_0.position_1 = vec4<f32>(((((positions_ndc_0[vertexID_0] * entryPointParams_0.perObject_0.size_0) * (mat2x2<f32>(cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + entryPointParams_0.perObject_0.position_0) * entryPointParams_perFrame_0.canvasSize_0.zw - vec2<f32>(1.0f, f32((i32(sign((entryPointParams_perFrame_0.canvasSize_0.w)))))), 0.0f, 1.0f);
     output_0.texcoord_0 = uvs_1[vertexID_0];
     output_0.color_1 = PackedColor_toFloat4_0(PackedColor_x24init_0(entryPointParams_0.perObject_0.colorPacked_0));
     return output_0;

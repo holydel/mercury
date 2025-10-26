@@ -3,7 +3,7 @@ module dedicated_sprite;
 import mercury_base;
 
 [shader("vertex")]
-BaseVertexOutput DedicatedSpriteVS(uniform DedicatedSpriteParameters perObject, uniform ParameterBlock<MercuryScene> perFrame, uint vertexID: SV_VertexID)
+BaseVertexOutput DedicatedSpriteVS(uniform ParameterBlock<MercuryScene> perFrame, uniform DedicatedSpriteParameters perObject, uint vertexID: SV_VertexID)
 {
     BaseVertexOutput output;
 
@@ -20,7 +20,7 @@ BaseVertexOutput DedicatedSpriteVS(uniform DedicatedSpriteParameters perObject, 
     );
     ndc = mul(rotationMatrix,(ndc * perObject.size)) + perObject.position;
 
-    output.position = float4(ndc * perFrame.canvasSize.zw + float2(-1.0,1.0), 0.0, 1.0);
+    output.position = float4(ndc * perFrame.canvasSize.zw - float2(1.0,sign(perFrame.canvasSize.w)), 0.0, 1.0);
 
     //output.position = float4(ndc, 0.0, 1.0);
     output.texcoord = uvs[vertexID];

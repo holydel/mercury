@@ -248,7 +248,7 @@ void TestBedApplication::Initialize() {
        //test_simd();
        //test_memory();
 
-       memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
+      // memory::gGraphicsMemoryAllocator->DumpStatsPerBucketTotal();
        testTriangleVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTriangleRotatedVS());
        testTriangleFS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTrianglePS());
 
@@ -300,7 +300,8 @@ void TestBedApplication::Tick() {
        
        float x = 300 + sin(t * 0.1f) * 100;
        float y = 400 + cos(t * 0.1f) * 150;
-      // canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
+
+       canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
     //m_running = false;
 }
 

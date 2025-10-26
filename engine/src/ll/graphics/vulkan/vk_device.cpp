@@ -17,10 +17,23 @@ VkQueue gVKGraphicsQueue = VK_NULL_HANDLE;
 VkQueue gVKTransferQueue = VK_NULL_HANDLE;
 VkQueue gVKComputeQueue = VK_NULL_HANDLE;
 VmaAllocator gVMA_Allocator = nullptr;
+VkDescriptorPool gVKGlobalDescriptorPool = VK_NULL_HANDLE;
 
 DeviceEnabledExtensions gVKDeviceEnabledExtensions;
 std::vector<PipelineObjects> gAllPSOs;
 std::vector<ShaderModuleCached> gAllShaderModules;
+std::vector<VkDescriptorSetLayout> gAllDSLayouts;
+std::vector<VkDescriptorSet> gAllDescriptorSets;
+
+struct BufferInfo
+{
+	VmaAllocation allocation = nullptr;
+	size_t size = 0;
+	void* persistentMappedPtr = nullptr;
+};
+
+std::vector<VkBuffer> gAllBuffers;
+std::vector<BufferInfo> gAllBufferMetas;
 
 struct EnabledVKFeatures
 {
@@ -360,6 +373,29 @@ void Device::Initialize()
 	allocatorInfo.pVulkanFunctions = &functions;
 
 	vmaCreateAllocator(&allocatorInfo, &gVMA_Allocator);
+
+	VkDescriptorPoolSize pool_sizes[] =
+	{
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 10000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 10000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 10000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 10000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 10000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 10000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 10000 }
+	};
+
+	VkDescriptorPoolCreateInfo dp_create_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,nullptr };
+	dp_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	dp_create_info.maxSets = 1000;
+	dp_create_info.pPoolSizes = pool_sizes;
+	dp_create_info.poolSizeCount = sizeof(pool_sizes) / sizeof(pool_sizes[0]);
+
+	vkCreateDescriptorPool(gVKDevice, &dp_create_info, nullptr, &gVKGlobalDescriptorPool);
 }
 
 void Device::Shutdown()
@@ -598,31 +634,14 @@ void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects
 
 	for (int i = 0; i < 4; ++i)
 	{
-		auto& bset = desc.bindingSetLayouts[i];
-		VkDescriptorSetLayoutCreateInfo createInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-		std::vector<VkDescriptorSetLayoutBinding> bindings;
+		IF_UNLIKELY (desc.bindingSetLayouts[i].allSlots.empty())
+			continue;
 
-		for (int s = 0; s < bset.allSlots.size(); ++s)
+		auto outLayout = gDevice->CreateParameterBlockLayout(desc.bindingSetLayouts[i], i); // ensure layout is created and cached
+
+		IF_LIKELY (outLayout.isValid())
 		{
-			VkDescriptorSetLayoutBinding bindingDesc = {};
-			bindingDesc.binding = s;
-			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //TODO: other types
-			bindingDesc.descriptorCount = 1;
-			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
-			bindingDesc.pImmutableSamplers = nullptr;
-
-			bindings.push_back(bindingDesc);
-		}
-		
-		createInfo.bindingCount = static_cast<u32>(bindings.size());
-		createInfo.pBindings = bindings.data();
-
-		VkDescriptorSetLayout outLayout = VK_NULL_HANDLE;
-		
-		if (createInfo.bindingCount > 0)
-		{
-			vkCreateDescriptorSetLayout(gVKDevice, &createInfo, gVKGlobalAllocationsCallbacks, &outLayout);
-			setLayouts.push_back(outLayout);
+			setLayouts.push_back(gAllDSLayouts[outLayout.handle]);
 		}
 	}
 
@@ -833,25 +852,209 @@ void Device::DestroyBuffer(BufferHandle bufferID)
 
 void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset)
 {
-	// Implementation for updating a buffer
-}
+	const u32 idx = bufferID.handle;
+	if (idx >= gAllBufferMetas.size())
+	{
+		MLOG_WARNING(u8"UpdateBuffer: invalid buffer handle (%u)", idx);
+		return;
+	}
+	auto& meta = gAllBufferMetas[idx];
 
+	if ((offset + size) > meta.size)
+	{
+		MLOG_WARNING(u8"UpdateBuffer: write out of bounds (offset=%zu, size=%zu, capacity=%zu). Clamping.",
+			offset, size, meta.size);
+		if (offset >= meta.size) return;
+		size = meta.size - offset;
+	}
+
+	// Ensure persistent mapping exists (should be already mapped via VMA_ALLOCATION_CREATE_MAPPED_BIT).
+	if (meta.persistentMappedPtr == nullptr)
+	{
+		void* mapped = nullptr;
+		VK_CALL(vmaMapMemory(gVMA_Allocator, meta.allocation, &mapped));
+		meta.persistentMappedPtr = mapped;
+	}
+
+	std::memcpy(static_cast<char*>(meta.persistentMappedPtr) + offset, data, size);
+
+	// Flush the written range (no-op if memory is HOST_COHERENT).
+	vmaFlushAllocation(gVMA_Allocator, meta.allocation, static_cast<VkDeviceSize>(offset), static_cast<VkDeviceSize>(size));
+}
 
 BufferHandle Device::CreateBuffer(size_t size)
 {
-	// Implementation for creating a buffer
-	return BufferHandle{};
+	VkBufferCreateInfo bufCI{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+	bufCI.size = static_cast<VkDeviceSize>(size);
+	bufCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; // uniform buffer usage
+	bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VmaAllocationCreateInfo allocCI{};
+	// Persistently map the buffer for CPU updates.
+	allocCI.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+	// We need CPU access.
+	allocCI.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+	// Prefer device-local if a host-visible device-local type exists (BAR/reBAR); also prefer coherent if available.
+	allocCI.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	// CPU-to-GPU access pattern (host visible, optimal for uploads/UBOs).
+	allocCI.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+	VkBuffer vkBuf = VK_NULL_HANDLE;
+	VmaAllocation allocation = nullptr;
+	VmaAllocationInfo allocInfo{};
+	VK_CALL(vmaCreateBuffer(gVMA_Allocator, &bufCI, &allocCI, &vkBuf, &allocation, &allocInfo));
+
+	BufferInfo meta{};
+	meta.allocation = allocation;
+	meta.size = size;
+	meta.persistentMappedPtr = allocInfo.pMappedData; // persistent map
+
+	gAllBuffers.push_back(vkBuf);
+	gAllBufferMetas.push_back(meta);
+
+	BufferHandle h;
+	h.handle = static_cast<u32>(gAllBuffers.size() - 1);
+	return h;
 }
 
 ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex)
 {
-	// Implementation for creating a parameter block layout
-	return ParameterBlockLayoutHandle{};
+	if (layoutDesc.allSlots.empty())
+	{
+		return ParameterBlockLayoutHandle{ ParameterBlockLayoutHandle::InvalidValue };
+	}
+
+	VkDescriptorSetLayout& outLayout = gAllDSLayouts.emplace_back();;
+
+	VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+	for (int s = 0; s < layoutDesc.allSlots.size(); ++s)
+	{
+		VkDescriptorSetLayoutBinding bindingDesc = {};
+		bindingDesc.binding = s;
+		bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //TODO: other types
+		bindingDesc.descriptorCount = 1;
+		bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
+		bindingDesc.pImmutableSamplers = nullptr;
+
+		bindings.push_back(bindingDesc);
+	}
+
+	createInfo.bindingCount = static_cast<u32>(bindings.size());
+	createInfo.pBindings = bindings.data();
+
+	if (createInfo.bindingCount > 0)
+	{
+		vkCreateDescriptorSetLayout(gVKDevice, &createInfo, gVKGlobalAllocationsCallbacks, &outLayout);
+	}
+
+	return ParameterBlockLayoutHandle{static_cast<u32>(gAllDSLayouts.size() - 1)};
 }
 
 void Device::DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID)
 {
+	//vkAllocateDescriptorSets()
 	// Implementation for destroying a parameter block layout
+}
+
+void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID)
+{
+	auto cmdBuff = static_cast<VkCommandBuffer>(nativePtr);
+
+	vkCmdBindDescriptorSets(
+		cmdBuff,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		static_cast<VkPipelineLayout>(currentPSOLayoutNativePtr),
+		setIndex,
+		1,
+		&gAllDescriptorSets[parameterBlockID.handle],
+		0,
+		nullptr
+	);
+}
+
+ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID)
+{
+	auto& ds = gAllDescriptorSets.emplace_back();
+
+	VkDescriptorSetAllocateInfo cinfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+	cinfo.descriptorPool = gVKGlobalDescriptorPool;
+	cinfo.descriptorSetCount = 1;
+	cinfo.pSetLayouts = &gAllDSLayouts[layoutID.handle];
+
+	vkAllocateDescriptorSets(gVKDevice, &cinfo, &ds);
+
+	return ParameterBlockHandle{ static_cast<u32>(gAllDescriptorSets.size() - 1) };
+}
+
+void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc)
+{
+	std::vector<VkWriteDescriptorSet> writes;
+	std::vector<VkDescriptorBufferInfo> bufferInfos;
+	std::vector<VkDescriptorImageInfo>  imageInfos;
+
+	u32 slotIndex = 0;
+	writes.reserve(pbDesc.resources.size());
+	bufferInfos.reserve(pbDesc.resources.size());
+
+	for (const auto& res : pbDesc.resources)
+	{
+		std::visit([&](auto&& arg)
+			{
+				using T = std::decay_t<decltype(arg)>;
+
+				if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
+				{
+					VkDescriptorBufferInfo bi{};
+					bi.buffer = gAllBuffers[arg.buffer.handle];
+					bi.offset = static_cast<VkDeviceSize>(arg.offset);
+					bi.range = (arg.size == SIZE_MAX) ? VK_WHOLE_SIZE : static_cast<VkDeviceSize>(arg.size);
+
+					bufferInfos.push_back(bi);
+
+					VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+					w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
+					w.dstBinding = slotIndex;
+					w.descriptorCount = 1;
+					// If you cached per-slot descriptor types when creating the layout, use that here.
+					// Without that metadata, default to UNIFORM_BUFFER for buffer resources:
+					w.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					w.pBufferInfo = &bufferInfos.back();
+
+					writes.push_back(w);
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
+				{
+					// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
+					// imageInfos.push_back(imgInfo);
+					// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
+					// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+					MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
+				{
+					// TODO: Fill VkDescriptorImageInfo for storage image
+					MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
+				{
+					// Intentionally empty slot – skip writing
+				}
+			}, res);
+
+		slotIndex++;
+	}
+
+	if (!writes.empty())
+	{
+		vkUpdateDescriptorSets(gVKDevice, static_cast<u32>(writes.size()), writes.data(), 0, nullptr);
+	}
+}
+
+void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
+{
+
 }
 
 #endif

@@ -5,6 +5,7 @@
 #include <string>
 #include <glm/glm.hpp>
 #include <array>
+#include <variant>
 
 namespace mercury {
 namespace ll {
@@ -23,6 +24,10 @@ struct BufferHandle : public Handle<u32>
 };
 
 struct ParameterBlockLayoutHandle : public Handle<u32>
+{
+};
+
+struct ParameterBlockHandle : public Handle<u32>
 {
 };
 
@@ -253,6 +258,76 @@ enum class PrimitiveTopology : u8
     PatchList
 };
 
+struct ParameterResourceBuffer
+{
+    BufferHandle buffer;
+    size_t offset = 0;
+	size_t size = SIZE_MAX;
+
+	ParameterResourceBuffer() = default;
+
+    ParameterResourceBuffer(BufferHandle buf, size_t off = 0, size_t sz = SIZE_MAX)
+        : buffer(buf), offset(off), size(sz)
+    {
+	}
+
+    ParameterResourceBuffer(BufferHandle buf)
+                : buffer(buf), offset(0), size(SIZE_MAX)
+    {
+	}
+};
+
+struct ParameterResourceTexture
+{
+
+};
+
+struct ParameterResourceRWImage
+{
+
+};
+
+struct ParameterResourceEmpty
+{
+
+};
+
+struct ParameterBlockDescriptor
+{
+	std::vector<std::variant<
+        ParameterResourceBuffer,
+        ParameterResourceTexture,
+        ParameterResourceRWImage,
+		ParameterResourceEmpty>> resources;
+
+	ParameterBlockDescriptor& AddBuffer(const BufferHandle& buffer, size_t offset = 0, size_t size = SIZE_MAX)
+    {
+        resources.push_back(ParameterResourceBuffer{ buffer, offset, size });
+        return *this;
+    }
+
+    ParameterBlockDescriptor& AddResource(const ParameterResourceBuffer& bufferResource)
+    {
+        resources.push_back(bufferResource);
+        return *this;
+    }
+    ParameterBlockDescriptor& AddResource(const ParameterResourceTexture& textureResource)
+    {
+        resources.push_back(textureResource);
+        return *this;
+    }
+    ParameterBlockDescriptor& AddResource(const ParameterResourceRWImage& rwImageResource)
+    {
+        resources.push_back(rwImageResource);
+        return *this;
+    }
+    ParameterBlockDescriptor& AddEmptyResource()
+    {
+        resources.push_back(ParameterResourceEmpty{});
+        return *this;
+	}
+};
+
 struct RasterizePipelineDescriptor : public PipelineBindingLayoutDescriptor
 {
 	Handle<u32> vertexShader;
@@ -313,6 +388,8 @@ struct CommandList
   void SetUniformBuffer(u8 bindingSslot, BufferHandle bufferID, size_t offset = 0, size_t size = SIZE_MAX);
 
   void SetParameterBlockLayout(u8 setIndex, ParameterBlockLayoutHandle layoutID);
+
+  void SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID);
 };
 
 struct CommandPool
@@ -463,6 +540,10 @@ public:
 
   ParameterBlockLayoutHandle CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex);
   void DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID);
+
+  ParameterBlockHandle CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID);
+  void UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc);
+  void DestroyParameterBlock(ParameterBlockHandle parameterBlockID);
 };
 
 class Swapchain {

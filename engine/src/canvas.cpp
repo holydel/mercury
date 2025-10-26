@@ -7,12 +7,13 @@ using namespace mercury;
 ll::graphics::ParameterBlockLayoutHandle gCanvasParameterBlockLayout;
 using namespace ll::graphics;
 
-constexpr int CANVAS_PER_FRAME_SET_INDEX = 1;
+constexpr int CANVAS_PER_FRAME_SET_INDEX = 0;
 
 
 struct CanvasFrameResources
 {
 	ll::graphics::BufferHandle scene2DConstantBuffer;
+	ll::graphics::ParameterBlockHandle scene2DParameterBlock;
 };
 
 std::vector<CanvasFrameResources> gCanvasFrameResources;
@@ -50,6 +51,13 @@ void MercuryCanvasInitialize(int numFramesInFlight)
 	for (int i = 0; i < numFramesInFlight; ++i)
 	{
 		gCanvasFrameResources[i].scene2DConstantBuffer = gDevice->CreateBuffer(sizeof(Scene2DConstants));
+
+		gCanvasFrameResources[i].scene2DParameterBlock = ll::graphics::gDevice->CreateParameterBlock(gCanvasParameterBlockLayout);
+
+		ll::graphics::ParameterBlockDescriptor pbDesc = {};
+		pbDesc.AddBuffer(gCanvasFrameResources[i].scene2DConstantBuffer);
+		ll::graphics::gDevice->UpdateParameterBlock(gCanvasFrameResources[i].scene2DParameterBlock, pbDesc);
+
 	}
 
 	testDedicatedSpriteVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::DedicatedSpriteVS());
@@ -59,7 +67,7 @@ void MercuryCanvasInitialize(int numFramesInFlight)
 	dedicatedSpritePsoDesc.vertexShader = testDedicatedSpriteVS;// testDedicatedSpriteVS;
 	dedicatedSpritePsoDesc.fragmentShader = testDedicatedSpriteFS;
 	dedicatedSpritePsoDesc.pushConstantSize = sizeof(Sprite2D);
-	dedicatedSpritePsoDesc.bindingSetLayouts[1].AddSlot(ll::graphics::ShaderResourceType::UniformBuffer); //simulate canvas binding set layout
+	dedicatedSpritePsoDesc.bindingSetLayouts[0].AddSlot(ll::graphics::ShaderResourceType::UniformBuffer); //simulate canvas binding set layout
 
 	dedicatedSpritePsoDesc.primitiveTopology = ll::graphics::PrimitiveTopology::TriangleStrip;
 	testDedicatedSpritePSO = ll::graphics::gDevice->CreateRasterizePipeline(dedicatedSpritePsoDesc);
@@ -86,24 +94,23 @@ void MercuryCanvasTick(mercury::ll::graphics::CommandList& cl, int frameInFlight
 	ctime += 0.016f; // TODO: Replace with actual delta time
 
 	Scene2DConstants scene2DConstants = {};
-	scene2DConstants.canvasSize = glm::vec4((float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight(), 2.0f / (float)gSwapchain->GetWidth(), -2.0f / (float)gSwapchain->GetHeight());
+	scene2DConstants.canvasSize = glm::vec4((float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight(), 2.0f / (float)gSwapchain->GetWidth(), 2.0f / (float)gSwapchain->GetHeight());
 	scene2DConstants.time = ctime;
 	scene2DConstants.deltaTime = 0.016f; // TODO: Replace with actual delta time
 	scene2DConstants.prerptationMatrix = glm::mat2x2(1.0f); // Identity matrix for now
 
 	gDevice->UpdateBuffer(gCanvasFrameResources[frameInFlightIndex].scene2DConstantBuffer, &scene2DConstants, sizeof(Scene2DConstants));
 
-
-	
 	//cl.SetParameterBlockLayout(CANVAS_PER_FRAME_SET_INDEX, gCanvasParameterBlockLayout);
 
 	cl.SetPSO(testDedicatedSpritePSO);
-	cl.SetUniformBuffer(1, gCanvasFrameResources[frameInFlightIndex].scene2DConstantBuffer);
+	//cl.SetUniformBuffer(0, gCanvasFrameResources[frameInFlightIndex].scene2DConstantBuffer);
+	cl.SetParameterBlock(CANVAS_PER_FRAME_SET_INDEX, gCanvasFrameResources[frameInFlightIndex].scene2DParameterBlock);
 
 	for(auto& sprite : gSpritesToDraw)
 	{
 		cl.PushConstants(sprite);
-		cl.Draw(4); // Sprite is a triange strip
+		cl.Draw(4); // Sprite is a triangle strip
 	}
 
 	gSpritesToDraw.clear();
