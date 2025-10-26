@@ -224,7 +224,8 @@ public:
               config.window.height = 900;
               config.window.resizable = true;
               config.graphics.enableValidationLayers = true; // Enable validation layers for testing
-              config.graphics.adapterPreference = Config::Graphics::AdapterTypePreference::HighPerformance;
+              config.graphics.adapterPreference = Config::Graphics::AdapterTypePreference::LowPower;
+              config.swapchain.vsync = Config::SwapchainConfig::VSyncMode::AlwaysVSync;
 
               config.logger.logToConsole = true;
               config.logger.logToIDE = false;
@@ -251,13 +252,13 @@ void TestBedApplication::Initialize() {
        testTriangleVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTriangleRotatedVS());
        testTriangleFS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::TestTrianglePS());
 
-	   //ll::graphics::RasterizePipelineDescriptor psoDesc = {};
-	   //psoDesc.vertexShader = testTriangleVS;
-	   //psoDesc.fragmentShader = testTriangleFS;
+	   ll::graphics::RasterizePipelineDescriptor psoDesc = {};
+	   psoDesc.vertexShader = testTriangleVS;
+	   psoDesc.fragmentShader = testTriangleFS;
 
-    //   psoDesc.pushConstantSize = 4; //float angle
+       psoDesc.pushConstantSize = 4; //float angle
 
-	   //testTrianglePSO = ll::graphics::gDevice->CreateRasterizePipeline(psoDesc);
+	   testTrianglePSO = ll::graphics::gDevice->CreateRasterizePipeline(psoDesc);
 }
 
 void TestBedApplication::Tick() {
@@ -299,7 +300,7 @@ void TestBedApplication::Tick() {
        
        float x = 300 + sin(t * 0.1f) * 100;
        float y = 400 + cos(t * 0.1f) * 150;
-       canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
+      // canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
     //m_running = false;
 }
 
@@ -312,9 +313,9 @@ void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL
 
     pc.angle = t * 0.1f;
 
-   // finalCL.SetPSO(testTrianglePSO);
-	//finalCL.PushConstants(pc);    
-	//finalCL.Draw(3, 1, 0, 0);
+    finalCL.SetPSO(testTrianglePSO);
+	finalCL.PushConstants(pc);    
+	finalCL.Draw(3, 1, 0, 0);
 
 	//finalCL.SetPSO(testDedicatedSpritePSO);
 	//DedicatedSpriteParameters spriteParams;

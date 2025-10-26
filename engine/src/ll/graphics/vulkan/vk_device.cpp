@@ -557,6 +557,28 @@ void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 	vkDestroyShaderModule(gVKDevice, gAllShaderModules[shaderModuleID.handle].module, gVKGlobalAllocationsCallbacks);
 }
 
+VkPrimitiveTopology fromMercuryPrimitiveTopology(PrimitiveTopology topology)
+{
+	switch (topology)
+	{
+	case PrimitiveTopology::PointList:
+		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+	case PrimitiveTopology::LineList:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	case PrimitiveTopology::LineStrip:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+	case PrimitiveTopology::TriangleList:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	case PrimitiveTopology::TriangleStrip:
+		return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+	case PrimitiveTopology::PatchList:
+		return VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+	default:
+		MERCURY_ASSERT(false && "Unknown Primitive Topology");
+		return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+	}
+}
+
 void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects& out)
 {
 	VkPipelineLayoutCreateInfo layoutCreateInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};	
@@ -572,8 +594,44 @@ void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects
 		pcr.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages		
 	}
 
+	std::vector<VkDescriptorSetLayout> setLayouts;
+
+	for (int i = 0; i < 4; ++i)
+	{
+		auto& bset = desc.bindingSetLayouts[i];
+		VkDescriptorSetLayoutCreateInfo createInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+		std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+		for (int s = 0; s < bset.allSlots.size(); ++s)
+		{
+			VkDescriptorSetLayoutBinding bindingDesc = {};
+			bindingDesc.binding = s;
+			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //TODO: other types
+			bindingDesc.descriptorCount = 1;
+			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
+			bindingDesc.pImmutableSamplers = nullptr;
+
+			bindings.push_back(bindingDesc);
+		}
+		
+		createInfo.bindingCount = static_cast<u32>(bindings.size());
+		createInfo.pBindings = bindings.data();
+
+		VkDescriptorSetLayout outLayout = VK_NULL_HANDLE;
+		
+		if (createInfo.bindingCount > 0)
+		{
+			vkCreateDescriptorSetLayout(gVKDevice, &createInfo, gVKGlobalAllocationsCallbacks, &outLayout);
+			setLayouts.push_back(outLayout);
+		}
+	}
+
+
 	layoutCreateInfo.pushConstantRangeCount = static_cast<u32>(pcRanges.size());
 	layoutCreateInfo.pPushConstantRanges = pcRanges.data();
+
+	layoutCreateInfo.setLayoutCount = static_cast<u32>(setLayouts.size());
+	layoutCreateInfo.pSetLayouts = setLayouts.data();
 
 	vkCreatePipelineLayout(gVKDevice, &layoutCreateInfo, gVKGlobalAllocationsCallbacks, &out.pipelineLayout);
 
@@ -615,7 +673,7 @@ void _createGraphicsPSO(const RasterizePipelineDescriptor& desc, PipelineObjects
 		shaderStages.push_back(stageInfo);
 	}
 
-	inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	inputAssemblyState.topology = fromMercuryPrimitiveTopology(desc.primitiveTopology);
 
 	VkViewport viewport = {};
 	viewport.x = 0.0f;
@@ -760,6 +818,40 @@ void CommandList::PushConstants(const void* data, size_t size)
 		static_cast<uint32_t>(size),
 		data
 	);
+}
+
+void CommandList::SetUniformBuffer(u8 bindingSslot, BufferHandle bufferID, size_t offset, size_t size)
+{
+	// Vulkan requires descriptor sets for binding resources like uniform buffers.
+	// This is a placeholder implementation and assumes that a descriptor set has been created and updated elsewhere.
+}
+
+void Device::DestroyBuffer(BufferHandle bufferID)
+{
+	// Implementation for destroying a buffer
+}
+
+void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset)
+{
+	// Implementation for updating a buffer
+}
+
+
+BufferHandle Device::CreateBuffer(size_t size)
+{
+	// Implementation for creating a buffer
+	return BufferHandle{};
+}
+
+ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex)
+{
+	// Implementation for creating a parameter block layout
+	return ParameterBlockLayoutHandle{};
+}
+
+void Device::DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID)
+{
+	// Implementation for destroying a parameter block layout
 }
 
 #endif

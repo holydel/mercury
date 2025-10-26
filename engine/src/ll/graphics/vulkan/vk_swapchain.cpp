@@ -648,17 +648,17 @@ void Swapchain::Initialize()
 		dependencies[0] = {
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
 			.dstSubpass = 0,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			.dependencyFlags = 0};
 		dependencies[1] = {
 			.srcSubpass = 0,
 			.dstSubpass = VK_SUBPASS_EXTERNAL,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
 			.dependencyFlags = 0};
 
@@ -783,12 +783,6 @@ CommandList Swapchain::AcquireNextImage()
 
 	auto result = vkAcquireNextImageKHR(gVKDevice, gVKSwapchain, UINT64_MAX, frame.imageAvailableSemaphore, VK_NULL_HANDLE, &gAcquiredNextImageIndex);
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-	{
-		ReInitIfNeeded();
-		vkAcquireNextImageKHR(gVKDevice, gVKSwapchain, UINT64_MAX, frame.imageAvailableSemaphore, VK_NULL_HANDLE, &gAcquiredNextImageIndex);
-	}
-
 	VK_CALL(vkResetCommandPool(gVKDevice, frameCPU.cmdPool, 0));
 
 	VkCommandBuffer cmd = frameCPU.cmdBuffer;
@@ -799,12 +793,6 @@ CommandList Swapchain::AcquireNextImage()
 
 	// IMPORTANT: operate on the acquired image/resources
 	auto &imageFrame = gFramesInFlight[gAcquiredNextImageIndex];
-
-	if (imageFrame.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
-	{
-		vk_utils::ImageTransition(cmd, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_ASPECT_COLOR_BIT);
-		imageFrame.imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	}
 
 	if (gVKConfig.useDynamicRendering)
 	{
@@ -830,6 +818,11 @@ CommandList Swapchain::AcquireNextImage()
 	}
 	else
 	{
+		if (imageFrame.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+		{
+			vk_utils::ImageTransition(cmd, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_ASPECT_COLOR_BIT);
+		}
+
 		VkClearValue clearValues[3] = {};
 		int colorAttachmentIndex = 0;
 
@@ -874,7 +867,7 @@ void Swapchain::Present()
 	if (gVKConfig.useDynamicRendering)
 	{
 		vkCmdEndRendering(cmd);
-		vk_utils::ImageTransition(cmd, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+		vk_utils::ImageTransition(cmd, imageFrame.image, imageFrame.imageLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 	else
 	{
@@ -889,7 +882,7 @@ void Swapchain::Present()
 	waitSemaphores.push_back({
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
 		.semaphore = frame.imageAvailableSemaphore,
-		.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR,
+		.stageMask = imageFrame.imageLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ? VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 	});
 	signalSemaphores.push_back({
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
@@ -956,9 +949,8 @@ void Swapchain::Present()
 		gSwapchainNeedRebuild = true;
 	}
 
-	gFramesInFlight[gAcquiredNextImageIndex].imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	imageFrame.imageLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	gSwapchainCurrentFrame = (gSwapchainCurrentFrame + 1) % GetNumberOfFrames();
-
 	gFrameRingCurrent = (gFrameRingCurrent + 1) % gNumberOfSwapchainFrames;
 }
 
