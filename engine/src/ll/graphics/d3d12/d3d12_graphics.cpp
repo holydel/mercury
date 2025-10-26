@@ -2,6 +2,13 @@
 
 #if defined(MERCURY_LL_GRAPHICS_D3D12)
 
+using namespace mercury;
+using namespace mercury::ll::graphics;
+
+bool mercury::ll::graphics::IsYFlipped()
+{
+	return true;
+}
 #include "mercury_memory.h"
 #include "mercury_log.h"
 #include "mercury_application.h"
@@ -9,12 +16,16 @@
 
 #include "../../../imgui/imgui_impl.h"
 
-using namespace mercury;
-using namespace mercury::ll::graphics;
-
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
- 
+
+#pragma comment(lib, "d3dcompiler.lib")  // For D3DReflect
+#pragma comment(lib, "dxguid.lib")  
+#pragma comment(lib, "dxcompiler.lib")
+
+#include <d3d12shader.h>
+#include <d3dcompiler.h>
+
 #include <dxcapi.h>
 
 #include <d3d12shader.h>
@@ -45,6 +56,8 @@ std::vector<PSOInfo> gAllPSOs;
 
 std::vector<ID3D12Resource*> gAllBuffers;
 std::vector<BufferInfo> gAllBuffersMeta;
+
+std::vector<ParameterBlockDescriptor> gAllParameterBlocks;
 
 Device* gDevice = nullptr;
 Instance* gInstance = nullptr;
@@ -658,11 +671,16 @@ void CommandList::RenderImgui()
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdListD3D12);
 }
 
-void CommandList::SetPSO(Handle<u32> psoID)
+void CommandList::SetPSO(PsoHandle psoID)
 {
+	if (currentPsoID == psoID)
+		return;
+
+	currentPsoID = psoID;
+
 	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
 
-	auto const &p = gAllPSOs[psoID.handle];
+	auto const& p = gAllPSOs[psoID.handle];
 
 	cmdListD3D12->SetPipelineState(p.pso);
 	cmdListD3D12->SetGraphicsRootSignature(p.rootSignature);
@@ -772,7 +790,7 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 
 	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
 	
-	/*
+	
 	// Get the vertex shader bytecode first
 	// Get the vertex shader bytecode first
 	if (desc.vertexShader.isValid())
@@ -870,27 +888,33 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 		}
 	}
 
-	*/
+	
 	if (desc.pushConstantSize > 0)
 	{
 		CD3DX12_ROOT_PARAMETER rootParam;
 		rootParam.InitAsConstants(desc.pushConstantSize / 4, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
 		rootParameters.push_back(rootParam);
+
+		pso.rootParameterRootConstantIndex = 0;
 	}
 
-
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < 3; ++i)
 	{
 		auto& bs_layout = desc.bindingSetLayouts[i];
+
+		pso.setOffsets[i] = static_cast<u32>(rootParameters.size());
+
 		for (int j = 0; j < bs_layout.allSlots.size(); ++j)
 		{
 			const auto& slot = bs_layout.allSlots[j];
 
 			CD3DX12_ROOT_PARAMETER rootParam;
-			rootParam.InitAsConstantBufferView(j, i, D3D12_SHADER_VISIBILITY_ALL);
+			rootParam.InitAsConstantBufferView(j, i + (desc.pushConstantSize > 0), D3D12_SHADER_VISIBILITY_ALL);
 			rootParameters.push_back(rootParam);
 		}
 	}
+
+
 
 	rootSignatureDesc.Init(rootParameters.size(), rootParameters.data(), 0, nullptr, rootSignatureFlags);
 
@@ -1020,7 +1044,7 @@ void CommandList::PushConstants(const void* data, size_t size)
 {
 	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
 
-	cmdListD3D12->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size / 4), data, 0);
+	cmdListD3D12->SetGraphicsRoot32BitConstants(gAllPSOs[currentPsoID.handle].rootParameterRootConstantIndex, static_cast<UINT>(size / 4), data, 0);
 }
 
 BufferHandle Device::CreateBuffer(size_t size)
@@ -1158,13 +1182,6 @@ void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, 
 	bufferResource->Unmap(0, &writtenRange);
 }
 
-void CommandList::SetUniformBuffer(u8 binding_slot, BufferHandle bufferID, size_t offset, size_t size)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	auto bufferResource = gAllBuffers[bufferID.handle];
-	cmdListD3D12->SetGraphicsRootConstantBufferView(binding_slot, bufferResource->GetGPUVirtualAddress());
-}
-
 ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex)
 {
 	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
@@ -1212,5 +1229,129 @@ void  CommandList::SetParameterBlockLayout(u8 set_index, ParameterBlockLayoutHan
 	cmdListD3D12->SetGraphicsRootSignature(gAllPSOs[layoutID.handle].rootSignature);
 }
 
+//void CommandList::SetUniformBuffer(u8 binding_slot, BufferHandle bufferID, size_t offset, size_t size)
+//{
+//	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+//	auto bufferResource = gAllBuffers[bufferID.handle];
+//	cmdListD3D12->SetGraphicsRootConstantBufferView(binding_slot, bufferResource->GetGPUVirtualAddress());
+//}
+
+void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID)
+{
+	u32 slotIndex = 0;
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+	const auto& pbDesc = gAllParameterBlocks[parameterBlockID.handle];
+	int slotStartIndex = gAllPSOs[currentPsoID.handle].setOffsets[setIndex];
+
+	for (const auto& res : pbDesc.resources)
+	{
+		std::visit([&](auto&& arg)
+			{
+				using T = std::decay_t<decltype(arg)>;
+
+				if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
+				{
+					cmdListD3D12->SetGraphicsRootConstantBufferView(slotStartIndex + slotIndex, gAllBuffers[arg.buffer.handle]->GetGPUVirtualAddress());
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
+				{
+					// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
+					// imageInfos.push_back(imgInfo);
+					// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
+					// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+					MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
+				{
+					// TODO: Fill VkDescriptorImageInfo for storage image
+					MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
+				{
+					// Intentionally empty slot – skip writing
+				}
+			}, res);
+
+		slotIndex++;
+	}
+}
+
+ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID)
+{
+	auto& ds = gAllParameterBlocks.emplace_back();
+
+	return ParameterBlockHandle{ static_cast<u32>(gAllParameterBlocks.size() - 1) };
+}
+
+void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc)
+{
+	gAllParameterBlocks[parameterBlockID.handle] = pbDesc;
+
+	//std::vector<VkWriteDescriptorSet> writes;
+	//std::vector<VkDescriptorBufferInfo> bufferInfos;
+	//std::vector<VkDescriptorImageInfo>  imageInfos;
+
+	//u32 slotIndex = 0;
+	//writes.reserve(pbDesc.resources.size());
+	//bufferInfos.reserve(pbDesc.resources.size());
+
+	//for (const auto& res : pbDesc.resources)
+	//{
+	//	std::visit([&](auto&& arg)
+	//		{
+	//			using T = std::decay_t<decltype(arg)>;
+
+	//			if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
+	//			{
+	//				VkDescriptorBufferInfo bi{};
+	//				bi.buffer = gAllBuffers[arg.buffer.handle];
+	//				bi.offset = static_cast<VkDeviceSize>(arg.offset);
+	//				bi.range = (arg.size == SIZE_MAX) ? VK_WHOLE_SIZE : static_cast<VkDeviceSize>(arg.size);
+
+	//				bufferInfos.push_back(bi);
+
+	//				VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+	//				w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
+	//				w.dstBinding = slotIndex;
+	//				w.descriptorCount = 1;
+	//				// If you cached per-slot descriptor types when creating the layout, use that here.
+	//				// Without that metadata, default to UNIFORM_BUFFER for buffer resources:
+	//				w.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	//				w.pBufferInfo = &bufferInfos.back();
+
+	//				writes.push_back(w);
+	//			}
+	//			else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
+	//			{
+	//				// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
+	//				// imageInfos.push_back(imgInfo);
+	//				// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
+	//				// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+	//				MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
+	//			}
+	//			else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
+	//			{
+	//				// TODO: Fill VkDescriptorImageInfo for storage image
+	//				MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
+	//			}
+	//			else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
+	//			{
+	//				// Intentionally empty slot – skip writing
+	//			}
+	//		}, res);
+
+	//	slotIndex++;
+	//}
+
+	//if (!writes.empty())
+	//{
+	//	vkUpdateDescriptorSets(gVKDevice, static_cast<u32>(writes.size()), writes.data(), 0, nullptr);
+	//}
+}
+
+void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
+{
+
+}
 
 #endif

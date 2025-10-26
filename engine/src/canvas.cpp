@@ -94,7 +94,7 @@ void MercuryCanvasTick(mercury::ll::graphics::CommandList& cl, int frameInFlight
 	ctime += 0.016f; // TODO: Replace with actual delta time
 
 	Scene2DConstants scene2DConstants = {};
-	scene2DConstants.canvasSize = glm::vec4((float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight(), 2.0f / (float)gSwapchain->GetWidth(), 2.0f / (float)gSwapchain->GetHeight());
+	scene2DConstants.canvasSize = glm::vec4((float)gSwapchain->GetWidth(), (float)gSwapchain->GetHeight(), 2.0f / (float)gSwapchain->GetWidth(), (ll::graphics::IsYFlipped() ? -2.0f : 2.0f) / (float)gSwapchain->GetHeight());
 	scene2DConstants.time = ctime;
 	scene2DConstants.deltaTime = 0.016f; // TODO: Replace with actual delta time
 	scene2DConstants.prerptationMatrix = glm::mat2x2(1.0f); // Identity matrix for now

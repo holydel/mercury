@@ -5,6 +5,11 @@
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
+bool mercury::ll::graphics::IsYFlipped()
+{
+	return false;
+}
+
 #include "vk_graphics.h"
 #include "vk_swapchain.h"
 #include "vk_device.h"
@@ -789,10 +794,11 @@ void CommandList::RenderImgui()
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(nativePtr));
 }
 
-void CommandList::SetPSO(Handle<u32> psoID)
+void CommandList::SetPSO(PsoHandle psoID)
 {
 	vkCmdBindPipeline(static_cast<VkCommandBuffer>(nativePtr), VK_PIPELINE_BIND_POINT_GRAPHICS, gAllPSOs[psoID.handle].pipeline);
 
+	currentPsoID = psoID;
 	currentPSOnativePtr = gAllPSOs[psoID.handle].pipeline;
 	currentPSOLayoutNativePtr = gAllPSOs[psoID.handle].pipelineLayout;
 }
@@ -839,11 +845,6 @@ void CommandList::PushConstants(const void* data, size_t size)
 	);
 }
 
-void CommandList::SetUniformBuffer(u8 bindingSslot, BufferHandle bufferID, size_t offset, size_t size)
-{
-	// Vulkan requires descriptor sets for binding resources like uniform buffers.
-	// This is a placeholder implementation and assumes that a descriptor set has been created and updated elsewhere.
-}
 
 void Device::DestroyBuffer(BufferHandle bufferID)
 {

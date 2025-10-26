@@ -189,6 +189,11 @@ namespace mercury
             handle = static_cast<T>(value);
             return *this;
         }
+
+        bool operator==(const Handle<T>& other) const
+        {
+            return handle == other.handle;
+		}
     };
 #else
     // C++17 version with SFINAE

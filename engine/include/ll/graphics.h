@@ -11,6 +11,8 @@ namespace mercury {
 namespace ll {
 namespace graphics {
 
+    bool IsYFlipped();
+
 struct ShaderHandle : public Handle<u32>
 {
 };
@@ -365,13 +367,15 @@ struct CommandList
   void* currentPSOnativePtr = nullptr;
   void* currentPSOLayoutNativePtr = nullptr;
 
+  PsoHandle currentPsoID;
+
   bool IsExecuted();
   void SetDebugName(const char* utf8_name);
   void Destroy();
 
   void RenderImgui();
 
-  void SetPSO(Handle<u32> psoID);
+  void SetPSO(PsoHandle psoID);
   void Draw(u32 vertexCount, u32 instanceCount = 1, u32 firstVertex = 0, u32 firstInstance = 0);
 
   void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f);
@@ -384,8 +388,6 @@ struct CommandList
   {
     PushConstants(&data, sizeof(T));
   }
-
-  void SetUniformBuffer(u8 bindingSslot, BufferHandle bufferID, size_t offset = 0, size_t size = SIZE_MAX);
 
   void SetParameterBlockLayout(u8 setIndex, ParameterBlockLayoutHandle layoutID);
 

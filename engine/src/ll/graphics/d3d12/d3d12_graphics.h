@@ -34,6 +34,8 @@ struct PSOInfo
 	ID3D12PipelineState* pso = nullptr;
 	ID3D12RootSignature* rootSignature = nullptr;
 	D3D_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	mercury::i8 rootParameterRootConstantIndex = -1;
+	mercury::i8 setOffsets[4] = { 0,0,0,0 };
 };
 
 extern std::vector<PSOInfo> gAllPSOs;
