@@ -214,6 +214,8 @@ class TestBedApplication : public Application {
 	   mercury::ll::graphics::PsoHandle testTrianglePSO;
        mercury::ll::graphics::ShaderHandle testTriangleVS;
        mercury::ll::graphics::ShaderHandle testTriangleFS;
+
+       ll::graphics::TextureHandle testTexture;
 public:
        void Configure() override
        {
@@ -259,6 +261,36 @@ void TestBedApplication::Initialize() {
        psoDesc.pushConstantSize = 4; //float angle
 
 	   testTrianglePSO = ll::graphics::gDevice->CreateRasterizePipeline(psoDesc);
+
+	   mercury::ll::sound::SoundHandle sound = mercury::ll::sound::CreateSoundFromFile(u8"C:\\Users\\holyd\\Documents\\Audacity\\short.flac");
+	   mercury::ll::sound::SoundPlay(sound);
+	   mercury::ll::sound::SoundSetVolume(sound, 0.05f);
+
+	   u32 textureWidth = 256;
+	   u32 textureHeight = 256;
+
+	   u32 textureDataSize = textureWidth * textureHeight * 4;
+	   u32* textureData = new u32[textureWidth * textureHeight];
+
+       for (int i = 0; i < textureHeight; ++i)
+       {
+		   for (int j = 0; j < textureWidth; ++j)
+           {
+               u8 r = (u8)(i % 256);
+               u8 g = (u8)(j % 256);
+               u8 b = (u8)(i * j + j) % 256;
+               u8 a = 255;
+               textureData[i * textureWidth + j] = (a << 24) | (b << 16) | (g << 8) | r;
+           }
+       }
+
+	   ll::graphics::TextureDescriptor texDesc = {};
+	   texDesc.width = textureWidth;
+	   texDesc.height = textureHeight;
+       texDesc.format = ll::graphics::Format::RGBA8_UNORM;
+	   texDesc.initialData = textureData;
+
+       testTexture = ll::graphics::gDevice->CreateTexture(texDesc);
 }
 
 void TestBedApplication::Tick() {
@@ -266,7 +298,7 @@ void TestBedApplication::Tick() {
 
       if(ll::graphics::gSwapchain)
       {
-       ll::graphics::gSwapchain->clearColor = glm::vec4(sin(t)*0.5f + 0.5f,cos(t)*0.5f + 0.5f,0.33f,1.0f);
+       ll::graphics::gSwapchain->clearColor = glm::vec4(sin(t)*0.015f + 0.5f,cos(t)*0.015f + 0.5f,0.33f,1.0f);
        // ll::graphics::gSwapchain->clearColor = glm::vec4(0.02f,0.03f,0.05f,1.0f);
       }      
 

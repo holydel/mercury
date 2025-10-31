@@ -13,10 +13,204 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="TestBedAPK">
+      <UniqueIdentifier>{43c5349d-ff53-48fc-b520-ce95b711ea0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\gradle">
+      <UniqueIdentifier>{aff31344-0810-4b13-b06f-9fbb2c1d8d8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\gradle\wrapper">
+      <UniqueIdentifier>{68b30a17-a352-47c1-a047-92eaf2d883a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app">
+      <UniqueIdentifier>{e244a510-b4c1-4a56-8c19-e4fac55d4559}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src">
+      <UniqueIdentifier>{8018e2cc-4b45-4432-9f39-600c62ef5ef4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\androidTest">
+      <UniqueIdentifier>{b5297d25-d578-4731-9635-372d798c8133}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\androidTest\java">
+      <UniqueIdentifier>{69827858-0f80-47e3-9c65-badca963a44b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\androidTest\java\com">
+      <UniqueIdentifier>{a246514c-472f-46c4-9453-a5872f3ee60a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\androidTest\java\com\mercury">
+      <UniqueIdentifier>{b47da4a9-d4e3-40d7-81e9-a09b51dd3fb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\androidTest\java\com\mercury\testbed_agde">
+      <UniqueIdentifier>{c7d4d333-132d-4606-a7b3-4af2b6899660}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main">
+      <UniqueIdentifier>{94a8cf71-4514-49da-8a60-f30b485d5949}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\cpp">
+      <UniqueIdentifier>{6f3dec47-f03b-4e92-8ef2-12239625d93e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\java">
+      <UniqueIdentifier>{3e95e064-419b-4cd2-a6db-59e8dacfbc2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\java\com">
+      <UniqueIdentifier>{21d1da8a-0a1b-4b61-950c-d183a16d87e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\java\com\mercury">
+      <UniqueIdentifier>{13a5e8f4-eab6-4349-9fb8-7626b8720473}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\java\com\mercury\testbed_agde">
+      <UniqueIdentifier>{2ef0449c-3113-4610-8281-1d3edb9bdca2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res">
+      <UniqueIdentifier>{213a87c9-d033-4361-b5f8-130df41885be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\drawable">
+      <UniqueIdentifier>{81ca0bc5-58d5-4cc8-a464-8c0ed127e268}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\drawable-v24">
+      <UniqueIdentifier>{743f6579-251d-4597-a481-9c0cdf0600da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\layout">
+      <UniqueIdentifier>{9cbab703-0c90-43af-a812-c576b33937ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\mipmap-anydpi-v26">
+      <UniqueIdentifier>{2ddb4707-20ef-409c-b7b8-6ed7124a8178}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\mipmap-hdpi">
+      <UniqueIdentifier>{2ce38f46-e71e-4300-98e5-2263903acdff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\mipmap-mdpi">
+      <UniqueIdentifier>{e1d75f75-668b-495b-b25f-f588295f31f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\mipmap-xhdpi">
+      <UniqueIdentifier>{cd3029e2-d18f-4fb4-90ab-342a2c7b77b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\mipmap-xxhdpi">
+      <UniqueIdentifier>{b364f3b2-c426-472a-abdd-0d8d2edcc2fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\mipmap-xxxhdpi">
+      <UniqueIdentifier>{ccf9fc73-16a9-4944-b391-7408e4e49b64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\main\res\values">
+      <UniqueIdentifier>{0e580b6f-4e4f-4f78-b198-fa7ef017643b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\test">
+      <UniqueIdentifier>{6916e30f-6218-404c-906f-eafa10f6ba7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\test\java">
+      <UniqueIdentifier>{d9a629d9-c25b-4e52-ae45-da32965b77e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\test\java\com">
+      <UniqueIdentifier>{97f29aa1-60a6-4c51-8f18-2155fdb2c228}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\test\java\com\mercury">
+      <UniqueIdentifier>{8b118e04-4961-45a7-a56b-9a0d2265c1d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestBedAPK\app\src\test\java\com\mercury\testbed_agde">
+      <UniqueIdentifier>{e0c86a8c-c68c-4513-bddb-f3499a93f862}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\testbed.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TestBedAPK\app\src\main\cpp\JniBindings.cpp">
+      <Filter>TestBedAPK\app\src\main\cpp</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="TestBedAPK\gradle\wrapper\gradle-wrapper.jar">
+      <Filter>TestBedAPK\gradle\wrapper</Filter>
+    </None>
+    <None Include="TestBedAPK\gradle\wrapper\gradle-wrapper.properties">
+      <Filter>TestBedAPK\gradle\wrapper</Filter>
+    </None>
+    <None Include="TestBedAPK\build.gradle">
+      <Filter>TestBedAPK</Filter>
+    </None>
+    <None Include="TestBedAPK\gradle.properties">
+      <Filter>TestBedAPK</Filter>
+    </None>
+    <None Include="TestBedAPK\gradlew">
+      <Filter>TestBedAPK</Filter>
+    </None>
+    <None Include="TestBedAPK\gradlew.bat">
+      <Filter>TestBedAPK</Filter>
+    </None>
+    <None Include="TestBedAPK\settings.gradle">
+      <Filter>TestBedAPK</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\androidTest\java\com\mercury\testbed_agde\ExampleInstrumentedTest.java">
+      <Filter>TestBedAPK\app\src\androidTest\java\com\mercury\testbed_agde</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\java\com\mercury\testbed_agde\MainActivity.java">
+      <Filter>TestBedAPK\app\src\main\java\com\mercury\testbed_agde</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\drawable\ic_launcher_background.xml">
+      <Filter>TestBedAPK\app\src\main\res\drawable</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\drawable-v24\ic_launcher_foreground.xml">
+      <Filter>TestBedAPK\app\src\main\res\drawable-v24</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\layout\activity_main.xml">
+      <Filter>TestBedAPK\app\src\main\res\layout</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-anydpi-v26</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-anydpi-v26</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-hdpi\ic_launcher.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-hdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-hdpi\ic_launcher_round.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-hdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-mdpi\ic_launcher.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-mdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-mdpi\ic_launcher_round.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-mdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-xhdpi\ic_launcher.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-xhdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-xhdpi\ic_launcher_round.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-xhdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-xxhdpi\ic_launcher.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-xxhdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-xxhdpi\ic_launcher_round.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-xxhdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-xxxhdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\mipmap-xxxhdpi\ic_launcher_round.png">
+      <Filter>TestBedAPK\app\src\main\res\mipmap-xxxhdpi</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\values\colors.xml">
+      <Filter>TestBedAPK\app\src\main\res\values</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\values\strings.xml">
+      <Filter>TestBedAPK\app\src\main\res\values</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\res\values\styles.xml">
+      <Filter>TestBedAPK\app\src\main\res\values</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\main\AndroidManifest.xml">
+      <Filter>TestBedAPK\app\src\main</Filter>
+    </None>
+    <None Include="TestBedAPK\app\src\test\java\com\mercury\testbed_agde\ExampleUnitTest.java">
+      <Filter>TestBedAPK\app\src\test\java\com\mercury\testbed_agde</Filter>
+    </None>
+    <None Include="TestBedAPK\app\build.gradle">
+      <Filter>TestBedAPK\app</Filter>
+    </None>
+    <None Include="TestBedAPK\app\proguard-rules.pro">
+      <Filter>TestBedAPK\app</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -7,6 +7,7 @@ namespace mercury {
 	namespace canvas
 	{
 		void DrawSprite(glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color);
+		void DrawSprite(ll::graphics::TextureHandle texture, glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color);
 
 		ll::graphics::BufferHandle GetCanvasScene2DConstantsBuffer();
 	}

@@ -98,7 +98,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>true</CompileAsWinRT>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory);../../engine/third_party/miniaudio</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>MERCURY_UWP;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -119,7 +119,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>true</CompileAsWinRT>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory);../../engine/third_party/miniaudio</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>MERCURY_UWP;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -137,7 +137,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>true</CompileAsWinRT>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory);../../engine/third_party/miniaudio</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>MERCURY_UWP;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -155,7 +155,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>true</CompileAsWinRT>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../engine/src;../../engine/include;../../third_party/glm/;../../third_party/imgui/;../../engine/third_party/Vulkan-Headers/include;../../engine/third_party/VulkanMemoryAllocator/include;../../engine/third_party/D3D12MemoryAllocator/include;../../engine/third_party/DirectX-Headers/include;../../engine/third_party/webgpu/include;%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory);../../engine/third_party/miniaudio</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>MERCURY_UWP;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

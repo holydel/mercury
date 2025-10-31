@@ -17,6 +17,11 @@
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
+bool mercury::ll::graphics::IsYFlipped()
+{
+    return true;
+}
+
 #include "../../../imgui/imgui_impl.h"
 
 #include "mercury_log.h"
@@ -55,8 +60,47 @@ int gCurrentCanvasHeight = 0;
 
 // Global storage for shaders and pipelines
 std::vector<wgpu::ShaderModule> gAllShaderModules;
-std::vector<wgpu::RenderPipeline> gAllPSOs;
 
+struct PSOMeta
+{
+	wgpu::PipelineLayout pipelineLayout;
+    bool hasPushConstants = false;
+};
+
+std::vector<wgpu::RenderPipeline> gAllPSOs;
+std::vector<PSOMeta> gAllPSOMetas;
+std::vector<wgpu::BindGroupLayout> gAllPSOLayouts;
+std::vector<wgpu::Buffer> gAllBuffers;
+std::vector<wgpu::BindGroupLayout> gAllParameterBlockLayouts;
+std::vector<wgpu::BindGroup> gAllParameterBlocks;
+
+struct ParamaterBllockMeta
+{
+	ParameterBlockLayoutHandle layoutHandle;
+};
+
+std::vector<ParamaterBllockMeta> gAllParameterBlockMetas;
+
+struct TextureMeta
+{
+};
+
+std::vector<TextureMeta> gAllTextureMetas;
+std::vector<wgpu::Texture> gAllTextures;
+
+struct PerFrameData
+{
+	u8* pushConstantData;
+    u32 pushConstantOffset;
+    wgpu::Buffer pushConstantBuffer;
+	wgpu::BindGroup pushConstantBindGroup;
+
+};
+std::vector<PerFrameData> gPerFrameData;
+wgpu::BindGroupLayout gPushConstantBindGroupLayout;
+
+int gNumFramesInFlight = 2;
+int gCurrentFrameIndex = 0;
 
 void Instance::Initialize()
 {
@@ -366,6 +410,51 @@ void Device::Initialize()
         }
     }
     MLOG_DEBUG(u8"Device ready! Total wait time: %d ms", waitCount * 10);
+
+    std::vector<wgpu::BindGroupLayoutEntry> bglEntries;
+    wgpu::BindGroupLayoutEntry pcEntry{};
+    pcEntry.binding = 0;
+    pcEntry.buffer.hasDynamicOffset = true;
+    pcEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+    pcEntry.buffer.minBindingSize = 256;
+    pcEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+    bglEntries.push_back(pcEntry);
+
+	wgpu::BindGroupLayoutDescriptor bglDesc{};
+	bglDesc.entryCount = static_cast<uint32_t>(bglEntries.size());
+	bglDesc.entries = bglEntries.data();
+	bglDesc.label = "Push Constant Bind Group Layout";
+	gPushConstantBindGroupLayout = wgpuDevice.CreateBindGroupLayout(&bglDesc);
+
+	u32 pushConstantsDataSize = 65536; // max uniform buffer size by spec
+	gPerFrameData.resize(gNumFramesInFlight);
+
+    for (int i = 0; i < gNumFramesInFlight; ++i)
+    {
+		PerFrameData& frameData = gPerFrameData[i];
+
+		frameData.pushConstantData = new u8[pushConstantsDataSize];
+
+        wgpu::BufferDescriptor pcBufferDesc{};
+		pcBufferDesc.size = pushConstantsDataSize;
+        pcBufferDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
+        pcBufferDesc.mappedAtCreation = false;
+		pcBufferDesc.label = "Push Constant Buffer";
+        
+        frameData.pushConstantBuffer = wgpuDevice.CreateBuffer(&pcBufferDesc);
+
+		wgpu::BindGroupEntry pcBindGroupEntry{};
+		pcBindGroupEntry.binding = 0;
+		pcBindGroupEntry.buffer = frameData.pushConstantBuffer;
+        pcBindGroupEntry.size = 256;
+
+		wgpu::BindGroupDescriptor pcBindGroupDesc{};
+		pcBindGroupDesc.layout = gPushConstantBindGroupLayout;
+		pcBindGroupDesc.entryCount = 1;
+		pcBindGroupDesc.entries = &pcBindGroupEntry;
+		pcBindGroupDesc.label = "Push Constant Bind Group";
+        frameData.pushConstantBindGroup = wgpuDevice.CreateBindGroup(&pcBindGroupDesc);
+    }
 }
 
 void Device::Shutdown()
@@ -450,7 +539,7 @@ void Swapchain::Initialize()
     surfaceConfig.height = gInitialCanvasHeight;
     surfaceConfig.device = wgpuDevice;
     surfaceConfig.alphaMode = wgpu::CompositeAlphaMode::Opaque;
-
+    
     wgpuSurface.Configure(&surfaceConfig);
     
     MLOG_DEBUG(u8"Swapchain initialized with format: %s, usage: %d, present mode: %s, size: %dx%d",
@@ -505,7 +594,7 @@ CommandList Swapchain::AcquireNextImage()
     wgpuSurface.GetCurrentTexture(&wgpuCurrentSwapchainTexture);
 
     gCurrentCommandEncoder = wgpuDevice.CreateCommandEncoder();
-
+	gCurrentCommandEncoder.SetLabel("Final Render Pass Command Encoder");
     // Create a render pass descriptor
     wgpu::RenderPassColorAttachment colorAttachment = {};
     colorAttachment.view = wgpuCurrentSwapchainTexture.texture.CreateView();
@@ -520,7 +609,10 @@ CommandList Swapchain::AcquireNextImage()
     // Begin the render pass
     gCurrentFinalRenderPass = gCurrentCommandEncoder.BeginRenderPass(&renderPassDesc);
 
+	gPerFrameData[gCurrentFrameIndex].pushConstantOffset = 0;
+
     CommandList clist = { &gCurrentCommandEncoder };
+	clist.currentRenderPassNativePtr = &gCurrentFinalRenderPass;
     return clist;
 }
 
@@ -530,10 +622,24 @@ void Swapchain::Present()
 
     // Finish encoding and submit the commands
     wgpu::CommandBuffer commandBuffer = gCurrentCommandEncoder.Finish();
+
+
+    wgpuDevice.GetQueue().WriteBuffer(
+        gPerFrameData[gCurrentFrameIndex].pushConstantBuffer,
+        0,
+        gPerFrameData[gCurrentFrameIndex].pushConstantData,
+		gPerFrameData[gCurrentFrameIndex].pushConstantOffset);
+
     wgpuDevice.GetQueue().Submit(1, &commandBuffer);
 
     ll::os::gOS->WebGPUPresent();
-
+    //wgpuSurface.re
+   // wgpuCurrentSwapchainTexture.Present();
+    //if (wgpuCurrentSwapchainTexture) {
+    //    wgpuCurrentSwapchainTexture.Present();   // release/present the acquired texture
+    //    wgpuCurrentSwapchainTexture = nullptr;   // clear handle
+    //}
+    //wgpuCurrentSwapchainTexture.texture.
     unsigned int currentWidth = 0;
     unsigned int currentHeight = 0;
     ll::os::gOS->GetActualWindowSize(currentWidth, currentHeight);
@@ -545,6 +651,8 @@ void Swapchain::Present()
         gCurrentCanvasHeight = currentHeight;
         Resize(gInitialCanvasWidth, gInitialCanvasHeight);
     }
+
+	gCurrentFrameIndex = (gCurrentFrameIndex + 1) % gNumFramesInFlight;
 }
 
 
@@ -560,9 +668,14 @@ const char* ll::graphics::GetBackendName()
 }
 
 // CommandList implementations
-void CommandList::SetPSO(Handle<u32> psoID)
+void CommandList::SetPSO(PsoHandle psoID)
 {
-    gCurrentFinalRenderPass.SetPipeline(gAllPSOs[psoID.handle]);
+	if (currentPsoID.handle == psoID.handle)
+        return;
+
+    currentPsoID = psoID;
+
+    gCurrentFinalRenderPass.SetPipeline(gAllPSOs[psoID.handle]); 
 }
 
 void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
@@ -633,6 +746,25 @@ void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
     gAllShaderModules[shaderModuleID.handle] = nullptr;
 }
 
+wgpu::PrimitiveTopology primitiveTopologyFromLLTopology(PrimitiveTopology topology)
+{
+    switch (topology)
+    {
+    case PrimitiveTopology::TriangleList:
+        return wgpu::PrimitiveTopology::TriangleList;
+    case PrimitiveTopology::TriangleStrip:
+        return wgpu::PrimitiveTopology::TriangleStrip;
+    case PrimitiveTopology::LineList:
+        return wgpu::PrimitiveTopology::LineList;
+    case PrimitiveTopology::LineStrip:
+        return wgpu::PrimitiveTopology::LineStrip;
+    case PrimitiveTopology::PointList:
+        return wgpu::PrimitiveTopology::PointList;
+    default:
+        return wgpu::PrimitiveTopology::TriangleList;
+    }
+}
+
 PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& desc)
 {
     MLOG_DEBUG(u8"Create Rasterize Pipeline (WEBGPU)");
@@ -641,6 +773,7 @@ PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& des
 
     wgpu::RenderPipelineDescriptor pipelineDesc{};
     pipelineDesc.nextInChain = nullptr;
+    
 
     // Vertex stage
     wgpu::VertexState vertexState{};
@@ -668,7 +801,7 @@ PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& des
 
     // Primitive state
     wgpu::PrimitiveState primitiveState{};
-    primitiveState.topology = wgpu::PrimitiveTopology::TriangleList;
+    primitiveState.topology = primitiveTopologyFromLLTopology(desc.primitiveTopology);
     pipelineDesc.primitive = primitiveState;
 
     // Multisample state
@@ -677,6 +810,46 @@ PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& des
     multisampleState.mask = 0xFFFFFFFF;
     pipelineDesc.multisample = multisampleState;
 
+	
+	auto& psoMeta = gAllPSOMetas.emplace_back();
+
+	std::vector<wgpu::BindGroupLayout> bgls;
+    
+    if (desc.pushConstantSize > 0)
+    {
+		psoMeta.hasPushConstants = true;
+		bgls.push_back(gPushConstantBindGroupLayout);
+    }
+
+    for (auto& bg : desc.bindingSetLayouts)
+    {
+		if (bg.allSlots.empty())
+            continue;
+
+        std::vector<wgpu::BindGroupLayoutEntry> bglEntries;
+        wgpu::BindGroupLayoutEntry pcEntry{};
+        pcEntry.binding = 0;
+        pcEntry.buffer.hasDynamicOffset = false;
+        pcEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+        pcEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+        bglEntries.push_back(pcEntry);
+
+        wgpu::BindGroupLayoutDescriptor bglDesc{};
+        bglDesc.entryCount = static_cast<uint32_t>(bglEntries.size());
+        bglDesc.entries = bglEntries.data();
+        bglDesc.label = "Scene Group Layout";
+
+		auto bgl = wgpuDevice.CreateBindGroupLayout(&bglDesc);
+		bgls.push_back(bgl);
+    }
+
+
+    wgpu::PipelineLayoutDescriptor pipelineLayoutDesc{};
+
+    pipelineLayoutDesc.bindGroupLayouts = bgls.data();
+	pipelineLayoutDesc.bindGroupLayoutCount = static_cast<u32>(bgls.size());
+    psoMeta.pipelineLayout = wgpuDevice.CreatePipelineLayout(&pipelineLayoutDesc);
+    pipelineDesc.layout = psoMeta.pipelineLayout;
     auto pipeline = wgpuDevice.CreateRenderPipeline(&pipelineDesc);
     gAllPSOs.push_back(pipeline);
 
@@ -744,6 +917,242 @@ int Swapchain::GetWidth() const
 int Swapchain::GetHeight() const
 {
     return gCurrentCanvasHeight;
+}
+
+void CommandList::PushConstants(const void* data, size_t size)
+{
+    auto& psoMeta = gAllPSOMetas[currentPsoID.handle];
+
+    if (psoMeta.hasPushConstants)
+    {
+        auto& frame = gPerFrameData[gCurrentFrameIndex];
+
+        auto rpassEnc = (wgpu::RenderPassEncoder*)currentRenderPassNativePtr;
+        rpassEnc->SetBindGroup(0, frame.pushConstantBindGroup, 1, &frame.pushConstantOffset);
+		memcpy(frame.pushConstantData + frame.pushConstantOffset, data, size);
+		frame.pushConstantOffset += 256;
+    }
+}
+
+
+void Device::DestroyBuffer(BufferHandle bufferID)
+{
+    // Implementation for destroying a buffer
+}
+
+void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset)
+{
+    wgpuDevice.GetQueue().WriteBuffer(
+        gAllBuffers[bufferID.handle],
+        static_cast<u64>(offset),
+        data,
+		static_cast<u64>(size));
+}
+
+BufferHandle Device::CreateBuffer(const BufferDescriptor& desc)
+{
+	wgpu::BufferDescriptor bufferDesc{};
+	bufferDesc.size = static_cast<u64>(desc.size);
+	bufferDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
+	bufferDesc.mappedAtCreation = false;
+	auto buffer = wgpuDevice.CreateBuffer(&bufferDesc);
+	gAllBuffers.push_back(buffer);
+
+    BufferHandle h;
+    h.handle = static_cast<u32>(gAllBuffers.size() - 1);
+    return h;
+}
+
+ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex)
+{
+    wgpu::BindGroupLayoutDescriptor desc{};
+	desc.label = "Parameter Block Layout";
+
+	std::vector<wgpu::BindGroupLayoutEntry> entries;
+
+	for (int i = 0; i < layoutDesc.allSlots.size(); ++i)
+    {
+        wgpu::BindGroupLayoutEntry entry{};
+        entry.binding = static_cast<u32>(i);
+        entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+        entry.buffer.hasDynamicOffset = false;
+        entry.buffer.type = wgpu::BufferBindingType::Uniform;
+		entries.push_back(entry);
+    }
+
+	desc.entryCount = static_cast<u32>(entries.size());
+	desc.entries = entries.data();
+
+	auto bgl = wgpuDevice.CreateBindGroupLayout(&desc);
+
+	gAllParameterBlockLayouts.push_back(bgl);
+
+    return ParameterBlockLayoutHandle{ static_cast<u32>(gAllParameterBlockLayouts.size() - 1) };
+}
+
+void Device::DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID)
+{
+    //vkAllocateDescriptorSets()
+    // Implementation for destroying a parameter block layout
+}
+
+void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID)
+{
+  //  auto cmdBuff = static_cast<VkCommandBuffer>(nativePtr);
+    PSOMeta& psoMeta = gAllPSOMetas[currentPsoID.handle];
+
+    if(currentRenderPassNativePtr != nullptr)
+    {
+        auto rpassEnc = (wgpu::RenderPassEncoder*)currentRenderPassNativePtr;
+        rpassEnc->SetBindGroup(setIndex + (psoMeta.hasPushConstants ? 1 : 0),
+            gAllParameterBlocks[parameterBlockID.handle],
+                               0,
+			nullptr);
+	}
+}
+
+ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID)
+{
+    ParamaterBllockMeta meta;
+    meta.layoutHandle = layoutID;
+
+	gAllParameterBlockMetas.push_back(meta);
+	gAllParameterBlocks.push_back(nullptr);
+
+    return ParameterBlockHandle{ static_cast<u32>(gAllParameterBlocks.size() - 1)};
+}
+
+void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc)
+{
+	ParamaterBllockMeta& meta = gAllParameterBlockMetas[parameterBlockID.handle];
+
+    wgpu::BindGroupDescriptor desc{};
+
+    std::vector<wgpu::BindGroupEntry> entries;
+    u32 slotIndex = 0;
+
+    for(int i= 0; i < pbDesc.resources.size(); ++i)
+    {
+        const auto& binding = pbDesc.resources[i];
+        
+		wgpu::BindGroupEntry entry{};
+        for (const auto& res : pbDesc.resources)
+        {
+            std::visit([&](auto&& arg)
+                {
+                    using T = std::decay_t<decltype(arg)>;
+
+                    if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
+                    {
+						entry.binding = slotIndex;
+                        entry.buffer = gAllBuffers[arg.buffer.handle];
+                        entry.offset = arg.offset;
+                        entry.size = arg.size;
+						entries.push_back(entry);
+                    }
+                    else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
+                    {
+                        // TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
+                        // imageInfos.push_back(imgInfo);
+                        // VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
+                        // w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+                        MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
+                    }
+                    else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
+                    {
+                        // TODO: Fill VkDescriptorImageInfo for storage image
+                        MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
+                    }
+                    else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
+                    {
+                        // Intentionally empty slot – skip writing
+                    }
+                }, res);
+
+            slotIndex++;
+        }
+	}
+
+    desc.layout = gAllParameterBlockLayouts[meta.layoutHandle.handle];
+    desc.entryCount = static_cast<u32>(entries.size());
+    desc.entries = entries.data();
+    desc.label = "Parameter Block";
+
+    auto bg = wgpuDevice.CreateBindGroup(&desc);
+	//DO i need to release old bind group? Probably not, WebGPU uses ref counting internally
+    gAllParameterBlocks[parameterBlockID.handle] = bg;
+}
+
+void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
+{
+
+}
+
+TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
+{
+    TextureHandle result;
+    result.handle = static_cast<u32>(gAllTextures.size());
+    wgpu::TextureDescriptor textureDesc{};
+    textureDesc.size.width = desc.width;
+    textureDesc.size.height = desc.height;
+    textureDesc.size.depthOrArrayLayers = desc.depth;
+    textureDesc.mipLevelCount = desc.mipLevels;
+    textureDesc.sampleCount = 1;
+    textureDesc.dimension = wgpu::TextureDimension::e2D;
+    textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    textureDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
+    auto texture = wgpuDevice.CreateTexture(&textureDesc);
+    gAllTextures.push_back(texture);
+        
+    if (desc.initialData != nullptr)
+    {
+		wgpu::TexelCopyTextureInfo texInfo{};
+		wgpu::TexelCopyBufferInfo bufferInfo{};
+
+		texInfo.aspect = wgpu::TextureAspect::All;
+		texInfo.texture = texture;
+		texInfo.mipLevel = 0;
+		texInfo.origin = { 0, 0, 0 };
+
+		bufferInfo.layout.offset = 0;
+		bufferInfo.layout.bytesPerRow = static_cast<u32>(desc.width * 4);
+		bufferInfo.layout.rowsPerImage = static_cast<u32>(desc.height);
+
+        wgpuDevice.GetQueue().WriteTexture(
+            &texInfo,
+            desc.initialData,
+            static_cast<u64>(desc.width * desc.height * 4),
+            &bufferInfo.layout,
+			&textureDesc.size);
+    }
+
+    TextureMeta meta;
+	gAllTextureMetas.push_back(meta);
+	return result;
+}
+
+void Device::DestroyTexture(TextureHandle textureID)
+{
+
+}
+
+void Device::UpdateTexture(TextureHandle textureID, const void* data, size_t size, size_t offset)
+{
+	//TODO: Implement texture update
+}
+
+void Device::UpdateSubregionTexture(
+    TextureHandle textureID,
+    size_t x,
+    size_t y,
+    size_t z,
+    size_t width,
+    size_t height,
+    size_t depth,
+    const void* data,
+    size_t dataSize)
+{
+	//TODO: Implement subregion texture update
 }
 
 #endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU

@@ -46,6 +46,15 @@
     <Filter Include="src\ll\graphics\webgpu">
       <UniqueIdentifier>{1a5d8ba2-c605-4861-82ef-36cae09a3a49}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\ll\sound">
+      <UniqueIdentifier>{095d987e-1d2c-4084-8d0b-de3b5270f169}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\sound\null">
+      <UniqueIdentifier>{0947e592-41b2-4f16-8a0d-351a597c24a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ll\sound\miniaudio">
+      <UniqueIdentifier>{0b9c1808-6cc4-4ac2-88d0-8276e0474e8d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\graphics.h">
@@ -147,6 +156,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\canvas.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_sound.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\sound\mercury_ll_sound.h">
+      <Filter>src\ll\sound</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp">
@@ -241,6 +256,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\canvas.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\sound\null\sound_system_null.cpp">
+      <Filter>src\ll\sound\null</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\sound\miniaudio\sound_system_ma.cpp">
+      <Filter>src\ll\sound\miniaudio</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

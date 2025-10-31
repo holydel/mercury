@@ -2,6 +2,9 @@ module dedicated_sprite;
 
 import mercury_base;
 
+[[vk::binding(0, 2)]]
+Sampler2D textureMap;
+
 [shader("vertex")]
 BaseVertexOutput DedicatedSpriteVS(uniform ParameterBlock<MercuryScene> perFrame, uniform DedicatedSpriteParameters perObject, uint vertexID: SV_VertexID)
 {
@@ -38,5 +41,5 @@ float4 DedicatedSpriteColorPS(BaseVertexOutput input) : SV_Target
 [shader("fragment")]
 float4 DedicatedSpritePS(BaseVertexOutput input) : SV_Target
 {
-    return input.color * float4(input.texcoord, 0.0, 1.0);
+    return input.color * textureMap.Sample(input.texcoord);
 }

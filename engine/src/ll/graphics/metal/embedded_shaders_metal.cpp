@@ -78,7 +78,7 @@ struct MercuryScene_0
 };
 
 
-#line 6 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
+#line 9 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
 struct KernelContext_0
 {
     EntryPointParams_0 constant* entryPointParams_0;
@@ -86,14 +86,14 @@ struct KernelContext_0
 };
 
 
-#line 6
+#line 9
 BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelContext_0 thread* kernelContext_0)
 {
 
 
     float2 _S2 = float2(1.0, 1.0);
 
-#line 10
+#line 13
     array<float2, int(4)> positions_ndc_0 = { float2(-1.0, 1.0), _S2, float2(-1.0, -1.0), float2(1.0, -1.0) };
     array<float2, int(4)> uvs_1 = { float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0), _S2 };
 
@@ -102,19 +102,19 @@ BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelCont
     float cosAngle_0 = cos(kernelContext_0->entryPointParams_0->perObject_0.angle_0);
     float sinAngle_0 = sin(kernelContext_0->entryPointParams_0->perObject_0.angle_0);
 
-#line 8
+#line 11
     thread BaseVertexOutput_0 output_0;
 
-#line 23
+#line 26
     (&output_0)->position_0 = float4(((((positions_ndc_0[*vertexID_0] * kernelContext_0->entryPointParams_0->perObject_0.size_0) * (matrix<float,int(2),int(2)> (cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + kernelContext_0->entryPointParams_0->perObject_0.position_1) * kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.zw - float2(1.0, float((int(sign((kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.w)))))), 0.0, 1.0);
 
 
     (&output_0)->texcoord_0 = uvs_1[*vertexID_0];
 
-#line 26
+#line 29
     thread PackedColor_0 _S3 = PackedColor_x24init_0(kernelContext_0->entryPointParams_0->perObject_0.colorPacked_0);
 
-#line 26
+#line 29
     float4 _S4 = PackedColor_toFloat4_0(&_S3);
     (&output_0)->color_1 = _S4;
 
@@ -122,7 +122,7 @@ BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelCont
 }
 
 
-#line 29
+#line 32
 struct DedicatedSpriteVS_Result_0
 {
     float4 position_2 [[position]];
@@ -131,32 +131,32 @@ struct DedicatedSpriteVS_Result_0
 };
 
 
-#line 29
+#line 32
 [[vertex]] DedicatedSpriteVS_Result_0 DedicatedSpriteVS(uint vertexID_1 [[vertex_id]])
 {
 
-#line 29
+#line 32
     thread uint _S5 = vertexID_1;
 
-#line 29
+#line 32
     thread KernelContext_0 kernelContext_1;
 
-#line 29
+#line 32
     BaseVertexOutput_0 _S6 = DedicatedSpriteVS_0(&_S5, &kernelContext_1);
 
-#line 29
+#line 32
     thread DedicatedSpriteVS_Result_0 _S7;
 
-#line 29
+#line 32
     (&_S7)->position_2 = _S6.position_0;
 
-#line 29
+#line 32
     (&_S7)->texcoord_1 = _S6.texcoord_0;
 
-#line 29
+#line 32
     (&_S7)->color_2 = _S6.color_1;
 
-#line 29
+#line 32
     return _S7;
 }
 
@@ -186,11 +186,11 @@ struct pixelInput_0
 };
 
 
-#line 33 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
+#line 36 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
 [[fragment]] pixelOutput_0 DedicatedSpriteColorPS(pixelInput_0 _S1 [[stage_in]], float4 position_0 [[position]])
 {
 
-#line 33
+#line 36
     pixelOutput_0 _S2 = { _S1.color_0 };
 
     return _S2;
@@ -207,14 +207,14 @@ mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS()
 #include <metal_texture>
 using namespace metal;
 
-#line 3 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
+#line 90 "core"
 struct pixelOutput_0
 {
     float4 output_0 [[color(0)]];
 };
 
 
-#line 39
+#line 90
 struct pixelInput_0
 {
     float2 texcoord_0 [[user(TEXCOORD)]];
@@ -222,13 +222,33 @@ struct pixelInput_0
 };
 
 
-#line 39 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
-[[fragment]] pixelOutput_0 DedicatedSpritePS(pixelInput_0 _S1 [[stage_in]], float4 position_0 [[position]])
+#line 90
+struct KernelContext_0
+{
+    texture2d<float, access::sample> textureMap_texture_0;
+    sampler textureMap_sampler_0;
+};
+
+
+#line 42 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
+[[fragment]] pixelOutput_0 DedicatedSpritePS(pixelInput_0 _S1 [[stage_in]], float4 position_0 [[position]], texture2d<float, access::sample> textureMap_texture_1 [[texture(0)]], sampler textureMap_sampler_1 [[sampler(0)]])
 {
 
-#line 39
-    pixelOutput_0 _S2 = { _S1.color_0 * float4(_S1.texcoord_0, 0.0, 1.0) };
+#line 42
+    thread KernelContext_0 kernelContext_0;
 
+#line 42
+    (&kernelContext_0)->textureMap_texture_0 = textureMap_texture_1;
+
+#line 42
+    (&kernelContext_0)->textureMap_sampler_0 = textureMap_sampler_1;
+
+    ;
+
+#line 44
+    pixelOutput_0 _S2 = { _S1.color_0 * (((&kernelContext_0)->textureMap_texture_0).sample(((&kernelContext_0)->textureMap_sampler_0), (_S1.texcoord_0))) };
+
+#line 44
     return _S2;
 }
 

@@ -7,6 +7,8 @@
 #include "ll/xr.h"
 #include "input.h"
 #include "graphics.h"
+#include "ll/sound/mercury_ll_sound.h"
+
 #include "mercury_log.h"
 #include <iostream>
 #include <chrono>
@@ -64,6 +66,7 @@ void InitializeCurrentApplication() {
 
   std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
   MercuryGraphicsInitialize();
+  MercurySoundInitialize();
   std::cout << "Graphics initialisation time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count() << " ms" << std::endl;
 
   g_currentApplication->Initialize();
@@ -73,6 +76,7 @@ void ShutdownCurrentApplication() {
   g_currentApplication->Shutdown();
   
   MercuryGraphicsShutdown();
+  MercurySoundShutdown();
   MercuryInputShutdown();
   
   ll::os::gOS->Shutdown();

@@ -104,7 +104,11 @@ fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixel
 
 mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS()
 {
-	static const char data[] = R"(struct pixelOutput_0
+	static const char data[] = R"(@binding(0) @group(2) var textureMap_texture_0 : texture_2d<f32>;
+
+@binding(1) @group(2) var textureMap_sampler_0 : sampler;
+
+struct pixelOutput_0
 {
     @location(0) output_0 : vec4<f32>,
 };
@@ -118,7 +122,8 @@ struct pixelInput_0
 @fragment
 fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixelOutput_0
 {
-    var _S2 : pixelOutput_0 = pixelOutput_0( _S1.color_0 * vec4<f32>(_S1.texcoord_0, 0.0f, 1.0f) );
+    ;
+    var _S2 : pixelOutput_0 = pixelOutput_0( _S1.color_0 * (textureSample((textureMap_texture_0), (textureMap_sampler_0), (_S1.texcoord_0))) );
     return _S2;
 }
 

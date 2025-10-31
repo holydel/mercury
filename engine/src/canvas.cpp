@@ -5,6 +5,7 @@
 
 using namespace mercury;
 ll::graphics::ParameterBlockLayoutHandle gCanvasParameterBlockLayout;
+ll::graphics::ParameterBlockLayoutHandle gCanvasSpriteTextureParameterBlockLayout;
 using namespace ll::graphics;
 
 constexpr int CANVAS_PER_FRAME_SET_INDEX = 0;
@@ -19,7 +20,7 @@ struct CanvasFrameResources
 std::vector<CanvasFrameResources> gCanvasFrameResources;
 
 
-struct Sprite2D
+struct SpriteTransform
 {
 	glm::vec2 position;
 	glm::vec2 size;
@@ -28,6 +29,12 @@ struct Sprite2D
 
 	float angle;
 	PackedColor color;
+};
+
+struct Sprite2D
+{
+	SpriteTransform transform;
+	ll::graphics::TextureHandle texture;
 };
 
 std::vector<Sprite2D> gSpritesToDraw;
@@ -50,7 +57,10 @@ void MercuryCanvasInitialize(int numFramesInFlight)
 
 	for (int i = 0; i < numFramesInFlight; ++i)
 	{
-		gCanvasFrameResources[i].scene2DConstantBuffer = gDevice->CreateBuffer(sizeof(Scene2DConstants));
+		BufferDescriptor bdesc = {};
+		bdesc.size = sizeof(Scene2DConstants);
+
+		gCanvasFrameResources[i].scene2DConstantBuffer = gDevice->CreateBuffer(bdesc);
 
 		gCanvasFrameResources[i].scene2DParameterBlock = ll::graphics::gDevice->CreateParameterBlock(gCanvasParameterBlockLayout);
 
@@ -66,8 +76,10 @@ void MercuryCanvasInitialize(int numFramesInFlight)
 	ll::graphics::RasterizePipelineDescriptor dedicatedSpritePsoDesc = {};
 	dedicatedSpritePsoDesc.vertexShader = testDedicatedSpriteVS;// testDedicatedSpriteVS;
 	dedicatedSpritePsoDesc.fragmentShader = testDedicatedSpriteFS;
-	dedicatedSpritePsoDesc.pushConstantSize = sizeof(Sprite2D);
+	dedicatedSpritePsoDesc.pushConstantSize = sizeof(SpriteTransform);
 	dedicatedSpritePsoDesc.bindingSetLayouts[0].AddSlot(ll::graphics::ShaderResourceType::UniformBuffer); //simulate canvas binding set layout
+	//dedicatedSpritePsoDesc.bindingSetLayouts[0].AddSlot(ll::graphics::ShaderResourceType::SampledImage2D); //simulate canvas binding set layout
+
 
 	dedicatedSpritePsoDesc.primitiveTopology = ll::graphics::PrimitiveTopology::TriangleStrip;
 	testDedicatedSpritePSO = ll::graphics::gDevice->CreateRasterizePipeline(dedicatedSpritePsoDesc);
@@ -109,7 +121,7 @@ void MercuryCanvasTick(mercury::ll::graphics::CommandList& cl, int frameInFlight
 
 	for(auto& sprite : gSpritesToDraw)
 	{
-		cl.PushConstants(sprite);
+		cl.PushConstants(sprite.transform);
 		cl.Draw(4); // Sprite is a triangle strip
 	}
 
@@ -117,6 +129,11 @@ void MercuryCanvasTick(mercury::ll::graphics::CommandList& cl, int frameInFlight
 }
 
 void canvas::DrawSprite(glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color)
+{
+	gSpritesToDraw.push_back({ position, size, uv0, uv1, angle, color });
+}
+
+void DrawSprite(ll::graphics::TextureHandle texture, glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color)
 {
 	gSpritesToDraw.push_back({ position, size, uv0, uv1, angle, color });
 }

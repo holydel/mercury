@@ -25,6 +25,10 @@ struct BufferHandle : public Handle<u32>
 {
 };
 
+struct TextureHandle : public Handle<u32>
+{
+};
+
 struct ParameterBlockLayoutHandle : public Handle<u32>
 {
 };
@@ -499,6 +503,22 @@ public:
   void SetDebugName(const char* utf8_name);
 };
 
+struct BufferDescriptor
+{
+    size_t size = 0;
+	void* initialData = nullptr;
+};
+
+struct TextureDescriptor
+{
+    size_t width = 1;
+    size_t height = 1;
+    size_t depth = 1;
+    size_t mipLevels = 1;
+	Format format = Format::RGBA8_UNORM;
+	void* initialData = nullptr;
+};
+
 class Device {
 public:
   Device() = default;
@@ -536,9 +556,24 @@ public:
   void UpdatePipelineState(PsoHandle psoID, const RasterizePipelineDescriptor& desc);
   void DestroyRasterizePipeline(PsoHandle psoID);
 
-  BufferHandle CreateBuffer(size_t size);
+  BufferHandle CreateBuffer(const BufferDescriptor& desc);
   void DestroyBuffer(BufferHandle bufferID);
   void UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset = 0);
+
+  TextureHandle CreateTexture(const TextureDescriptor& desc);
+  void DestroyTexture(TextureHandle textureID);
+  void UpdateTexture(TextureHandle textureID, const void* data, size_t size, size_t offset = 0);
+
+  void UpdateSubregionTexture(
+      TextureHandle textureID,
+      size_t x,
+      size_t y,
+      size_t z,
+      size_t width,
+      size_t height,
+      size_t depth,
+      const void* data,
+	  size_t dataSize);
 
   ParameterBlockLayoutHandle CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex);
   void DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID);

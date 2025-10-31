@@ -307,18 +307,7 @@ void Device::Initialize()
 	deviceCreateInfo.enabledLayerCount = 0; // deprecated
 	deviceCreateInfo.ppEnabledLayerNames = nullptr;
 	deviceCreateInfo.pEnabledFeatures = &enabledFeatures10;
-	deviceCreateInfo.ppEnabledExtensionNames = device_extender.EnabledExtensions(); // deprecated
-	deviceCreateInfo.enabledExtensionCount = device_extender.NumEnabledExtension();
-
-	VK_CALL(vkCreateDevice(gVKPhysicalDevice, &deviceCreateInfo, gVKGlobalAllocationsCallbacks, &gVKDevice));
-
-	LoadVkDeviceLevelFuncs(gVKDevice);
-
-	vkGetDeviceQueue(gVKDevice, 0, 0, &gVKGraphicsQueue);
-
-	// vk_utils::debug::SetName(gVKMainQueue, "Main Queue");
-
-	VmaAllocatorCreateInfo allocatorInfo = {};
+	deviceCreateInfo.ppEnabledExtensionNames = device_extender.EnabledExtensions(); // deprecated`
 	allocatorInfo.physicalDevice = gVKPhysicalDevice;
 	allocatorInfo.device = gVKDevice;
 	allocatorInfo.instance = gVKInstance;

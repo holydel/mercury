@@ -19,3 +19,6 @@
 [submodule "engine/third_party/D3D12MemoryAllocator"]
 	path = engine/third_party/D3D12MemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+[submodule "engine/third_party/miniaudio"]
+	path = engine/third_party/miniaudio
+	url = https://github.com/mackron/miniaudio
