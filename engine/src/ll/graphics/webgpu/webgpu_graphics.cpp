@@ -46,6 +46,10 @@ void *gWebGPUSurface = nullptr; // for emscripten os GetCurrentNativeWindowHandl
 wgpu::Surface wgpuSurface;
 wgpu::SurfaceTexture wgpuCurrentSwapchainTexture;
 wgpu::TextureFormat wgpuSwapchainFormat = wgpu::TextureFormat::BGRA8Unorm;
+wgpu::Sampler wgpuDefaultLinearSampler;
+wgpu::Sampler wgpuDefaultNearestSampler;
+wgpu::Sampler wgpuDefaultTrilinearSampler;
+wgpu::Sampler wgpuDefaultAnisotropicSampler;
 
 // State tracking
 bool adapterRequested = false;
@@ -455,6 +459,55 @@ void Device::Initialize()
 		pcBindGroupDesc.label = "Push Constant Bind Group";
         frameData.pushConstantBindGroup = wgpuDevice.CreateBindGroup(&pcBindGroupDesc);
     }
+
+    {
+		wgpu::SamplerDescriptor samplerDesc{};
+		samplerDesc.addressModeU = wgpu::AddressMode::Repeat;
+		samplerDesc.addressModeV = wgpu::AddressMode::Repeat;
+		samplerDesc.addressModeW = wgpu::AddressMode::Repeat;
+		samplerDesc.magFilter = wgpu::FilterMode::Linear;
+		samplerDesc.minFilter = wgpu::FilterMode::Linear;
+		samplerDesc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+        samplerDesc.label = "Default Linear Sampler";
+        wgpuDefaultLinearSampler = wgpuDevice.CreateSampler(&samplerDesc);
+    }
+
+    {
+        wgpu::SamplerDescriptor samplerDesc{};
+        samplerDesc.addressModeU = wgpu::AddressMode::Repeat;
+        samplerDesc.addressModeV = wgpu::AddressMode::Repeat;
+        samplerDesc.addressModeW = wgpu::AddressMode::Repeat;
+        samplerDesc.magFilter = wgpu::FilterMode::Nearest;
+        samplerDesc.minFilter = wgpu::FilterMode::Nearest;
+        samplerDesc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+        samplerDesc.label = "Default Nearest Sampler";
+        wgpuDefaultNearestSampler = wgpuDevice.CreateSampler(&samplerDesc);
+    }
+    
+    {
+        wgpu::SamplerDescriptor samplerDesc{};
+        samplerDesc.addressModeU = wgpu::AddressMode::Repeat;
+        samplerDesc.addressModeV = wgpu::AddressMode::Repeat;
+        samplerDesc.addressModeW = wgpu::AddressMode::Repeat;
+        samplerDesc.magFilter = wgpu::FilterMode::Linear;
+        samplerDesc.minFilter = wgpu::FilterMode::Linear;
+        samplerDesc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+        samplerDesc.label = "Default Trilinear Sampler";
+        wgpuDefaultTrilinearSampler = wgpuDevice.CreateSampler(&samplerDesc);
+    }
+
+    {
+        wgpu::SamplerDescriptor samplerDesc{};
+        samplerDesc.addressModeU = wgpu::AddressMode::Repeat;
+        samplerDesc.addressModeV = wgpu::AddressMode::Repeat;
+        samplerDesc.addressModeW = wgpu::AddressMode::Repeat;
+        samplerDesc.magFilter = wgpu::FilterMode::Linear;
+        samplerDesc.minFilter = wgpu::FilterMode::Linear;
+        samplerDesc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+        samplerDesc.maxAnisotropy = 16;
+        samplerDesc.label = "Default Anisotropic Sampler";
+		wgpuDefaultAnisotropicSampler = wgpuDevice.CreateSampler(&samplerDesc);
+    }
 }
 
 void Device::Shutdown()
@@ -828,11 +881,45 @@ PsoHandle Device::CreateRasterizePipeline(const RasterizePipelineDescriptor& des
 
         std::vector<wgpu::BindGroupLayoutEntry> bglEntries;
         wgpu::BindGroupLayoutEntry pcEntry{};
-        pcEntry.binding = 0;
-        pcEntry.buffer.hasDynamicOffset = false;
-        pcEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-        pcEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
-        bglEntries.push_back(pcEntry);
+
+		u32 bindingIndex = 0;
+
+        for (int i = 0; i < bg.allSlots.size(); ++i)
+        {
+            auto& slot = bg.allSlots[i];
+
+            if (slot.resourceType == ShaderResourceType::UniformBuffer)
+            {
+                wgpu::BindGroupLayoutEntry entry{};
+                entry.binding = static_cast<u32>(bindingIndex);
+                entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+                entry.buffer.hasDynamicOffset = false;
+                entry.buffer.type = wgpu::BufferBindingType::Uniform;
+                bglEntries.push_back(entry);
+                bindingIndex++;
+            }
+
+            if (slot.resourceType == ShaderResourceType::SampledImage2D)
+            {
+                {
+                    wgpu::BindGroupLayoutEntry entry{};
+                    entry.binding = static_cast<u32>(bindingIndex);
+                    entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+                    entry.texture.sampleType = wgpu::TextureSampleType::Float;
+                    entry.texture.viewDimension = wgpu::TextureViewDimension::e2D;
+                    bglEntries.push_back(entry);
+                    ++bindingIndex;
+                }
+
+                {
+                    wgpu::BindGroupLayoutEntry entry{};
+                    entry.binding = static_cast<u32>(bindingIndex);
+                    entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+                    entry.sampler.type = wgpu::SamplerBindingType::Filtering;
+                    bglEntries.push_back(entry);
+                }
+            }
+        }
 
         wgpu::BindGroupLayoutDescriptor bglDesc{};
         bglDesc.entryCount = static_cast<uint32_t>(bglEntries.size());
@@ -969,15 +1056,44 @@ ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLa
 	desc.label = "Parameter Block Layout";
 
 	std::vector<wgpu::BindGroupLayoutEntry> entries;
+	int bindingIndex = 0;
 
 	for (int i = 0; i < layoutDesc.allSlots.size(); ++i)
     {
-        wgpu::BindGroupLayoutEntry entry{};
-        entry.binding = static_cast<u32>(i);
-        entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
-        entry.buffer.hasDynamicOffset = false;
-        entry.buffer.type = wgpu::BufferBindingType::Uniform;
-		entries.push_back(entry);
+		auto& slot = layoutDesc.allSlots[i];
+
+        if (slot.resourceType == ShaderResourceType::UniformBuffer)
+        {
+            wgpu::BindGroupLayoutEntry entry{};            
+            entry.binding = static_cast<u32>(bindingIndex);
+            entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+            entry.buffer.hasDynamicOffset = false;
+            entry.buffer.type = wgpu::BufferBindingType::Uniform;
+            entries.push_back(entry);
+        }
+
+        if (slot.resourceType == ShaderResourceType::SampledImage2D)
+        {
+            {
+                wgpu::BindGroupLayoutEntry entry{};
+                entry.binding = static_cast<u32>(bindingIndex);
+                entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+				entry.texture.sampleType = wgpu::TextureSampleType::Float;
+				entry.texture.viewDimension = wgpu::TextureViewDimension::e2D;            
+                entries.push_back(entry);
+                ++bindingIndex;
+            }            
+
+            {
+                wgpu::BindGroupLayoutEntry entry{};
+                entry.binding = static_cast<u32>(bindingIndex);
+                entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+				entry.sampler.type = wgpu::SamplerBindingType::Filtering;
+                entries.push_back(entry);
+            }
+        }
+
+        ++bindingIndex;
     }
 
 	desc.entryCount = static_cast<u32>(entries.size());
@@ -1052,10 +1168,16 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
                     }
                     else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
                     {
-                        // TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
-                        // imageInfos.push_back(imgInfo);
-                        // VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
-                        // w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+                        entry.binding = slotIndex;
+						entry.textureView = gAllTextures[arg.texture.handle].CreateView();
+                        entries.push_back(entry);
+                        slotIndex++;
+
+                        wgpu::BindGroupEntry samplerEntry{};
+						samplerEntry.binding = slotIndex;
+						samplerEntry.sampler = wgpuDefaultLinearSampler;
+						entries.push_back(samplerEntry);
+
                         MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
                     }
                     else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)

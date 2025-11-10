@@ -6,9 +6,14 @@
 using namespace mercury;
 ll::graphics::ParameterBlockLayoutHandle gCanvasParameterBlockLayout;
 ll::graphics::ParameterBlockLayoutHandle gCanvasSpriteTextureParameterBlockLayout;
+
+ll::graphics::TextureHandle gWhiteTextureHandle;
+ll::graphics::ParameterBlockHandle gWhiteTexturePlaceholder;
+
 using namespace ll::graphics;
 
 constexpr int CANVAS_PER_FRAME_SET_INDEX = 0;
+constexpr int CANVAS_SPRITE_TEXTURE_SET_INDEX = 1;
 
 
 struct CanvasFrameResources
@@ -43,6 +48,8 @@ mercury::ll::graphics::PsoHandle testDedicatedSpritePSO;
 mercury::ll::graphics::ShaderHandle testDedicatedSpriteVS;
 mercury::ll::graphics::ShaderHandle testDedicatedSpriteFS;
 
+std::unordered_map<u32, ll::graphics::ParameterBlockHandle> gSpriteTextureParameterBlocks;
+
 void MercuryCanvasInitialize(int numFramesInFlight)
 {
 	MLOG_DEBUG(u8"MercuryCanvasInitialize - Starting");
@@ -52,6 +59,21 @@ void MercuryCanvasInitialize(int numFramesInFlight)
 	layoutDesc.AddSlot(ll::graphics::ShaderResourceType::UniformBuffer);
 
 	gCanvasParameterBlockLayout = ll::graphics::gDevice->CreateParameterBlockLayout(layoutDesc, CANVAS_PER_FRAME_SET_INDEX);
+
+	{
+		ll::graphics::BindingSetLayoutDescriptor layoutDesc2 = {};
+		layoutDesc2.AddSlot(ll::graphics::ShaderResourceType::SampledImage2D);
+		gCanvasSpriteTextureParameterBlockLayout = ll::graphics::gDevice->CreateParameterBlockLayout(layoutDesc2, CANVAS_SPRITE_TEXTURE_SET_INDEX);
+
+		gWhiteTextureHandle = ll::graphics::TextureHandle::GetBlackOpaqueTexture();
+		gWhiteTexturePlaceholder = ll::graphics::gDevice->CreateParameterBlock(gCanvasSpriteTextureParameterBlockLayout);
+
+		ll::graphics::ParameterBlockDescriptor pbDesc = {};
+		pbDesc.AddSampledTexture2D(gWhiteTextureHandle);
+
+		ll::graphics::gDevice->UpdateParameterBlock(gWhiteTexturePlaceholder, pbDesc);
+	}
+	
 
 	gCanvasFrameResources.resize(numFramesInFlight);
 
@@ -78,7 +100,7 @@ void MercuryCanvasInitialize(int numFramesInFlight)
 	dedicatedSpritePsoDesc.fragmentShader = testDedicatedSpriteFS;
 	dedicatedSpritePsoDesc.pushConstantSize = sizeof(SpriteTransform);
 	dedicatedSpritePsoDesc.bindingSetLayouts[0].AddSlot(ll::graphics::ShaderResourceType::UniformBuffer); //simulate canvas binding set layout
-	//dedicatedSpritePsoDesc.bindingSetLayouts[0].AddSlot(ll::graphics::ShaderResourceType::SampledImage2D); //simulate canvas binding set layout
+	dedicatedSpritePsoDesc.bindingSetLayouts[1].AddSlot(ll::graphics::ShaderResourceType::SampledImage2D); //simulate canvas binding set layout
 
 
 	dedicatedSpritePsoDesc.primitiveTopology = ll::graphics::PrimitiveTopology::TriangleStrip;
@@ -121,6 +143,26 @@ void MercuryCanvasTick(mercury::ll::graphics::CommandList& cl, int frameInFlight
 
 	for(auto& sprite : gSpritesToDraw)
 	{
+		if (sprite.texture.isValid())
+		{
+			auto texIt = gSpriteTextureParameterBlocks.find(sprite.texture.handle);
+
+			if (texIt == gSpriteTextureParameterBlocks.end())
+			{
+				gSpriteTextureParameterBlocks[sprite.texture.handle] = ll::graphics::gDevice->CreateParameterBlock(gCanvasSpriteTextureParameterBlockLayout);
+				ll::graphics::ParameterBlockDescriptor pbDesc = {};
+				pbDesc.AddSampledTexture2D(sprite.texture);
+				ll::graphics::gDevice->UpdateParameterBlock(gSpriteTextureParameterBlocks[sprite.texture.handle], pbDesc);
+				texIt = gSpriteTextureParameterBlocks.find(sprite.texture.handle);
+			}
+
+			cl.SetParameterBlock(CANVAS_SPRITE_TEXTURE_SET_INDEX, texIt->second);
+		}
+		else
+		{
+			cl.SetParameterBlock(CANVAS_SPRITE_TEXTURE_SET_INDEX, gWhiteTexturePlaceholder);
+		}
+		
 		cl.PushConstants(sprite.transform);
 		cl.Draw(4); // Sprite is a triangle strip
 	}
@@ -130,10 +172,10 @@ void MercuryCanvasTick(mercury::ll::graphics::CommandList& cl, int frameInFlight
 
 void canvas::DrawSprite(glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color)
 {
-	gSpritesToDraw.push_back({ position, size, uv0, uv1, angle, color });
+	gSpritesToDraw.push_back({ { position, size, uv0, uv1, angle, color }, gWhiteTextureHandle });
 }
 
-void DrawSprite(ll::graphics::TextureHandle texture, glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color)
+void canvas::DrawSprite(ll::graphics::TextureHandle texture, glm::vec2 position, glm::vec2 size, glm::vec2 uv0, glm::vec2 uv1, float angle, PackedColor color)
 {
-	gSpritesToDraw.push_back({ position, size, uv0, uv1, angle, color });
+	gSpritesToDraw.push_back({ { position, size, uv0, uv1, angle, color }, texture });
 }

@@ -277,7 +277,7 @@ void TestBedApplication::Initialize() {
 		   for (int j = 0; j < textureWidth; ++j)
            {
                u8 r = (u8)(i % 256);
-               u8 g = (u8)(j % 256);
+               u8 g = (u8)(j % 5) * 50;
                u8 b = (u8)(i * j + j) % 256;
                u8 a = 255;
                textureData[i * textureWidth + j] = (a << 24) | (b << 16) | (g << 8) | r;
@@ -333,7 +333,7 @@ void TestBedApplication::Tick() {
        float x = 300 + sin(t * 0.1f) * 100;
        float y = 400 + cos(t * 0.1f) * 150;
 
-       canvas::DrawSprite(input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
+       canvas::DrawSprite(testTexture, input::gMouse->GetPosition(), glm::vec2(10, 50), glm::vec2(0, 0), glm::vec2(1, 1), t * 0.1f, ColorWhite);
     //m_running = false;
 }
 

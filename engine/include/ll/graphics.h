@@ -27,13 +27,13 @@ struct BufferHandle : public Handle<u32>
 
 struct TextureHandle : public Handle<u32>
 {
+	static TextureHandle GetWhiteOpaqueTexture();
+	static TextureHandle GetBlackOpaqueTexture();
+	static TextureHandle GetWhiteTransparentTexture();
+	static TextureHandle GetBlackTransparentTexture();
 };
 
 struct ParameterBlockLayoutHandle : public Handle<u32>
-{
-};
-
-struct ParameterBlockHandle : public Handle<u32>
 {
 };
 
@@ -285,7 +285,7 @@ struct ParameterResourceBuffer
 
 struct ParameterResourceTexture
 {
-
+    TextureHandle texture;
 };
 
 struct ParameterResourceRWImage
@@ -312,6 +312,12 @@ struct ParameterBlockDescriptor
         return *this;
     }
 
+    ParameterBlockDescriptor& AddSampledTexture2D(const TextureHandle& texture)
+    {
+        resources.push_back(ParameterResourceTexture{ texture });
+        return *this;
+    }
+
     ParameterBlockDescriptor& AddResource(const ParameterResourceBuffer& bufferResource)
     {
         resources.push_back(bufferResource);
@@ -332,6 +338,11 @@ struct ParameterBlockDescriptor
         resources.push_back(ParameterResourceEmpty{});
         return *this;
 	}
+};
+
+struct ParameterBlockHandle : public Handle<u32>
+{
+    void Update(ParameterBlockDescriptor& desc);
 };
 
 struct RasterizePipelineDescriptor : public PipelineBindingLayoutDescriptor

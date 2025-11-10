@@ -7,4 +7,8 @@
 #include "webgpu_utils.h"
 
 extern wgpu::Instance wgpuInstance;
+extern wgpu::Sampler wgpuDefaultLinearSampler;
+extern wgpu::Sampler wgpuDefaultNearestSampler;
+extern wgpu::Sampler wgpuDefaultTrilinearSampler;
+extern wgpu::Sampler wgpuDefaultAnisotropicSampler;
 #endif

@@ -250,3 +250,48 @@ mercury::u8 SelectAdapterByHeuristic(
 
     return 0;
 }
+
+
+TextureHandle GetPreinitialized1pxTextureHandle(u32 color)
+{
+    TextureDescriptor texDesc = {};
+    texDesc.width = 1;
+    texDesc.height = 1;
+    texDesc.depth = 1;
+    texDesc.mipLevels = 1;
+    texDesc.format = Format::RGBA8_UNORM;
+    texDesc.initialData = &color;
+
+    TextureHandle textureHandle = ll::graphics::gDevice->CreateTexture(texDesc);
+    
+	return textureHandle;
+}
+
+TextureHandle TextureHandle::GetWhiteOpaqueTexture()
+{
+	static TextureHandle whiteOpaqueTexture = GetPreinitialized1pxTextureHandle(0xFFFFFFFF);
+	return whiteOpaqueTexture;
+}
+
+TextureHandle TextureHandle::GetBlackOpaqueTexture()
+{
+	static TextureHandle blackOpaqueTexture = GetPreinitialized1pxTextureHandle(0xFF000000);
+	return blackOpaqueTexture;
+}
+
+TextureHandle TextureHandle::GetWhiteTransparentTexture()
+{
+    static TextureHandle whiteTransparentTexture = GetPreinitialized1pxTextureHandle(0x00FFFFFF);
+	return whiteTransparentTexture;
+}
+
+TextureHandle TextureHandle::GetBlackTransparentTexture()
+{
+    static TextureHandle blackTransparentTexture = GetPreinitialized1pxTextureHandle(0x00000000);
+	return blackTransparentTexture;
+}
+
+void ParameterBlockHandle::Update(ParameterBlockDescriptor& desc)
+{
+	ll::graphics::gDevice->UpdateParameterBlock(*this, desc);
+}
