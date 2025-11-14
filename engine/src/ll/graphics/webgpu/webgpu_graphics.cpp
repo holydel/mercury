@@ -87,6 +87,7 @@ std::vector<ParamaterBllockMeta> gAllParameterBlockMetas;
 
 struct TextureMeta
 {
+	wgpu::TextureView textureView;
 };
 
 std::vector<TextureMeta> gAllTextureMetas;
@@ -1249,6 +1250,8 @@ TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
     }
 
     TextureMeta meta;
+
+	meta.textureView = texture.CreateView();
 	gAllTextureMetas.push_back(meta);
 	return result;
 }
@@ -1275,6 +1278,11 @@ void Device::UpdateSubregionTexture(
     size_t dataSize)
 {
 	//TODO: Implement subregion texture update
+}
+
+u64 TextureHandle::CreateImguiTextureOpaqueHandle() const
+{
+	return (u64)(intptr_t)gAllTextureMetas[handle].textureView.Get();
 }
 
 #endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU#endif //MERCURY_LL_GRAPHICS_WEBGPU

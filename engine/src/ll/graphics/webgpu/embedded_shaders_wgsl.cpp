@@ -29,7 +29,7 @@ struct MercuryScene_std140_0
     @align(4) deltaTime_0 : f32,
 };
 
-@binding(0) @group(1) var<uniform> entryPointParams_perFrame_0 : MercuryScene_std140_0;
+@binding(0) @group(2) var<uniform> entryPointParams_perFrame_0 : MercuryScene_std140_0;
 struct PackedColor_0
 {
      packed_0 : u32,
@@ -104,9 +104,9 @@ fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixel
 
 mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS()
 {
-	static const char data[] = R"(@binding(0) @group(2) var textureMap_texture_0 : texture_2d<f32>;
+	static const char data[] = R"(@binding(0) @group(1) var textureMap_texture_0 : texture_2d<f32>;
 
-@binding(1) @group(2) var textureMap_sampler_0 : sampler;
+@binding(1) @group(1) var textureMap_sampler_0 : sampler;
 
 struct pixelOutput_0
 {

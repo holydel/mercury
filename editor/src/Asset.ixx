@@ -19,8 +19,10 @@ export enum class AssetType {
     Folder,
     GenericFile,
     ShadersSet,
-    Shader
+    Shader,
+    Image
 };
+
 
 export struct Asset : public IImGuiPropertyDrawer {
 protected:
@@ -55,6 +57,13 @@ export struct FolderAsset : public FileAsset {
         isSystemFolder = true;
 		assetName = name;
     }
+};
+
+export class IAssetLoader
+{
+public:
+    virtual std::vector<std::string> GetSupportedExtensions() const = 0;
+    virtual FileAsset* LoadAssetDataFromFile(const std::filesystem::path& path) = 0;
 };
 
 // Shader-related asset types (declarations only; heavy logic implemented in another TU)

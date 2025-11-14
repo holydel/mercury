@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <array>
 #include <variant>
+#include <functional>
 
 namespace mercury {
 namespace ll {
@@ -31,13 +32,15 @@ struct TextureHandle : public Handle<u32>
 	static TextureHandle GetBlackOpaqueTexture();
 	static TextureHandle GetWhiteTransparentTexture();
 	static TextureHandle GetBlackTransparentTexture();
+
+    u64 CreateImguiTextureOpaqueHandle() const;
 };
 
 struct ParameterBlockLayoutHandle : public Handle<u32>
 {
 };
 
-enum class Format {
+enum class Format : u8 {
   // Common formats
   RGBA8_UNORM,
   RGBA8_UNORM_SRGB,
@@ -592,6 +595,9 @@ public:
   ParameterBlockHandle CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID);
   void UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc);
   void DestroyParameterBlock(ParameterBlockHandle parameterBlockID);
+
+  //onFinish is called in the Device::Tick function after the commands have finished executing
+  void SubmitOneTimeCommandsList(std::function<void(CommandList& cmdList)> recordCommands, std::function<void()> onFinish = nullptr);
 };
 
 class Swapchain {

@@ -19,6 +19,12 @@
     <Filter Include="Source Files\third_party\simdjson">
       <UniqueIdentifier>{8626b4fc-ddad-4620-b652-cb67c995ff9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\AssetsLoaders">
+      <UniqueIdentifier>{1e192dc2-35a7-4e08-b9e8-9874e379a979}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\AssetsProcessors">
+      <UniqueIdentifier>{c267b3bc-9c18-40c5-bd39-9c9be078a1b4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\editor\third_party\simdjson\simdjson.cpp">
@@ -66,14 +72,14 @@
     <ClCompile Include="..\..\editor\src\AssetShaderSetImpl.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="engine\src\ll\graphics\d3d12\d3d12_graphics.cpp">
+    <ClCompile Include="..\..\editor\src\AssetsLoaders\AssetsLoaderImageOpenImageIO.ixx">
+      <Filter>Source Files\AssetsLoaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\editor\src\AssetImage.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="engine\src\graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\src\ll\graphics\vulkan\vk_device.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\editor\src\AssetsLoaders\AssetsLoadersRegistry.ixx">
+      <Filter>Source Files\AssetsLoaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -89,14 +95,19 @@
     <ClInclude Include="simple_example.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="engine\include\ll\graphics.h">
+    <ClInclude Include="engine\src\ll\graphics\vulkan\vk_device.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="engine\src\ll\graphics\vulkan\vk_device.h">
+    <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="vcpkg_setup.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="editor.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

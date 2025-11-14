@@ -30,6 +30,11 @@ std::vector<ShaderModuleCached> gAllShaderModules;
 std::vector<VkDescriptorSetLayout> gAllDSLayouts;
 std::vector<VkDescriptorSet> gAllDescriptorSets;
 
+VkSampler gVKDefaultLinearSampler = VK_NULL_HANDLE;
+VkSampler gVKDefaultNearestSampler = VK_NULL_HANDLE;
+VkSampler gVKDefaultTrilinearSampler = VK_NULL_HANDLE;
+VkSampler gVKDefaultAnisotropicSampler = VK_NULL_HANDLE;
+
 struct BufferInfo
 {
 	VmaAllocation allocation = nullptr;
@@ -39,6 +44,28 @@ struct BufferInfo
 
 std::vector<VkBuffer> gAllBuffers;
 std::vector<BufferInfo> gAllBufferMetas;
+
+struct TextureInfo
+{
+	VmaAllocation allocation = nullptr;
+	VmaAllocationInfo allocationInfo = {};
+	VkImageLayout currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkImage image = VK_NULL_HANDLE;
+	VkImageView imageView = VK_NULL_HANDLE;
+};
+
+std::vector<TextureInfo> gAllTextures;
+
+struct OneTimeSubmitContext
+{
+	VkCommandPool commandPool = VK_NULL_HANDLE;
+	VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+	VkFence fence = VK_NULL_HANDLE;
+	bool inUse = false;
+	std::function<void()> onFinish = nullptr;
+};
+
+std::vector<OneTimeSubmitContext> gOneTimeSubmitContexts;
 
 struct EnabledVKFeatures
 {
@@ -127,6 +154,29 @@ void *EnabledVKFeatures::BuildPChains()
 		NextPChain(pchain, &fragmentShaderBarycentricFeaturesNV);
 	}
 	return pchain;
+}
+
+
+
+VkSamplerCreateInfo createDefaultSampler()
+{
+	VkSamplerCreateInfo sampler_info = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	sampler_info.anisotropyEnable = VK_FALSE;
+	sampler_info.maxAnisotropy = 1.0f;
+	sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	sampler_info.unnormalizedCoordinates = VK_FALSE;
+	sampler_info.compareEnable = VK_FALSE;
+	sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler_info.mipLodBias = 0.0f;
+	sampler_info.minLod = 0.0f;
+	sampler_info.maxLod = VK_LOD_CLAMP_NONE;
+	sampler_info.magFilter = VK_FILTER_LINEAR;
+	sampler_info.minFilter = VK_FILTER_LINEAR;
+	return sampler_info;
 }
 
 void Device::Initialize()
@@ -305,9 +355,21 @@ void Device::Initialize()
 	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(requestedQueues.size());
 	deviceCreateInfo.pQueueCreateInfos = requestedQueues.data();
 	deviceCreateInfo.enabledLayerCount = 0; // deprecated
-	deviceCreateInfo.ppEnabledLayerNames = nullptr;
+	deviceCreateInfo.ppEnabledLayerNames = nullptr; // deprecated
 	deviceCreateInfo.pEnabledFeatures = &enabledFeatures10;
-	deviceCreateInfo.ppEnabledExtensionNames = device_extender.EnabledExtensions(); // deprecated`
+	deviceCreateInfo.ppEnabledExtensionNames = device_extender.EnabledExtensions();
+	deviceCreateInfo.enabledExtensionCount = device_extender.NumEnabledExtension();
+
+	VK_CALL(vkCreateDevice(gVKPhysicalDevice, &deviceCreateInfo, gVKGlobalAllocationsCallbacks, &gVKDevice));
+
+	LoadVkDeviceLevelFuncs(gVKDevice);
+
+	vkGetDeviceQueue(gVKDevice, 0, 0, &gVKGraphicsQueue);
+
+	// vk_utils::debug::SetName(gVKMainQueue, "Main Queue");
+
+	VmaAllocatorCreateInfo allocatorInfo = {};
+
 	allocatorInfo.physicalDevice = gVKPhysicalDevice;
 	allocatorInfo.device = gVKDevice;
 	allocatorInfo.instance = gVKInstance;
@@ -390,6 +452,59 @@ void Device::Initialize()
 	dp_create_info.poolSizeCount = sizeof(pool_sizes) / sizeof(pool_sizes[0]);
 
 	vkCreateDescriptorPool(gVKDevice, &dp_create_info, nullptr, &gVKGlobalDescriptorPool);
+
+	{
+		VkSamplerCreateInfo sampler_info = createDefaultSampler();
+		sampler_info.anisotropyEnable = VK_TRUE;
+		sampler_info.maxAnisotropy = 16.0f;
+		vkCreateSampler(gVKDevice, &sampler_info, gVKGlobalAllocationsCallbacks, &gVKDefaultAnisotropicSampler);
+	}
+
+	{
+		VkSamplerCreateInfo sampler_info = createDefaultSampler();
+		vkCreateSampler(gVKDevice, &sampler_info, gVKGlobalAllocationsCallbacks, &gVKDefaultTrilinearSampler);
+	}
+
+	{
+		VkSamplerCreateInfo sampler_info = createDefaultSampler();
+		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		vkCreateSampler(gVKDevice, &sampler_info, gVKGlobalAllocationsCallbacks, &gVKDefaultLinearSampler);
+	}
+
+	{
+		VkSamplerCreateInfo sampler_info = createDefaultSampler();
+		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		sampler_info.magFilter = VK_FILTER_NEAREST;
+		sampler_info.minFilter = VK_FILTER_NEAREST;
+		vkCreateSampler(gVKDevice, &sampler_info, gVKGlobalAllocationsCallbacks, &gVKDefaultNearestSampler);
+	}
+
+	gOneTimeSubmitContexts.resize(64);
+	for(int i=0;i<gOneTimeSubmitContexts.size();i++)
+	{
+		auto& context = gOneTimeSubmitContexts[i];
+
+		{
+			VkCommandPoolCreateInfo create_info = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+			create_info.queueFamilyIndex = 0; //todo			
+			vkCreateCommandPool(gVKDevice, &create_info, nullptr, reinterpret_cast<VkCommandPool*>(&context.commandPool));
+		}
+
+		{
+			VkCommandBufferAllocateInfo alloc_info = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+			alloc_info.commandPool = context.commandPool;
+			alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			alloc_info.commandBufferCount = 1;
+
+			vkAllocateCommandBuffers(gVKDevice, &alloc_info, &context.commandBuffer);
+		}
+
+		{
+			VkFenceCreateInfo fence_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+			fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+			vkCreateFence(gVKDevice, &fence_info, nullptr, &context.fence);
+		}
+	}
 }
 
 void Device::Shutdown()
@@ -872,11 +987,13 @@ void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, 
 	vmaFlushAllocation(gVMA_Allocator, meta.allocation, static_cast<VkDeviceSize>(offset), static_cast<VkDeviceSize>(size));
 }
 
-BufferHandle Device::CreateBuffer(size_t size)
+BufferHandle Device::CreateBuffer(const BufferDescriptor& desc)
 {
+	auto size = desc.size;
+
 	VkBufferCreateInfo bufCI{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 	bufCI.size = static_cast<VkDeviceSize>(size);
-	bufCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; // uniform buffer usage
+	bufCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // uniform buffer usage
 	bufCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	VmaAllocationCreateInfo allocCI{};
@@ -898,6 +1015,14 @@ BufferHandle Device::CreateBuffer(size_t size)
 	meta.allocation = allocation;
 	meta.size = size;
 	meta.persistentMappedPtr = allocInfo.pMappedData; // persistent map
+
+	if (desc.initialData != nullptr)
+	{
+		// Copy initial data into the buffer.
+		std::memcpy(meta.persistentMappedPtr, desc.initialData, size);
+		// Flush the written range (no-op if memory is HOST_COHERENT).
+		vmaFlushAllocation(gVMA_Allocator, meta.allocation, 0, static_cast<VkDeviceSize>(size));
+	}
 
 	gAllBuffers.push_back(vkBuf);
 	gAllBufferMetas.push_back(meta);
@@ -922,11 +1047,25 @@ ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLa
 	for (int s = 0; s < layoutDesc.allSlots.size(); ++s)
 	{
 		VkDescriptorSetLayoutBinding bindingDesc = {};
-		bindingDesc.binding = s;
-		bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //TODO: other types
-		bindingDesc.descriptorCount = 1;
-		bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
-		bindingDesc.pImmutableSamplers = nullptr;
+		const auto& slot = layoutDesc.allSlots[s];
+
+		if (slot.resourceType == ShaderResourceType::UniformBuffer)
+		{
+			bindingDesc.binding = s;
+			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //TODO: other types
+			bindingDesc.descriptorCount = 1;
+			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
+			bindingDesc.pImmutableSamplers = nullptr;
+		}
+
+		if (slot.resourceType == ShaderResourceType::SampledImage2D)
+		{
+			bindingDesc.binding = s;
+			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; //TODO: other types
+			bindingDesc.descriptorCount = 1;
+			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
+			bindingDesc.pImmutableSamplers = &gVKDefaultLinearSampler;
+		}
 
 		bindings.push_back(bindingDesc);
 	}
@@ -987,6 +1126,7 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
 	u32 slotIndex = 0;
 	writes.reserve(pbDesc.resources.size());
 	bufferInfos.reserve(pbDesc.resources.size());
+	imageInfos.reserve(pbDesc.resources.size());
 
 	for (const auto& res : pbDesc.resources)
 	{
@@ -1007,8 +1147,6 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
 					w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
 					w.dstBinding = slotIndex;
 					w.descriptorCount = 1;
-					// If you cached per-slot descriptor types when creating the layout, use that here.
-					// Without that metadata, default to UNIFORM_BUFFER for buffer resources:
 					w.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					w.pBufferInfo = &bufferInfos.back();
 
@@ -1016,10 +1154,21 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
 				}
 				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
 				{
-					// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
-					// imageInfos.push_back(imgInfo);
-					// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
-					// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+					VkDescriptorImageInfo ii{};
+					ii.imageView = gAllTextures[arg.texture.handle].imageView;
+					ii.sampler = VK_NULL_HANDLE;
+					ii.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					imageInfos.push_back(ii);
+
+					VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+					w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
+					w.dstBinding = slotIndex;
+					w.descriptorCount = 1;
+					w.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					w.pImageInfo = &imageInfos.back();
+
+					writes.push_back(w);
+
 					MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
 				}
 				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
@@ -1045,6 +1194,197 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
 void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
 {
 
+}
+
+TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
+{
+	TextureHandle result;
+	result.handle = static_cast<u32>(gAllTextures.size());
+
+	auto& texOut = gAllTextures.emplace_back();
+
+	VmaAllocationCreateInfo vmaAllocCI{};
+	vmaAllocCI.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	VkImageCreateInfo imageCI{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+	imageCI.imageType = VK_IMAGE_TYPE_2D;
+	imageCI.format = VK_FORMAT_R8G8B8A8_UNORM;
+	imageCI.extent.width = static_cast<u32>(desc.width);
+	imageCI.extent.height = static_cast<u32>(desc.height);
+	imageCI.extent.depth = 1;
+	imageCI.mipLevels = static_cast<u32>(desc.mipLevels);
+	imageCI.arrayLayers = 1;
+	imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VK_CALL(vmaCreateImage(gVMA_Allocator, &imageCI, &vmaAllocCI, &texOut.image, &texOut.allocation, &texOut.allocationInfo));
+
+	VkImageViewCreateInfo imageViewCI{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+
+	imageViewCI.format = VK_FORMAT_R8G8B8A8_UNORM;
+	imageViewCI.image = texOut.image;
+	imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewCI.subresourceRange.baseMipLevel = 0;
+	imageViewCI.subresourceRange.levelCount = static_cast<u32>(desc.mipLevels);
+	imageViewCI.subresourceRange.baseArrayLayer = 0;
+	imageViewCI.subresourceRange.layerCount = 1;
+
+	VK_CALL(vkCreateImageView(gVKDevice, &imageViewCI, gVKGlobalAllocationsCallbacks, &texOut.imageView));
+	
+	if (desc.initialData != nullptr)
+	{
+		BufferDescriptor stagingDesc{};
+		stagingDesc.size = desc.width * desc.height * 4; // TODO: calculate proper size based on format
+		stagingDesc.initialData = desc.initialData;
+
+		BufferHandle stagingBuffer = gDevice->CreateBuffer(stagingDesc);
+
+		gDevice->SubmitOneTimeCommandsList(
+			[=](CommandList& cmdList)
+			{
+				// Transition image layout to TRANSFER_DST_OPTIMAL
+				VkImageMemoryBarrier barrierToTransfer{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+				barrierToTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrierToTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrierToTransfer.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierToTransfer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierToTransfer.image = texOut.image;
+				barrierToTransfer.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrierToTransfer.subresourceRange.baseMipLevel = 0;
+				barrierToTransfer.subresourceRange.levelCount = static_cast<u32>(desc.mipLevels);
+				barrierToTransfer.subresourceRange.baseArrayLayer = 0;
+				barrierToTransfer.subresourceRange.layerCount = 1;
+				barrierToTransfer.srcAccessMask = 0;
+				barrierToTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				vkCmdPipelineBarrier(
+					static_cast<VkCommandBuffer>(cmdList.nativePtr),
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrierToTransfer);
+				// Copy buffer to image
+				VkBufferImageCopy copyRegion{};
+				copyRegion.bufferOffset = 0;
+				copyRegion.bufferRowLength = 0;
+				copyRegion.bufferImageHeight = 0;
+				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				copyRegion.imageSubresource.mipLevel = 0;
+				copyRegion.imageSubresource.baseArrayLayer = 0;
+				copyRegion.imageSubresource.layerCount = 1;
+				copyRegion.imageOffset = { 0, 0, 0 };
+				copyRegion.imageExtent = { static_cast<u32>(desc.width), static_cast<u32>(desc.height), 1 };
+
+				vkCmdCopyBufferToImage(
+					static_cast<VkCommandBuffer>(cmdList.nativePtr),
+					gAllBuffers[stagingBuffer.handle],
+					texOut.image,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1,
+					&copyRegion);
+
+				// Transition image layout to SHADER_READ_ONLY_OPTIMAL
+				VkImageMemoryBarrier barrierToShaderRead{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+				barrierToShaderRead.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrierToShaderRead.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrierToShaderRead.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierToShaderRead.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrierToShaderRead.image = texOut.image;
+				barrierToShaderRead.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrierToShaderRead.subresourceRange.baseMipLevel = 0;
+				barrierToShaderRead.subresourceRange.levelCount = static_cast<u32>(desc.mipLevels);
+				barrierToShaderRead.subresourceRange.baseArrayLayer = 0;
+				barrierToShaderRead.subresourceRange.layerCount = 1;
+				barrierToShaderRead.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrierToShaderRead.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				vkCmdPipelineBarrier(
+					static_cast<VkCommandBuffer>(cmdList.nativePtr),
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrierToShaderRead);
+			});
+	}
+
+	return result;
+}
+
+void Device::DestroyTexture(TextureHandle textureID)
+{
+
+}
+
+void Device::UpdateTexture(TextureHandle textureID, const void* data, size_t size, size_t offset)
+{
+	//TODO: Implement texture update
+}
+
+void Device::UpdateSubregionTexture(
+	TextureHandle textureID,
+	size_t x,
+	size_t y,
+	size_t z,
+	size_t width,
+	size_t height,
+	size_t depth,
+	const void* data,
+	size_t dataSize)
+{
+	//TODO: Implement subregion texture update
+}
+
+u64 TextureHandle::CreateImguiTextureOpaqueHandle() const
+{
+	const auto& tex_data = &gAllTextures[handle];
+	VkDescriptorSet ds = ImGui_ImplVulkan_AddTexture(gVKDefaultLinearSampler, tex_data->imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	return (u64)(intptr_t)ds;
+}
+
+void Device::SubmitOneTimeCommandsList(std::function<void(CommandList& cmdList)> recordCommands, std::function<void()> onFinish)
+{
+	//get ready one time submit commands
+	while (true)
+	{
+		for (int i = 0; i < gOneTimeSubmitContexts.size(); i++)
+		{
+			auto& cc = gOneTimeSubmitContexts[i];
+			if (vkGetFenceStatus(gVKDevice, cc.fence) == VK_SUCCESS)
+			{
+				if (cc.inUse)
+				{
+					if (cc.onFinish)
+						cc.onFinish();
+				}
+
+				cc.inUse = true;
+
+				vkResetCommandPool(gVKDevice, cc.commandPool, 0);
+				VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				vkBeginCommandBuffer(cc.commandBuffer, &beginInfo);
+				CommandList cmdList;
+				cmdList.nativePtr = cc.commandBuffer;
+				recordCommands(cmdList);
+				vkEndCommandBuffer(cc.commandBuffer);
+				VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &cc.commandBuffer;
+				vkResetFences(gVKDevice, 1, &cc.fence);
+				vkQueueSubmit(gVKGraphicsQueue, 1, &submitInfo, cc.fence);
+				cc.onFinish = onFinish;
+				return;
+			}
+		}
+
+		ll::os::gOS->Sleep(1);
+	}
 }
 
 #endif

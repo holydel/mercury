@@ -12,6 +12,7 @@ export module Project;
 import Asset;
 import ShellOS;
 import EditorOptions;
+import AssetsLoadersRegistry;
 
 export class Project {
 	std::filesystem::path rootPath;
@@ -221,10 +222,17 @@ public:
 	{
 		auto onFile = [](FolderAsset* folder, const std::filesystem::directory_entry& entry)
 			{
-				auto* fileAsset = new FileAsset();
+				auto* fileAsset = AssetsLoadersRegistry::GetInstance().LoadAssetFromFile(entry.path());
+
+				if (fileAsset == nullptr)
+				{
+					fileAsset = new FileAsset();
+				}
+
 				fileAsset->path = entry.path();
 				fileAsset->size = std::filesystem::file_size(entry.path());
 				fileAsset->ResolveAssetName();
+
 				folder->assets.push_back(fileAsset);
 			};
 

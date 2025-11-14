@@ -15,6 +15,7 @@ import EditorOptions;
 import ImguiState;
 import ShaderCompiler;
 import PropertyWindow;
+import AssetsLoadersRegistry;
 
 using namespace mercury;
 
@@ -51,6 +52,7 @@ public:
 EditorApplication gEditor;
 
 void EditorApplication::Initialize() {
+    AssetsLoadersRegistry::GetInstance().Initialize();
     EditorState::gCurrentProject.LoadFromFolder(u8"D:\\Projects\\mercury\\testbed_project");
 
 

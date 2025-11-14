@@ -2,7 +2,7 @@ module dedicated_sprite;
 
 import mercury_base;
 
-[[vk::binding(0, 2)]]
+[[vk::binding(0, 1)]]
 Sampler2D textureMap;
 
 [shader("vertex")]
