@@ -1,5 +1,7 @@
 module mercury_base;
 
+public static const uint32_t MERCURY_BASE_BINDING_SET = 0;
+
 public struct MercuryScene
 {
     public float4 prerptationMatrix;

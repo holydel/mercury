@@ -2,11 +2,14 @@ module dedicated_sprite;
 
 import mercury_base;
 
+[[vk::binding(0, 0)]]
+ParameterBlock<MercuryScene> perFrame : register(b0, space0);
+
 [[vk::binding(0, 1)]]
-Sampler2D textureMap;
+Sampler2D textureMap : register(t0, space2) : register(s0, space2);
 
 [shader("vertex")]
-BaseVertexOutput DedicatedSpriteVS(uniform ParameterBlock<MercuryScene> perFrame, uniform DedicatedSpriteParameters perObject, uint vertexID: SV_VertexID)
+BaseVertexOutput DedicatedSpriteVS(uniform DedicatedSpriteParameters perObject, uint vertexID: SV_VertexID)
 {
     BaseVertexOutput output;
 

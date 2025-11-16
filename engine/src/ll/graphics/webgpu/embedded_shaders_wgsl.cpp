@@ -6,7 +6,16 @@ namespace mercury::ll::graphics::embedded_shaders {
 
 mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteVS()
 {
-	static const char data[] = R"(struct DedicatedSpriteParameters_std140_0
+	static const char data[] = R"(struct MercuryScene_std140_0
+{
+    @align(16) prerptationMatrix_0 : vec4<f32>,
+    @align(16) canvasSize_0 : vec4<f32>,
+    @align(16) time_0 : f32,
+    @align(4) deltaTime_0 : f32,
+};
+
+@binding(0) @group(0) var<uniform> perFrame_0 : MercuryScene_std140_0;
+struct DedicatedSpriteParameters_std140_0
 {
     @align(16) position_0 : vec2<f32>,
     @align(8) size_0 : vec2<f32>,
@@ -21,15 +30,6 @@ struct EntryPointParams_std140_0
 };
 
 @binding(0) @group(0) var<uniform> entryPointParams_0 : EntryPointParams_std140_0;
-struct MercuryScene_std140_0
-{
-    @align(16) prerptationMatrix_0 : vec4<f32>,
-    @align(16) canvasSize_0 : vec4<f32>,
-    @align(16) time_0 : f32,
-    @align(4) deltaTime_0 : f32,
-};
-
-@binding(0) @group(2) var<uniform> entryPointParams_perFrame_0 : MercuryScene_std140_0;
 struct PackedColor_0
 {
      packed_0 : u32,
@@ -68,7 +68,7 @@ fn main(@builtin(vertex_index) vertexID_0 : u32) -> BaseVertexOutput_0
     var cosAngle_0 : f32 = cos(entryPointParams_0.perObject_0.angle_0);
     var sinAngle_0 : f32 = sin(entryPointParams_0.perObject_0.angle_0);
     var output_0 : BaseVertexOutput_0;
-    output_0.position_1 = vec4<f32>(((((positions_ndc_0[vertexID_0] * entryPointParams_0.perObject_0.size_0) * (mat2x2<f32>(cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + entryPointParams_0.perObject_0.position_0) * entryPointParams_perFrame_0.canvasSize_0.zw - vec2<f32>(1.0f, f32((i32(sign((entryPointParams_perFrame_0.canvasSize_0.w)))))), 0.0f, 1.0f);
+    output_0.position_1 = vec4<f32>(((((positions_ndc_0[vertexID_0] * entryPointParams_0.perObject_0.size_0) * (mat2x2<f32>(cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + entryPointParams_0.perObject_0.position_0) * perFrame_0.canvasSize_0.zw - vec2<f32>(1.0f, f32((i32(sign((perFrame_0.canvasSize_0.w)))))), 0.0f, 1.0f);
     output_0.texcoord_0 = uvs_1[vertexID_0];
     output_0.color_1 = PackedColor_toFloat4_0(PackedColor_x24init_0(entryPointParams_0.perObject_0.colorPacked_0));
     return output_0;

@@ -11,23 +11,23 @@ mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteVS()
 #include <metal_texture>
 using namespace metal;
 
-#line 12 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
+#line 14 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
 struct PackedColor_0
 {
     uint packed_0;
 };
 
 
-#line 12
+#line 14
 PackedColor_0 PackedColor_x24init_0(uint packed_1)
 {
 
-#line 12
+#line 14
     thread PackedColor_0 _S1;
 
     (&_S1)->packed_0 = packed_1;
 
-#line 12
+#line 14
     return _S1;
 }
 
@@ -50,7 +50,17 @@ struct BaseVertexOutput_0
 };
 
 
-#line 39
+#line 5
+struct MercuryScene_0
+{
+    float4 prerptationMatrix_0;
+    float4 canvasSize_0;
+    float time_0;
+    float deltaTime_0;
+};
+
+
+#line 41
 struct DedicatedSpriteParameters_0
 {
     float2 position_1;
@@ -61,39 +71,29 @@ struct DedicatedSpriteParameters_0
 };
 
 
-#line 39
+#line 41
 struct EntryPointParams_0
 {
     DedicatedSpriteParameters_0 perObject_0;
 };
 
 
-#line 3
-struct MercuryScene_0
-{
-    float4 prerptationMatrix_0;
-    float4 canvasSize_0;
-    float time_0;
-    float deltaTime_0;
-};
-
-
-#line 9 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
+#line 41
 struct KernelContext_0
 {
+    MercuryScene_0 constant* perFrame_0;
     EntryPointParams_0 constant* entryPointParams_0;
-    MercuryScene_0 constant* entryPointParams_perFrame_0;
 };
 
 
-#line 9
+#line 12 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
 BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelContext_0 thread* kernelContext_0)
 {
 
 
     float2 _S2 = float2(1.0, 1.0);
 
-#line 13
+#line 16
     array<float2, int(4)> positions_ndc_0 = { float2(-1.0, 1.0), _S2, float2(-1.0, -1.0), float2(1.0, -1.0) };
     array<float2, int(4)> uvs_1 = { float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0), _S2 };
 
@@ -102,19 +102,19 @@ BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelCont
     float cosAngle_0 = cos(kernelContext_0->entryPointParams_0->perObject_0.angle_0);
     float sinAngle_0 = sin(kernelContext_0->entryPointParams_0->perObject_0.angle_0);
 
-#line 11
+#line 14
     thread BaseVertexOutput_0 output_0;
 
-#line 26
-    (&output_0)->position_0 = float4(((((positions_ndc_0[*vertexID_0] * kernelContext_0->entryPointParams_0->perObject_0.size_0) * (matrix<float,int(2),int(2)> (cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + kernelContext_0->entryPointParams_0->perObject_0.position_1) * kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.zw - float2(1.0, float((int(sign((kernelContext_0->entryPointParams_perFrame_0->canvasSize_0.w)))))), 0.0, 1.0);
+#line 29
+    (&output_0)->position_0 = float4(((((positions_ndc_0[*vertexID_0] * kernelContext_0->entryPointParams_0->perObject_0.size_0) * (matrix<float,int(2),int(2)> (cosAngle_0, - sinAngle_0, sinAngle_0, cosAngle_0)))) + kernelContext_0->entryPointParams_0->perObject_0.position_1) * kernelContext_0->perFrame_0->canvasSize_0.zw - float2(1.0, float((int(sign((kernelContext_0->perFrame_0->canvasSize_0.w)))))), 0.0, 1.0);
 
 
     (&output_0)->texcoord_0 = uvs_1[*vertexID_0];
 
-#line 29
+#line 32
     thread PackedColor_0 _S3 = PackedColor_x24init_0(kernelContext_0->entryPointParams_0->perObject_0.colorPacked_0);
 
-#line 29
+#line 32
     float4 _S4 = PackedColor_toFloat4_0(&_S3);
     (&output_0)->color_1 = _S4;
 
@@ -122,7 +122,7 @@ BaseVertexOutput_0 DedicatedSpriteVS_0(const uint thread* vertexID_0, KernelCont
 }
 
 
-#line 32
+#line 35
 struct DedicatedSpriteVS_Result_0
 {
     float4 position_2 [[position]];
@@ -131,32 +131,35 @@ struct DedicatedSpriteVS_Result_0
 };
 
 
-#line 32
-[[vertex]] DedicatedSpriteVS_Result_0 DedicatedSpriteVS(uint vertexID_1 [[vertex_id]])
+#line 35
+[[vertex]] DedicatedSpriteVS_Result_0 DedicatedSpriteVS(uint vertexID_1 [[vertex_id]], MercuryScene_0 constant* perFrame_1 [[buffer(0)]])
 {
 
-#line 32
-    thread uint _S5 = vertexID_1;
-
-#line 32
+#line 35
     thread KernelContext_0 kernelContext_1;
 
-#line 32
+#line 35
+    (&kernelContext_1)->perFrame_0 = perFrame_1;
+
+#line 35
+    thread uint _S5 = vertexID_1;
+
+#line 35
     BaseVertexOutput_0 _S6 = DedicatedSpriteVS_0(&_S5, &kernelContext_1);
 
-#line 32
+#line 35
     thread DedicatedSpriteVS_Result_0 _S7;
 
-#line 32
+#line 35
     (&_S7)->position_2 = _S6.position_0;
 
-#line 32
+#line 35
     (&_S7)->texcoord_1 = _S6.texcoord_0;
 
-#line 32
+#line 35
     (&_S7)->color_2 = _S6.color_1;
 
-#line 32
+#line 35
     return _S7;
 }
 
@@ -171,14 +174,14 @@ mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteColorPS()
 #include <metal_texture>
 using namespace metal;
 
-#line 3 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
+#line 5 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
 struct pixelOutput_0
 {
     float4 output_0 [[color(0)]];
 };
 
 
-#line 26
+#line 28
 struct pixelInput_0
 {
     float2 texcoord_0 [[user(TEXCOORD)]];
@@ -186,11 +189,11 @@ struct pixelInput_0
 };
 
 
-#line 36 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
+#line 39 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
 [[fragment]] pixelOutput_0 DedicatedSpriteColorPS(pixelInput_0 _S1 [[stage_in]], float4 position_0 [[position]])
 {
 
-#line 36
+#line 39
     pixelOutput_0 _S2 = { _S1.color_0 };
 
     return _S2;
@@ -230,25 +233,25 @@ struct KernelContext_0
 };
 
 
-#line 42 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
+#line 45 "D:/Projects/mercury/engine/shaders/dedicated_sprite.slang"
 [[fragment]] pixelOutput_0 DedicatedSpritePS(pixelInput_0 _S1 [[stage_in]], float4 position_0 [[position]], texture2d<float, access::sample> textureMap_texture_1 [[texture(0)]], sampler textureMap_sampler_1 [[sampler(0)]])
 {
 
-#line 42
+#line 45
     thread KernelContext_0 kernelContext_0;
 
-#line 42
+#line 45
     (&kernelContext_0)->textureMap_texture_0 = textureMap_texture_1;
 
-#line 42
+#line 45
     (&kernelContext_0)->textureMap_sampler_0 = textureMap_sampler_1;
 
     ;
 
-#line 44
+#line 47
     pixelOutput_0 _S2 = { _S1.color_0 * (((&kernelContext_0)->textureMap_texture_0).sample(((&kernelContext_0)->textureMap_sampler_0), (_S1.texcoord_0))) };
 
-#line 44
+#line 47
     return _S2;
 }
 
@@ -263,7 +266,7 @@ mercury::ll::graphics::ShaderBytecodeView TestTriangleVS()
 #include <metal_texture>
 using namespace metal;
 
-#line 33 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
+#line 35 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
 struct TestTriangleVS_Result_0
 {
     float4 position_0 [[position]];
@@ -271,7 +274,7 @@ struct TestTriangleVS_Result_0
 };
 
 
-#line 33
+#line 35
 struct BaseVertexOutputColorOnly_0
 {
     float4 position_1;
@@ -279,7 +282,7 @@ struct BaseVertexOutputColorOnly_0
 };
 
 
-#line 33
+#line 35
 [[vertex]] TestTriangleVS_Result_0 TestTriangleVS(uint vertexID_0 [[vertex_id]])
 {
 
@@ -318,7 +321,7 @@ mercury::ll::graphics::ShaderBytecodeView TestTriangleRotatedVS()
 #include <metal_texture>
 using namespace metal;
 
-#line 33 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
+#line 35 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
 struct BaseVertexOutputColorOnly_0
 {
     float4 position_0;
@@ -420,14 +423,14 @@ mercury::ll::graphics::ShaderBytecodeView TestTrianglePS()
 #include <metal_texture>
 using namespace metal;
 
-#line 3 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
+#line 5 "D:/Projects/mercury/engine/shaders/mercury_base.slang"
 struct pixelOutput_0
 {
     float4 output_0 [[color(0)]];
 };
 
 
-#line 3
+#line 5
 struct pixelInput_0
 {
     float4 color_0 [[user(COLOR)]];

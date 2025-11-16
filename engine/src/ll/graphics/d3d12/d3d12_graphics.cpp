@@ -45,6 +45,7 @@ ID3D12CommandAllocator* gD3DCommandAllocator = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapRTV = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapDSV = nullptr;
 ID3D12DescriptorHeap* gImgui_pd3dSrvDescHeap = nullptr;
+ID3D12DescriptorHeap* gDescriptorsHeapSRV = nullptr;
 
 D3D12MA::Allocator* gAllocator = nullptr;
 DXGI_FORMAT gD3DSwapChainFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -58,6 +59,16 @@ std::vector<ID3D12Resource*> gAllBuffers;
 std::vector<BufferInfo> gAllBuffersMeta;
 
 std::vector<ParameterBlockDescriptor> gAllParameterBlocks;
+
+struct TextureInfo
+{
+	ID3D12Resource* resource = nullptr;
+	D3D12MA::Allocation* allocation = nullptr;
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = {};
+	D3D12_GPU_DESCRIPTOR_HANDLE srvGpuHandle = {};
+};
+
+std::vector<TextureInfo> gAllTextures;
 
 Device* gDevice = nullptr;
 Instance* gInstance = nullptr;
@@ -232,6 +243,14 @@ void Device::Initialize()
 		gDescriptorsHeapDSV->SetName(L"DSV Heap");
 	}
 
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+		desc.NumDescriptors = 1024;
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		D3D_CALL(gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gDescriptorsHeapSRV)));
+		gDescriptorsHeapSRV->SetName(L"SRV Heap");
+	}
 	// Initialize D3D12 Memory Allocator
 	D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 	allocatorDesc.pDevice = gD3DDevice;
@@ -254,6 +273,9 @@ void Device::Initialize()
 void Device::Shutdown()
 {
 	MLOG_DEBUG(u8"Shutdown Device (D3D12)");
+
+	if (gDescriptorsHeapSRV) gDescriptorsHeapSRV->Release();
+	gDescriptorsHeapSRV = nullptr;
 }
 
 void Device::Tick()
@@ -790,9 +812,6 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 
 	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
 	
-	
-	// Get the vertex shader bytecode first
-	// Get the vertex shader bytecode first
 	if (desc.vertexShader.isValid())
 	{
 		auto& vsBytecode = gAllShaders[desc.vertexShader.handle];
@@ -888,7 +907,101 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 		}
 	}
 
-	
+	if (desc.fragmentShader.isValid())
+	{
+		auto& fsBytecode = gAllShaders[desc.fragmentShader.handle];
+
+		// Validate bytecode before reflection
+		if (fsBytecode.pShaderBytecode == nullptr || fsBytecode.BytecodeLength == 0)
+		{
+			MLOG_ERROR(u8"Vertex shader bytecode is null or empty!");
+		}
+		else
+		{
+			MLOG_DEBUG(u8"Reflecting DXIL vertex shader: %zu bytes at %p",
+				fsBytecode.BytecodeLength, fsBytecode.pShaderBytecode);
+
+			ComPtr<IDxcUtils> dxcUtils;
+			HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+
+			if (SUCCEEDED(hr))
+			{
+				// Create a blob wrapper around the shader bytecode
+				ComPtr<IDxcBlobEncoding> shaderBlob;
+				hr = dxcUtils->CreateBlob(
+					fsBytecode.pShaderBytecode,
+					static_cast<UINT32>(fsBytecode.BytecodeLength),
+					CP_ACP,
+					&shaderBlob
+				);
+
+				if (SUCCEEDED(hr))
+				{
+					ComPtr<IDxcContainerReflection> containerReflection;
+					hr = DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection));
+
+					if (SUCCEEDED(hr))
+					{
+						hr = containerReflection->Load(shaderBlob.Get());
+
+						if (SUCCEEDED(hr))
+						{
+							UINT32 partIndex;
+							hr = containerReflection->FindFirstPartKind(DXC_PART_DXIL, &partIndex);
+
+							if (SUCCEEDED(hr))
+							{
+								ComPtr<ID3D12ShaderReflection> reflection;
+								hr = containerReflection->GetPartReflection(partIndex, IID_PPV_ARGS(&reflection));
+
+								if (SUCCEEDED(hr))
+								{
+									D3D12_SHADER_DESC shaderDesc;
+									reflection->GetDesc(&shaderDesc);
+
+									MLOG_DEBUG(u8"DXIL Fragment Shader has %u bound resources:", shaderDesc.BoundResources);
+
+									for (UINT i = 0; i < shaderDesc.BoundResources; ++i)
+									{
+										D3D12_SHADER_INPUT_BIND_DESC bindDesc;
+										reflection->GetResourceBindingDesc(i, &bindDesc);
+
+										MLOG_DEBUG(u8"  Resource '%s': Type=%d, BindPoint=%u, Space=%u, BindCount=%u",
+											bindDesc.Name,
+											bindDesc.Type,
+											bindDesc.BindPoint,
+											bindDesc.Space,
+											bindDesc.BindCount);
+									}
+								}
+								else
+								{
+									MLOG_ERROR(u8"Failed to get part reflection: 0x%08X", hr);
+								}
+							}
+							else
+							{
+								MLOG_ERROR(u8"Failed to find DXIL part: 0x%08X", hr);
+							}
+						}
+						else
+						{
+							MLOG_ERROR(u8"Failed to load container reflection: 0x%08X", hr);
+						}
+					}
+				}
+				else
+				{
+					MLOG_ERROR(u8"Failed to create DXC blob: 0x%08X", hr);
+				}
+			}
+			else
+			{
+				MLOG_ERROR(u8"Failed to create DxcUtils: 0x%08X", hr);
+			}
+		}
+	}
+
 	if (desc.pushConstantSize > 0)
 	{
 		CD3DX12_ROOT_PARAMETER rootParam;
@@ -897,6 +1010,8 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 
 		pso.rootParameterRootConstantIndex = 0;
 	}
+
+	std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers;
 
 	for (int i = 0; i < 3; ++i)
 	{
@@ -908,15 +1023,57 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 		{
 			const auto& slot = bs_layout.allSlots[j];
 
-			CD3DX12_ROOT_PARAMETER rootParam;
-			rootParam.InitAsConstantBufferView(j, i + (desc.pushConstantSize > 0), D3D12_SHADER_VISIBILITY_ALL);
-			rootParameters.push_back(rootParam);
+			if (slot.resourceType == ShaderResourceType::UniformBuffer)
+			{
+				CD3DX12_ROOT_PARAMETER rootParam;
+				rootParam.InitAsConstantBufferView(j, i + (desc.pushConstantSize > 0), D3D12_SHADER_VISIBILITY_ALL);
+				rootParameters.push_back(rootParam);
+			}
+
+			if (slot.resourceType == ShaderResourceType::SampledImage2D)
+			{
+				CD3DX12_DESCRIPTOR_RANGE srvRange;
+				srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, j, i + (desc.pushConstantSize > 0));
+				CD3DX12_ROOT_PARAMETER rootParam;
+				rootParam.InitAsDescriptorTable(1, &srvRange);
+				rootParameters.push_back(rootParam);
+			}
 		}
 	}
 
+	// Add static sampler if any textures are present
+	bool hasTextures = false;
+	for (int i = 0; i < 3; ++i)
+	{
+		for (const auto& slot : desc.bindingSetLayouts[i].allSlots)
+		{
+			if (slot.resourceType == ShaderResourceType::SampledImage2D)
+			{
+				hasTextures = true;
+				break;
+			}
+		}
+		if (hasTextures) break;
+	}
+	if (hasTextures)
+	{
+		auto& sdesc = staticSamplers.emplace_back();
+		sdesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sdesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sdesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sdesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sdesc.MipLODBias = 0.0f;
+		sdesc.MaxAnisotropy = 1;
+		sdesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		sdesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+		sdesc.MinLOD = 0.0f;
+		sdesc.MaxLOD = D3D12_FLOAT32_MAX;
+		sdesc.ShaderRegister = 0; // s0
+		sdesc.RegisterSpace = 2;
+		sdesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	}
 
-
-	rootSignatureDesc.Init(rootParameters.size(), rootParameters.data(), 0, nullptr, rootSignatureFlags);
+	rootSignatureDesc.Init(static_cast<UINT>(rootParameters.size()), rootParameters.data(), staticSamplers.size(), staticSamplers.data(), rootSignatureFlags);
 
 	ID3DBlob* signature = nullptr;
 	ID3DBlob* error = nullptr;
@@ -1047,12 +1204,12 @@ void CommandList::PushConstants(const void* data, size_t size)
 	cmdListD3D12->SetGraphicsRoot32BitConstants(gAllPSOs[currentPsoID.handle].rootParameterRootConstantIndex, static_cast<UINT>(size / 4), data, 0);
 }
 
-BufferHandle Device::CreateBuffer(size_t size)
+BufferHandle Device::CreateBuffer(const BufferDescriptor& desc)
 {
 	BufferHandle result;
 	result.handle = static_cast<u32>(gAllBuffers.size());
 
-	size = mercury::utils::math::alignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	auto size = mercury::utils::math::alignUp(desc.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 	// Validate allocator is initialized
 	if (!gAllocator)
@@ -1098,7 +1255,7 @@ BufferHandle Device::CreateBuffer(size_t size)
 	HRESULT hr = gAllocator->CreateResource(
 		&allocDesc,
 		&bufferDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_COPY_SOURCE,
 		nullptr,
 		&bufferInfo.allocation,
 		IID_PPV_ARGS(&bufferResource)
@@ -1113,6 +1270,15 @@ BufferHandle Device::CreateBuffer(size_t size)
 		return result;
 	}
 
+	if (desc.initialData)
+	{
+		void* mappedData = nullptr;
+		D3D12_RANGE readRange = { 0, 0 };
+		hr = bufferResource->Map(0, &readRange, &mappedData);
+		memcpy(mappedData, desc.initialData, desc.size);
+		D3D12_RANGE writtenRange = { 0, desc.size };
+		bufferResource->Unmap(0, &writtenRange);
+	}
 
 	MLOG_DEBUG(u8"Created D3D12 buffer: handle=%u, size=%zu bytes", result.handle, size);
 
@@ -1243,6 +1409,21 @@ void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterB
 	const auto& pbDesc = gAllParameterBlocks[parameterBlockID.handle];
 	int slotStartIndex = gAllPSOs[currentPsoID.handle].setOffsets[setIndex];
 
+	// Set descriptor heap if there are textures
+	bool hasTextures = false;
+	for (const auto& res : pbDesc.resources)
+	{
+		if (std::holds_alternative<ParameterResourceTexture>(res))
+		{
+			hasTextures = true;
+			break;
+		}
+	}
+	if (hasTextures)
+	{
+		cmdListD3D12->SetDescriptorHeaps(1, &gDescriptorsHeapSRV);
+	}
+
 	for (const auto& res : pbDesc.resources)
 	{
 		std::visit([&](auto&& arg)
@@ -1255,11 +1436,7 @@ void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterB
 				}
 				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
 				{
-					// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
-					// imageInfos.push_back(imgInfo);
-					// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
-					// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
-					MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
+					cmdListD3D12->SetGraphicsRootDescriptorTable(slotStartIndex + slotIndex, gAllTextures[arg.texture.handle].srvGpuHandle);
 				}
 				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
 				{
@@ -1348,6 +1525,186 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
 	//	vkUpdateDescriptorSets(gVKDevice, static_cast<u32>(writes.size()), writes.data(), 0, nullptr);
 	//}
 }
+
+TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
+{
+	TextureInfo texInfo = {};
+
+	D3D12_RESOURCE_DESC textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	textureDesc.Alignment = 0;
+	textureDesc.Width = desc.width;
+	textureDesc.Height = desc.height;
+	textureDesc.DepthOrArraySize = desc.depth;
+	textureDesc.MipLevels = desc.mipLevels;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
+
+	HRESULT hr = gAllocator->CreateResource(
+		&allocDesc,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		&texInfo.allocation,
+		IID_PPV_ARGS(&texInfo.resource)
+	);
+
+	if (desc.initialData)
+	{
+		// Calculate data size (assuming RGBA8)
+		size_t dataSize = desc.width * desc.height * 4;
+
+		// Create staging buffer
+		D3D12_RESOURCE_DESC stagingDesc = {};
+		stagingDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		stagingDesc.Alignment = 0;
+		stagingDesc.Width = dataSize;
+		stagingDesc.Height = 1;
+		stagingDesc.DepthOrArraySize = 1;
+		stagingDesc.MipLevels = 1;
+		stagingDesc.Format = DXGI_FORMAT_UNKNOWN;
+		stagingDesc.SampleDesc.Count = 1;
+		stagingDesc.SampleDesc.Quality = 0;
+		stagingDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		stagingDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+		D3D12MA::ALLOCATION_DESC stagingAllocDesc = {};
+		stagingAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+		stagingAllocDesc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+
+		D3D12MA::Allocation* stagingAllocation = nullptr;
+		ID3D12Resource* stagingBuffer = nullptr;
+		HRESULT hr = gAllocator->CreateResource(
+			&stagingAllocDesc,
+			&stagingDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			&stagingAllocation,
+			IID_PPV_ARGS(&stagingBuffer)
+		);
+		if (FAILED(hr))
+		{
+			MLOG_ERROR(u8"Failed to create staging buffer for texture upload: HRESULT=0x%08X", hr);
+		}
+		else
+		{
+			// Map and copy data
+			void* mappedData = nullptr;
+			D3D12_RANGE readRange = { 0, 0 };
+			hr = stagingBuffer->Map(0, &readRange, &mappedData);
+			if (SUCCEEDED(hr))
+			{
+				memcpy(mappedData, desc.initialData, dataSize);
+				D3D12_RANGE writtenRange = { 0, dataSize };
+				stagingBuffer->Unmap(0, &writtenRange);
+
+				// Create temporary command list for copy
+				ID3D12CommandAllocator* tempAllocator = nullptr;
+				ID3D12GraphicsCommandList* tempCmdList = nullptr;
+				hr = gD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&tempAllocator));
+				if (SUCCEEDED(hr))
+				{
+					hr = gD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, tempAllocator, nullptr, IID_PPV_ARGS(&tempCmdList));
+					if (SUCCEEDED(hr))
+					{
+						tempCmdList->Close(); // Reset to open
+						tempCmdList->Reset(tempAllocator, nullptr);
+
+						// Transition texture to copy dest
+						D3D12_RESOURCE_BARRIER barrier = {};
+						barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+						barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+						barrier.Transition.pResource = texInfo.resource;
+						barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+						barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+						barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+						tempCmdList->ResourceBarrier(1, &barrier);
+
+						// Copy buffer to texture
+						D3D12_TEXTURE_COPY_LOCATION src = {};
+						src.pResource = stagingBuffer;
+						src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+						src.PlacedFootprint.Offset = 0;
+						src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+						src.PlacedFootprint.Footprint.Width = desc.width;
+						src.PlacedFootprint.Footprint.Height = desc.height;
+						src.PlacedFootprint.Footprint.Depth = 1;
+						src.PlacedFootprint.Footprint.RowPitch = desc.width * 4;
+
+						D3D12_TEXTURE_COPY_LOCATION dst = {};
+						dst.pResource = texInfo.resource;
+						dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+						dst.SubresourceIndex = 0;
+
+						tempCmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+						// Transition back to generic read
+						barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+						barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+						tempCmdList->ResourceBarrier(1, &barrier);
+
+						// Close and execute
+						tempCmdList->Close();
+						ID3D12CommandList* cmdLists[] = { tempCmdList };
+						gD3DCommandQueue->ExecuteCommandLists(1, cmdLists);
+
+						// Wait for completion
+						ID3D12Fence* tempFence = nullptr;
+						gD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&tempFence));
+						gD3DCommandQueue->Signal(tempFence, 1);
+						if (tempFence->GetCompletedValue() < 1)
+						{
+							HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
+							tempFence->SetEventOnCompletion(1, event);
+							WaitForSingleObject(event, INFINITE);
+							CloseHandle(event);
+						}
+						tempFence->Release();
+
+						tempCmdList->Release();
+					}
+					tempAllocator->Release();
+				}
+			}
+			stagingBuffer->Release();
+			stagingAllocation->Release();
+		}
+	}
+
+	auto srvIncrement = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	auto srvCpuHandle = gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart();
+	srvCpuHandle.ptr += gAllTextures.size() * srvIncrement;
+	auto srvGpuHandle = gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart();
+	srvGpuHandle.ptr += gAllTextures.size() * srvIncrement;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Texture2D.MipLevels = desc.mipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+	gD3DDevice->CreateShaderResourceView(texInfo.resource, &srvDesc, srvCpuHandle);
+
+	texInfo.srvHandle = srvCpuHandle;
+	texInfo.srvGpuHandle = srvGpuHandle;
+
+	gAllTextures.push_back(texInfo);
+
+	TextureHandle result;
+	result.handle = static_cast<u32>(gAllTextures.size() - 1);
+	return result;
+}
+
 
 void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
 {
