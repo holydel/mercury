@@ -125,7 +125,7 @@ FileAsset* AssetLoaderImageOpenImageIO::LoadAssetDataFromFile(const std::filesys
 	asset->numLayers = 1;
 	asset->numMipLevels = 1;
 
-	asset->imageData = new u8[xres * yres * zres * nchannels * asset->channelSizeBytes];
+	asset->imageData = new u8[xres * yres * zres * 4 * asset->channelSizeBytes];
 
 	inp->read_image(0, 0, 0, -1, spec.format, asset->imageData);
 

@@ -44,7 +44,6 @@ ID3D12CommandQueue* gD3DCommandQueue = nullptr;
 ID3D12CommandAllocator* gD3DCommandAllocator = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapRTV = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapDSV = nullptr;
-ID3D12DescriptorHeap* gImgui_pd3dSrvDescHeap = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapSRV = nullptr;
 
 D3D12MA::Allocator* gAllocator = nullptr;
@@ -245,7 +244,7 @@ void Device::Initialize()
 
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.NumDescriptors = 1024;
+		desc.NumDescriptors = 4096;
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		D3D_CALL(gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gDescriptorsHeapSRV)));
@@ -294,23 +293,42 @@ void Device::InitializeSwapchain()
 	gSwapchain->Initialize();
 }
 
+static UINT currentSRVOffset = 0;
+
+void AllocateSrvDescriptor(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
+{
+	static UINT descriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	*out_cpu_desc_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		info->SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+		currentSRVOffset,
+		descriptorSize);
+	*out_gpu_desc_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+		info->SrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart(),
+		currentSRVOffset,
+		descriptorSize);
+	currentSRVOffset++;
+}
+
+void FreeSrvDescriptor(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_desc_handle)
+{
+	// No-op for now
+}
+
 void Device::ImguiInitialize()
 {
-	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	desc.NumDescriptors = 4096;
-	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gImgui_pd3dSrvDescHeap));
+
 
 	ImGui_ImplDX12_InitInfo init_info = {};
 	init_info.CommandQueue = gD3DCommandQueue;
 	init_info.Device = gD3DDevice;
-	init_info.SrvDescriptorHeap = gImgui_pd3dSrvDescHeap;
+	init_info.SrvDescriptorHeap = gDescriptorsHeapSRV;
 	init_info.NumFramesInFlight = 3;
 	init_info.RTVFormat = gD3DSwapChainFormat;
-	init_info.LegacySingleSrvCpuDescriptor = gImgui_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart();
-	init_info.LegacySingleSrvGpuDescriptor = gImgui_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart();
-	
+
+	init_info.SrvDescriptorAllocFn = &AllocateSrvDescriptor;
+	init_info.SrvDescriptorFreeFn = &FreeSrvDescriptor;
+	//init_info.SrvDescriptorAllocFn
 	ImGui_ImplDX12_Init(&init_info);
 
 	ImGui_ImplDX12_CreateDeviceObjects();
@@ -689,7 +707,7 @@ void CommandPool::Reset()
 void CommandList::RenderImgui()
 {
 	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	cmdListD3D12->SetDescriptorHeaps(1, &gImgui_pd3dSrvDescHeap);
+	cmdListD3D12->SetDescriptorHeaps(1, &gDescriptorsHeapSRV);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdListD3D12);
 }
 
@@ -1679,11 +1697,16 @@ TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
 		}
 	}
 
-	auto srvIncrement = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	auto srvCpuHandle = gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart();
-	srvCpuHandle.ptr += gAllTextures.size() * srvIncrement;
-	auto srvGpuHandle = gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart();
-	srvGpuHandle.ptr += gAllTextures.size() * srvIncrement;
+	auto descriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	auto srvCpuHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart(),
+		currentSRVOffset,
+		descriptorSize);
+	auto srvGpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+		gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart(),
+		currentSRVOffset,
+		descriptorSize);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -1700,6 +1723,8 @@ TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
 
 	gAllTextures.push_back(texInfo);
 
+	currentSRVOffset++;
+
 	TextureHandle result;
 	result.handle = static_cast<u32>(gAllTextures.size() - 1);
 	return result;
@@ -1709,6 +1734,13 @@ TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
 void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
 {
 
+}
+
+u64 TextureHandle::CreateImguiTextureOpaqueHandle() const
+{
+	const auto& tex_data = &gAllTextures[handle];
+
+	return (u64)(tex_data->srvGpuHandle.ptr);
 }
 
 #endif
