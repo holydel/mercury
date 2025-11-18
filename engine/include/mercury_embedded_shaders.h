@@ -13,6 +13,15 @@ namespace mercury::ll::graphics::embedded_shaders {
 	// dedicated_sprite - PS
 	mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS();
 
+	// dedicated_static_mesh - VS
+	mercury::ll::graphics::ShaderBytecodeView DedicatedStaticMeshVS();
+
+	// dedicated_static_mesh - PS
+	mercury::ll::graphics::ShaderBytecodeView DedicatedStaticMeshColorPS();
+
+	// dedicated_static_mesh - PS
+	mercury::ll::graphics::ShaderBytecodeView DedicatedStaticMeshPS();
+
 	// mercury - VS
 	mercury::ll::graphics::ShaderBytecodeView TestTriangleVS();
 

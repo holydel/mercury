@@ -2,6 +2,9 @@
 
 #if defined(MERCURY_LL_GRAPHICS_D3D12)
 
+#include <winapifamily.h>
+
+
 using namespace mercury;
 using namespace mercury::ll::graphics;
 
@@ -16,21 +19,28 @@ bool mercury::ll::graphics::IsYFlipped()
 
 #include "../../../imgui/imgui_impl.h"
 
+// Add utils for DXGI<->internal format conversion
+#include "d3d12_utils.h"
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #pragma comment(lib, "d3dcompiler.lib")  // For D3DReflect
 #pragma comment(lib, "dxguid.lib")  
 #pragma comment(lib, "dxcompiler.lib")
+#include <d3dcompiler.h>
+#endif
 
 #include <d3d12shader.h>
-#include <d3dcompiler.h>
+
 
 #include <dxcapi.h>
 
 #include <d3d12shader.h>
 
 #include <wrl/client.h>
+#include "d3d12_graphics.h"
 
 // Include D3D12 Memory Allocator implementation in this translation unit
 #include "../../../../engine/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp"
@@ -325,7 +335,7 @@ void Device::ImguiInitialize()
 	init_info.SrvDescriptorHeap = gDescriptorsHeapSRV;
 	init_info.NumFramesInFlight = 3;
 	init_info.RTVFormat = gD3DSwapChainFormat;
-
+	init_info.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	init_info.SrvDescriptorAllocFn = &AllocateSrvDescriptor;
 	init_info.SrvDescriptorFreeFn = &FreeSrvDescriptor;
 	//init_info.SrvDescriptorAllocFn
@@ -387,6 +397,11 @@ struct FrameData
 	u64 frameIndex = 0;
 };
 
+// Depth buffer resources
+ID3D12Resource* gDepthStencilBuffer = nullptr;
+D3D12MA::Allocation* gDepthStencilAllocation = nullptr;
+CD3DX12_CPU_DESCRIPTOR_HANDLE gDepthStencilView;
+
 int gNumFrames = 3;
 std::vector<BackbufferResourceInfo> gBBFrames;
 std::vector<FrameData> gFrames;
@@ -427,7 +442,7 @@ void Swapchain::Initialize()
 	sdesc.Stereo = false;
 	sdesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	sdesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-
+	
 	ll::os::gOS->CreateSwapchainForD3D12(&sdesc, &swapchain1);
 
 	D3D_CALL(swapchain1->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&gSwapChain));
@@ -451,6 +466,57 @@ void Swapchain::Initialize()
 		bb.bbRTV = rtvHandle;
 		bb.frameIndex = i;
 		rtvHandle.Offset(rtvDescriptorSize);
+	}
+
+	// Create depth-stencil buffer
+	D3D12_RESOURCE_DESC depthDesc = {};
+	depthDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthDesc.Alignment = 0;
+	depthDesc.Width = gCurWidth;
+	depthDesc.Height = gCurHeight;
+	depthDesc.DepthOrArraySize = 1;
+	depthDesc.MipLevels = 1;
+	depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	depthDesc.SampleDesc.Count = 1;
+	depthDesc.SampleDesc.Quality = 0;
+	depthDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_CLEAR_VALUE depthClearValue = {};
+	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	depthClearValue.DepthStencil.Depth = 1.0f;
+	depthClearValue.DepthStencil.Stencil = 0;
+
+	D3D12MA::ALLOCATION_DESC depthAllocDesc = {};
+	depthAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	//depthAllocDesc.Flags = D3D12MA::ALLOCATOR_FLAG_COMMITTED;
+
+	HRESULT hr = gAllocator->CreateResource(
+		&depthAllocDesc,
+		&depthDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthClearValue,
+		&gDepthStencilAllocation,
+		IID_PPV_ARGS(&gDepthStencilBuffer)
+	);
+
+	if (FAILED(hr))
+	{
+		MLOG_ERROR(u8"Failed to create depth-stencil buffer: HRESULT=0x%08X", hr);
+	}
+	else
+	{
+		// Create depth-stencil view
+		gDepthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(gDescriptorsHeapDSV->GetCPUDescriptorHandleForHeapStart());
+		
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+		gD3DDevice->CreateDepthStencilView(gDepthStencilBuffer, &dsvDesc, gDepthStencilView);
+		
+		MLOG_DEBUG(u8"Created depth-stencil buffer: %ux%u", gCurWidth, gCurHeight);
 	}
 
 	// Initialize frame data for CPU-GPU synchronization
@@ -484,6 +550,18 @@ void Swapchain::Shutdown()
 		if (frame.commandAllocator) frame.commandAllocator->Release();
 	}
 	gFrames.clear();
+
+	// Release depth-stencil resources
+	if (gDepthStencilBuffer)
+	{
+		gDepthStencilBuffer->Release();
+		gDepthStencilBuffer = nullptr;
+	}
+	if (gDepthStencilAllocation)
+	{
+		gDepthStencilAllocation->Release();
+		gDepthStencilAllocation = nullptr;
+	}
 
 	for (auto& bb : gBBFrames)
 	{
@@ -549,6 +627,44 @@ ll:os::gOS->GetActualWindowSize((unsigned int&)gNewWidth, (unsigned int&)gNewHei
 			bb.bbRTV = rtvHandle;
 			rtvHandle.Offset(rtvDescriptorSize);
 		}
+
+		// Resize depth stencil buffer
+		{
+			D3D_CALL(gDepthStencilBuffer->Release());
+			gDepthStencilBuffer = nullptr;
+
+			D3D12_RESOURCE_DESC depthDesc = {};
+			depthDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			depthDesc.Width = gCurWidth;
+			depthDesc.Height = gCurHeight;
+			depthDesc.MipLevels = 1;
+			depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
+			depthDesc.SampleDesc.Count = 1;
+			depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+			depthDesc.DepthOrArraySize = 1;
+
+			D3D12MA::ALLOCATION_DESC depthAllocDesc = {};
+			depthAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+			depthAllocDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
+			D3D_CALL(gAllocator->CreateResource(
+				&depthAllocDesc,
+				&depthDesc,
+				D3D12_RESOURCE_STATE_DEPTH_WRITE,
+				nullptr,
+				&gDepthStencilAllocation,
+				IID_PPV_ARGS(&gDepthStencilBuffer)
+			));
+		
+			gDepthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(gDescriptorsHeapDSV->GetCPUDescriptorHandleForHeapStart());
+
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+			dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+			dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+			gD3DDevice->CreateDepthStencilView(gDepthStencilBuffer, &dsvDesc, gDepthStencilView);
+		}
 	}
 
 	auto& frame = gFrames[gFrameRingCurrent];
@@ -578,7 +694,18 @@ ll:os::gOS->GetActualWindowSize((unsigned int&)gNewWidth, (unsigned int&)gNewHei
 
 	FLOAT clearColorD3D[] = { clearColor.x, clearColor.y, clearColor.z, clearColor.w };
 	frame.commandList->ClearRenderTargetView(bbResource.bbRTV, clearColorD3D, 0, nullptr);
-	frame.commandList->OMSetRenderTargets(1, &bbResource.bbRTV, FALSE, nullptr);
+
+	frame.commandList->ClearDepthStencilView(
+		gDepthStencilView,
+		D3D12_CLEAR_FLAG_DEPTH,
+		1.0f,
+		0,
+		0,
+		nullptr);
+
+	frame.commandList->OMSetRenderTargets(1, &bbResource.bbRTV, FALSE, &gDepthStencilView);
+
+
 
 	// Set viewport and scissor
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (float)gCurWidth, (float)gCurHeight, 0.0f, 1.0f };
@@ -761,6 +888,39 @@ void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
 	cmdListD3D12->RSSetScissorRects(1, &scissorRect);
 }
 
+void CommandList::SetIndexBuffer(BufferHandle bufferID)
+{
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+
+	D3D12_INDEX_BUFFER_VIEW view = {};
+	const auto& bmeta = gAllBuffersMeta[bufferID.handle];
+	view.Format = DXGI_FORMAT_R16_UINT;
+	view.SizeInBytes = static_cast<UINT>(bmeta.size);
+	view.BufferLocation = bmeta.gpuAddress;
+
+	cmdListD3D12->IASetIndexBuffer(&view);
+}
+
+void CommandList::SetVertexBuffer(BufferHandle bufferID, u8 stride, u8 slot, size_t offset)
+{
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+
+	D3D12_VERTEX_BUFFER_VIEW view = {};
+	const auto& bmeta = gAllBuffersMeta[bufferID.handle];
+
+	view.StrideInBytes = stride;
+	view.SizeInBytes = static_cast<UINT>(bmeta.size);
+	view.BufferLocation = bmeta.gpuAddress + offset;
+	
+	cmdListD3D12->IASetVertexBuffers(slot, 1, &view);
+}
+
+void CommandList::DrawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, u32 firstVertex, u32 firstInstance)
+{
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+	cmdListD3D12->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, firstVertex, firstInstance);
+}
+
 ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 {
 	ShaderHandle result;
@@ -814,22 +974,805 @@ D3D_PRIMITIVE_TOPOLOGY PrimitiveTopologyFromMercuryPrimitiveTopology(mercury::ll
 	}
 }
 
+void DebugShaderReflection(const mercury::ll::graphics::RasterizePipelineDescriptor& desc);
+
 PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::RasterizePipelineDescriptor& desc)
 {
-	using Microsoft::WRL::ComPtr;
-
 	// TODO: Implement full D3D12 rasterize pipeline creation
 	PsoHandle result;
 	result.handle = static_cast<u32>(gAllPSOs.size());
 
 	auto& pso = gAllPSOs.emplace_back();
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
 	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+	if (!desc.verticesInputInfo.empty())
+	{
+		rootSignatureFlags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	}
+
+
+	if (desc.vertexShader.isValid())
+	{
+		psoDesc.VS = gAllShaders[desc.vertexShader.handle];
+	}
+
+	if (desc.tessControlShader.isValid())
+	{
+		psoDesc.HS = gAllShaders[desc.tessControlShader.handle];
+	}
+
+	if (desc.tessEvalShader.isValid())
+	{
+		psoDesc.DS = gAllShaders[desc.tessEvalShader.handle];
+	}
+
+	if (desc.geometryShader.isValid())
+	{
+		psoDesc.GS = gAllShaders[desc.geometryShader.handle];
+	}
+
+	if (desc.fragmentShader.isValid())
+	{
+		psoDesc.PS = gAllShaders[desc.fragmentShader.handle];
+	}
+
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 
 	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
 	
+	DebugShaderReflection(desc);
+
+	if (desc.pushConstantSize > 0)
+	{
+		CD3DX12_ROOT_PARAMETER rootParam;
+		rootParam.InitAsConstants(desc.pushConstantSize / 4, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters.push_back(rootParam);
+
+		pso.rootParameterRootConstantIndex = 0;
+	}
+
+	std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		auto& bs_layout = desc.bindingSetLayouts[i];
+
+		pso.setOffsets[i] = static_cast<u32>(rootParameters.size());
+
+		for (int j = 0; j < bs_layout.allSlots.size(); ++j)
+		{
+			const auto& slot = bs_layout.allSlots[j];
+
+			if (slot.resourceType == ShaderResourceType::UniformBuffer)
+			{
+				CD3DX12_ROOT_PARAMETER rootParam;
+				rootParam.InitAsConstantBufferView(j, i + (desc.pushConstantSize > 0), D3D12_SHADER_VISIBILITY_ALL);
+				rootParameters.push_back(rootParam);
+			}
+
+			if (slot.resourceType == ShaderResourceType::SampledImage2D)
+			{
+				CD3DX12_DESCRIPTOR_RANGE srvRange;
+				srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, j, i + (desc.pushConstantSize > 0));
+				CD3DX12_ROOT_PARAMETER rootParam;
+				rootParam.InitAsDescriptorTable(1, &srvRange);
+				rootParameters.push_back(rootParam);
+			}
+		}
+	}
+
+	// Add static sampler if any textures are present
+	bool hasTextures = false;
+	for (int i = 0; i < 3; ++i)
+	{
+		for (const auto& slot : desc.bindingSetLayouts[i].allSlots)
+		{
+			if (slot.resourceType == ShaderResourceType::SampledImage2D)
+			{
+				hasTextures = true;
+				break;
+			}
+		}
+		if (hasTextures) break;
+	}
+	if (hasTextures)
+	{
+		auto& sdesc = staticSamplers.emplace_back();
+		sdesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sdesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sdesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sdesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sdesc.MipLODBias = 0.0f;
+		sdesc.MaxAnisotropy = 1;
+		sdesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		sdesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+		sdesc.MinLOD = 0.0f;
+		sdesc.MaxLOD = D3D12_FLOAT32_MAX;
+		sdesc.ShaderRegister = 0; // s0
+		sdesc.RegisterSpace = 2;
+		sdesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	}
+
+	rootSignatureDesc.Init(static_cast<UINT>(rootParameters.size()), rootParameters.data(), staticSamplers.size(), staticSamplers.data(), rootSignatureFlags);
+
+	ID3DBlob* signature = nullptr;
+	ID3DBlob* error = nullptr;
+	D3D_CALL(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+	
+
+	D3D_CALL(gD3DDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&pso.rootSignature)));
+
+	psoDesc.pRootSignature = pso.rootSignature;
+
+	// Release the blob as it's no longer needed
+	signature->Release();
+	if (error) error->Release();
+	
+	std::vector<D3D12_INPUT_ELEMENT_DESC> vtxInputElements;
+	u32 vertexAttribOffset = 0;
+
+	for (int i = 0; i < desc.verticesInputInfo.size(); ++i)
+	{
+		const auto& attr = desc.verticesInputInfo[i];
+		D3D12_INPUT_ELEMENT_DESC elementDesc = {};
+		elementDesc.SemanticName = attr.semanticName.c_str();
+		elementDesc.SemanticIndex = 0;
+		elementDesc.Format = ToDXGIFormat(attr.format);
+		elementDesc.InputSlot = 0;
+		elementDesc.AlignedByteOffset = vertexAttribOffset;
+		elementDesc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+		elementDesc.InstanceDataStepRate = 0;
+		elementDesc.SemanticIndex = attr.semanticIndex;
+		vtxInputElements.push_back(elementDesc);
+
+		const auto& finfo = ll::graphics::GetFormatInfo(desc.verticesInputInfo[i].format);
+		vertexAttribOffset += finfo.blockSize;
+	}
+			
+	psoDesc.InputLayout.pInputElementDescs = vtxInputElements.data();
+	psoDesc.InputLayout.NumElements = static_cast<UINT>(vtxInputElements.size());
+
+	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	psoDesc.RasterizerState.FrontCounterClockwise = true;
+	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	psoDesc.DepthStencilState.DepthEnable = true;
+	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	//psoDesc.DepthStencilState.DepthEnable = FALSE;
+	//psoDesc.DepthStencilState.StencilEnable = FALSE;
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = PrimitiveTopologyTypeFromMercuryTopology(desc.primitiveTopology);
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = gD3DSwapChainFormat;
+	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	psoDesc.SampleDesc.Count = 1;
+	//psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+
+	D3D_CALL(gD3DDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso.pso)));
+
+	pso.primitiveTopology = PrimitiveTopologyFromMercuryPrimitiveTopology(desc.primitiveTopology);
+	
+	return result;
+}
+
+void Device::UpdatePipelineState(PsoHandle psoID, const mercury::ll::graphics::RasterizePipelineDescriptor& desc)
+{
+	// TODO: Implement D3D12 pipeline state update
+}
+
+void Device::DestroyRasterizePipeline(PsoHandle psoID)
+{
+	gAllPSOs[psoID.handle].pso->Release();
+	gAllPSOs[psoID.handle].pso = nullptr;
+
+	gAllPSOs[psoID.handle].rootSignature->Release();
+	gAllPSOs[psoID.handle].rootSignature = nullptr;
+}
+
+CommandPool Device::CreateCommandPool(QueueType queue_type)
+{
+	CommandPool pool = {};
+	// In D3D12, command pools are managed per-frame, not explicitly created
+	return pool;
+}
+
+TimelineSemaphore Device::CreateTimelineSemaphore(mercury::u64 initial_value)
+{
+	TimelineSemaphore semaphore;
+	// D3D12 uses fences instead of timeline semaphores
+	ID3D12Fence* fence = nullptr;
+	D3D_CALL(gD3DDevice->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+	semaphore.nativePtr = fence;
+	return semaphore;
+}
+
+void Device::WaitIdle()
+{
+	for (auto& frame : gFrames)
+	{
+		Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
+	}
+}
+
+void Device::WaitQueueIdle(QueueType queue_type)
+{
+	WaitIdle();
+}
+
+void Device::SetDebugName(const char* utf8_name)
+{
+	if (gD3DDevice)
+	{
+		wchar_t wideName[256] = {};
+		MultiByteToWideChar(CP_UTF8, 0, utf8_name, -1, wideName, 256);
+		gD3DDevice->SetName(wideName);
+	}
+}
+
+void CommandList::PushConstants(const void* data, size_t size)
+{
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+
+	cmdListD3D12->SetGraphicsRoot32BitConstants(gAllPSOs[currentPsoID.handle].rootParameterRootConstantIndex, static_cast<UINT>(size / 4), data, 0);
+}
+
+BufferHandle Device::CreateBuffer(const BufferDescriptor& desc)
+{
+	BufferHandle result;
+	result.handle = static_cast<u32>(gAllBuffers.size());
+
+	auto size = desc.size;
+
+	if (desc.type == BufferType::UniformBuffer)
+	{
+		size = mercury::utils::math::alignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	}
+
+	if (desc.type == BufferType::IndexBuffer || desc.type == BufferType::VertexBuffer)
+	{
+		size = mercury::utils::math::alignUp(size, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+	}
+	
+
+	// Validate allocator is initialized
+	if (!gAllocator)
+	{
+		MLOG_ERROR(u8"D3D12MA::Allocator is not initialized!");
+		result.handle = BufferHandle::InvalidValue;
+		gAllBuffersMeta.push_back(BufferInfo{});
+		gAllBuffers.push_back(nullptr);
+		return result;
+	}
+
+	// Validate size
+	if (size == 0)
+	{
+		MLOG_ERROR(u8"Cannot create buffer with size 0");
+		result.handle = BufferHandle::InvalidValue;
+		gAllBuffersMeta.push_back(BufferInfo{});
+		gAllBuffers.push_back(nullptr);
+		return result;
+	}
+
+	D3D12_RESOURCE_DESC bufferDesc = {};
+	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	bufferDesc.Alignment = 0;
+	bufferDesc.Width = size;
+	bufferDesc.Height = 1;
+	bufferDesc.DepthOrArraySize = 1;
+	bufferDesc.MipLevels = 1;
+	bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	bufferDesc.SampleDesc.Count = 1;
+	bufferDesc.SampleDesc.Quality = 0;
+	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+	allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+
+	BufferInfo bufferInfo = {};
+	ID3D12Resource* bufferResource = nullptr;
+	bufferInfo.size = size;
+
+	D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+	if (desc.type == BufferType::UniformBuffer || desc.type == BufferType::VertexBuffer)
+	{
+		initialState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+	}
+	else if (desc.type == BufferType::IndexBuffer)
+	{
+		initialState = D3D12_RESOURCE_STATE_INDEX_BUFFER;
+	}
+
+	HRESULT hr = gAllocator->CreateResource(
+		&allocDesc,
+		&bufferDesc,
+		initialState,
+		nullptr,
+		&bufferInfo.allocation,
+		IID_PPV_ARGS(&bufferResource)
+	);
+
+	if (FAILED(hr))
+	{
+		MLOG_ERROR(u8"Failed to create D3D12 buffer of size %zu bytes: HRESULT=0x%08X", size, hr);
+		result.handle = BufferHandle::InvalidValue;
+		gAllBuffersMeta.push_back(BufferInfo{});
+		gAllBuffers.push_back(nullptr);
+		return result;
+	}
+
+	if (desc.initialData)
+	{
+		void* mappedData = nullptr;
+		D3D12_RANGE readRange = { 0, 0 };
+		hr = bufferResource->Map(0, &readRange, &mappedData);
+		memcpy(mappedData, desc.initialData, desc.size);
+		D3D12_RANGE writtenRange = { 0, desc.size };
+		bufferResource->Unmap(0, &writtenRange);
+	}
+
+	MLOG_DEBUG(u8"Created D3D12 buffer: handle=%u, size=%zu bytes", result.handle, size);
+	bufferInfo.gpuAddress = bufferResource->GetGPUVirtualAddress();
+	gAllBuffersMeta.push_back(bufferInfo);
+	gAllBuffers.push_back(bufferResource);
+
+	return result;
+}
+
+void Device::DestroyBuffer(BufferHandle bufferID)
+{
+	if (!bufferID.isValid() || bufferID.handle >= gAllBuffers.size())
+	{
+		MLOG_WARNING(u8"Attempting to destroy invalid buffer handle: %u", bufferID.handle);
+		return;
+	}
+
+	BufferInfo& bufferInfo = gAllBuffersMeta[bufferID.handle];
+	ID3D12Resource* bufferResource = gAllBuffers[bufferID.handle];
+
+	if (bufferResource)
+	{
+		bufferResource->Release();
+	}
+
+	if (bufferInfo.allocation)
+	{
+		bufferInfo.allocation->Release();
+		bufferInfo.allocation = nullptr;
+	}
+
+	bufferInfo.size = 0;
+
+	MLOG_DEBUG(u8"Destroyed D3D12 buffer: handle=%u", bufferID.handle);
+}
+
+void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset)
+{
+	if (!bufferID.isValid() || bufferID.handle >= gAllBuffers.size())
+	{
+		MLOG_ERROR(u8"Attempting to update invalid buffer handle: %u", bufferID.handle);
+		return;
+	}
+
+	BufferInfo& bufferInfo = gAllBuffersMeta[bufferID.handle];
+	ID3D12Resource* bufferResource = gAllBuffers[bufferID.handle];
+
+	if (!bufferResource)
+	{
+		MLOG_ERROR(u8"Buffer resource is null for handle: %u", bufferID.handle);
+		return;
+	}
+
+	// Validate bounds
+	if (offset + size > bufferInfo.size)
+	{
+		MLOG_ERROR(u8"Buffer update out of bounds: handle=%u, offset=%zu, size=%zu, buffer_size=%zu",
+			bufferID.handle, offset, size, bufferInfo.size);
+		return;
+	}
+
+	void* mappedData = nullptr;
+	D3D12_RANGE readRange = { 0, 0 };
+	HRESULT hr = bufferResource->Map(0, &readRange, &mappedData);
+	memcpy(static_cast<u8*>(mappedData) + offset, data, size);
+	D3D12_RANGE writtenRange = { offset, offset + size };
+	bufferResource->Unmap(0, &writtenRange);
+}
+
+ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex)
+{
+	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
+
+	for (int i = 0; i < layoutDesc.allSlots.size(); ++i)
+	{
+		CD3DX12_ROOT_PARAMETER rootParam2;
+		rootParam2.InitAsConstantBufferView(i, setIndex, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters.push_back(rootParam2);
+	}
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init(rootParameters.size(), rootParameters.data(), 0, nullptr, rootSignatureFlags);
+
+	ID3DBlob* signature = nullptr;
+	ID3DBlob* error = nullptr;
+	D3D_CALL(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+
+	// Create the actual root signature from the blob
+	ID3D12RootSignature* rootSignature = nullptr;
+	D3D_CALL(gD3DDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
+
+	// Release the blob as it's no longer needed
+	signature->Release();
+	if (error) error->Release();
+
+	auto &pso = gAllPSOs.emplace_back();
+	pso.rootSignature = rootSignature;
+
+	ParameterBlockLayoutHandle result;
+	result.handle = static_cast<u32>(gAllPSOs.size() - 1);
+	return result;
+}
+
+void Device::DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID)
+{
+	gAllPSOs[layoutID.handle].rootSignature->Release();	
+}
+
+void  CommandList::SetParameterBlockLayout(u8 set_index, ParameterBlockLayoutHandle layoutID)
+{
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+	cmdListD3D12->SetGraphicsRootSignature(gAllPSOs[layoutID.handle].rootSignature);
+}
+
+//void CommandList::SetUniformBuffer(u8 binding_slot, BufferHandle bufferID, size_t offset, size_t size)
+//{
+//	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+//	auto bufferResource = gAllBuffers[bufferID.handle];
+//	cmdListD3D12->SetGraphicsRootConstantBufferView(binding_slot, bufferResource->GetGPUVirtualAddress());
+//}
+
+void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID)
+{
+	u32 slotIndex = 0;
+	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
+	const auto& pbDesc = gAllParameterBlocks[parameterBlockID.handle];
+	int slotStartIndex = gAllPSOs[currentPsoID.handle].setOffsets[setIndex];
+
+	// Set descriptor heap if there are textures
+	bool hasTextures = false;
+	for (const auto& res : pbDesc.resources)
+	{
+		if (std::holds_alternative<ParameterResourceTexture>(res))
+		{
+			hasTextures = true;
+			break;
+		}
+	}
+	if (hasTextures)
+	{
+		cmdListD3D12->SetDescriptorHeaps(1, &gDescriptorsHeapSRV);
+	}
+
+	for (const auto& res : pbDesc.resources)
+	{
+		std::visit([&](auto&& arg)
+			{
+				using T = std::decay_t<decltype(arg)>;
+
+				if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
+				{
+					cmdListD3D12->SetGraphicsRootConstantBufferView(slotStartIndex + slotIndex, gAllBuffers[arg.buffer.handle]->GetGPUVirtualAddress());
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
+				{
+					cmdListD3D12->SetGraphicsRootDescriptorTable(slotStartIndex + slotIndex, gAllTextures[arg.texture.handle].srvGpuHandle);
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
+				{
+					// TODO: Fill VkDescriptorImageInfo for storage image
+					MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
+				}
+				else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
+				{
+					// Intentionally empty slot ï¿½ skip writing
+				}
+			}, res);
+
+		slotIndex++;
+	}
+}
+
+ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID)
+{
+	auto& ds = gAllParameterBlocks.emplace_back();
+
+	return ParameterBlockHandle{ static_cast<u32>(gAllParameterBlocks.size() - 1) };
+}
+
+void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc)
+{
+	gAllParameterBlocks[parameterBlockID.handle] = pbDesc;
+
+	//std::vector<VkWriteDescriptorSet> writes;
+	//std::vector<VkDescriptorBufferInfo> bufferInfos;
+	//std::vector<VkDescriptorImageInfo>  imageInfos;
+
+	//u32 slotIndex = 0;
+	//writes.reserve(pbDesc.resources.size());
+	//bufferInfos.reserve(pbDesc.resources.size());
+
+	//for (const auto& res : pbDesc.resources)
+	//{
+	//	std::visit([&](auto&& arg)
+	//		{
+	//			using T = std::decay_t<decltype(arg)>;
+
+	//			if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
+	//			{
+	//				VkDescriptorBufferInfo bi{};
+	//				bi.buffer = gAllBuffers[arg.buffer.handle];
+	//				bi.offset = static_cast<VkDeviceSize>(arg.offset);
+	//				bi.range = (arg.size == SIZE_MAX) ? VK_WHOLE_SIZE : static_cast<VkDeviceSize>(arg.size);
+
+	//				bufferInfos.push_back(bi);
+
+	//				VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+	//				w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
+	//				w.dstBinding = slotIndex;
+	//				w.descriptorCount = 1;
+	//				// If you cached per-slot descriptor types when creating the layout, use that here.
+	//				// Without that metadata, default to UNIFORM_BUFFER for buffer resources:
+	//				w.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	//				w.pBufferInfo = &bufferInfos.back();
+
+	//				writes.push_back(w);
+	//			}
+	//			else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
+	//			{
+	//				// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
+	//				// imageInfos.push_back(imgInfo);
+	//				// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
+	//				// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
+	//				MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
+	//			}
+	//			else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
+	//			{
+	//				// TODO: Fill VkDescriptorImageInfo for storage image
+	//				MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
+	//			}
+	//			else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
+	//			{
+	//				// Intentionally empty slot ï¿½ skip writing
+	//			}
+	//		}, res);
+
+	//	slotIndex++;
+	//}
+
+	//if (!writes.empty())
+	//{
+	//	vkUpdateDescriptorSets(gVKDevice, static_cast<u32>(writes.size()), writes.data(), 0, nullptr);
+	//}
+}
+
+TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
+{
+	TextureInfo texInfo = {};
+
+	D3D12_RESOURCE_DESC textureDesc = {};
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	textureDesc.Alignment = 0;
+	textureDesc.Width = desc.width;
+	textureDesc.Height = desc.height;
+	textureDesc.DepthOrArraySize = desc.depth;
+	textureDesc.MipLevels = desc.mipLevels;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
+
+	HRESULT hr = gAllocator->CreateResource(
+		&allocDesc,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		&texInfo.allocation,
+		IID_PPV_ARGS(&texInfo.resource)
+	);
+
+	if (desc.initialData)
+	{
+		// Calculate data size (assuming RGBA8)
+		size_t dataSize = desc.width * desc.height * 4;
+
+		// Create staging buffer
+		D3D12_RESOURCE_DESC stagingDesc = {};
+		stagingDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		stagingDesc.Alignment = 0;
+		stagingDesc.Width = dataSize;
+		stagingDesc.Height = 1;
+		stagingDesc.DepthOrArraySize = 1;
+		stagingDesc.MipLevels = 1;
+		stagingDesc.Format = DXGI_FORMAT_UNKNOWN;
+		stagingDesc.SampleDesc.Count = 1;
+		stagingDesc.SampleDesc.Quality = 0;
+		stagingDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		stagingDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+		D3D12MA::ALLOCATION_DESC stagingAllocDesc = {};
+		stagingAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+		stagingAllocDesc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
+
+		D3D12MA::Allocation* stagingAllocation = nullptr;
+		ID3D12Resource* stagingBuffer = nullptr;
+		HRESULT hr = gAllocator->CreateResource(
+			&stagingAllocDesc,
+			&stagingDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			&stagingAllocation,
+			IID_PPV_ARGS(&stagingBuffer)
+		);
+		if (FAILED(hr))
+		{
+			MLOG_ERROR(u8"Failed to create staging buffer for texture upload: HRESULT=0x%08X", hr);
+		}
+		else
+		{
+			// Map and copy data
+			void* mappedData = nullptr;
+			D3D12_RANGE readRange = { 0, 0 };
+			hr = stagingBuffer->Map(0, &readRange, &mappedData);
+			if (SUCCEEDED(hr))
+			{
+				memcpy(mappedData, desc.initialData, dataSize);
+				D3D12_RANGE writtenRange = { 0, dataSize };
+				stagingBuffer->Unmap(0, &writtenRange);
+
+				// Create temporary command list for copy
+				ID3D12CommandAllocator* tempAllocator = nullptr;
+				ID3D12GraphicsCommandList* tempCmdList = nullptr;
+				hr = gD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&tempAllocator));
+				if (SUCCEEDED(hr))
+				{
+					hr = gD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, tempAllocator, nullptr, IID_PPV_ARGS(&tempCmdList));
+					if (SUCCEEDED(hr))
+					{
+						tempCmdList->Close(); // Reset to open
+						tempCmdList->Reset(tempAllocator, nullptr);
+
+						// Transition texture to copy dest
+						D3D12_RESOURCE_BARRIER barrier = {};
+						barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+						barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+						barrier.Transition.pResource = texInfo.resource;
+						barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+						barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+						barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+						tempCmdList->ResourceBarrier(1, &barrier);
+
+						// Copy buffer to texture
+						D3D12_TEXTURE_COPY_LOCATION src = {};
+						src.pResource = stagingBuffer;
+						src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+						src.PlacedFootprint.Offset = 0;
+						src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+						src.PlacedFootprint.Footprint.Width = desc.width;
+						src.PlacedFootprint.Footprint.Height = desc.height;
+						src.PlacedFootprint.Footprint.Depth = 1;
+						src.PlacedFootprint.Footprint.RowPitch = desc.width * 4;
+
+						D3D12_TEXTURE_COPY_LOCATION dst = {};
+						dst.pResource = texInfo.resource;
+						dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+						dst.SubresourceIndex = 0;
+
+						tempCmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+						// Transition back to generic read
+						barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+						barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+						tempCmdList->ResourceBarrier(1, &barrier);
+
+						// Close and execute
+						tempCmdList->Close();
+						ID3D12CommandList* cmdLists[] = { tempCmdList };
+						gD3DCommandQueue->ExecuteCommandLists(1, cmdLists);
+
+						// Wait for completion
+						ID3D12Fence* tempFence = nullptr;
+						gD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&tempFence));
+						gD3DCommandQueue->Signal(tempFence, 1);
+						if (tempFence->GetCompletedValue() < 1)
+						{
+							HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
+							tempFence->SetEventOnCompletion(1, event);
+							WaitForSingleObject(event, INFINITE);
+							CloseHandle(event);
+						}
+						tempFence->Release();
+						
+						MLOG_DEBUG(u8"Texture uploaded successfully: %ux%u", desc.width, desc.height);
+						tempCmdList->Release();
+					}
+					tempAllocator->Release();
+				}
+			}
+			stagingBuffer->Release();
+			stagingAllocation->Release();
+		}
+	}
+
+	auto descriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	auto srvCpuHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+		gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart(),
+		currentSRVOffset,
+		descriptorSize);
+	auto srvGpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+		gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart(),
+		currentSRVOffset,
+		descriptorSize);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Texture2D.MipLevels = desc.mipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+	gD3DDevice->CreateShaderResourceView(texInfo.resource, &srvDesc, srvCpuHandle);
+
+	texInfo.srvHandle = srvCpuHandle;
+	texInfo.srvGpuHandle = srvGpuHandle;
+
+	gAllTextures.push_back(texInfo);
+
+	currentSRVOffset++;
+
+	TextureHandle result;
+	result.handle = static_cast<u32>(gAllTextures.size() - 1);
+	return result;
+}
+
+
+void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
+{
+
+}
+
+u64 TextureHandle::CreateImguiTextureOpaqueHandle() const
+{
+	const auto& tex_data = &gAllTextures[handle];
+
+	return (u64)(tex_data->srvGpuHandle.ptr);
+}
+
+void DebugShaderReflection(const mercury::ll::graphics::RasterizePipelineDescriptor& desc)
+{
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+	using Microsoft::WRL::ComPtr;
+
+
 	if (desc.vertexShader.isValid())
 	{
 		auto& vsBytecode = gAllShaders[desc.vertexShader.handle];
@@ -1019,728 +1962,6 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 			}
 		}
 	}
-
-	if (desc.pushConstantSize > 0)
-	{
-		CD3DX12_ROOT_PARAMETER rootParam;
-		rootParam.InitAsConstants(desc.pushConstantSize / 4, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
-		rootParameters.push_back(rootParam);
-
-		pso.rootParameterRootConstantIndex = 0;
-	}
-
-	std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers;
-
-	for (int i = 0; i < 3; ++i)
-	{
-		auto& bs_layout = desc.bindingSetLayouts[i];
-
-		pso.setOffsets[i] = static_cast<u32>(rootParameters.size());
-
-		for (int j = 0; j < bs_layout.allSlots.size(); ++j)
-		{
-			const auto& slot = bs_layout.allSlots[j];
-
-			if (slot.resourceType == ShaderResourceType::UniformBuffer)
-			{
-				CD3DX12_ROOT_PARAMETER rootParam;
-				rootParam.InitAsConstantBufferView(j, i + (desc.pushConstantSize > 0), D3D12_SHADER_VISIBILITY_ALL);
-				rootParameters.push_back(rootParam);
-			}
-
-			if (slot.resourceType == ShaderResourceType::SampledImage2D)
-			{
-				CD3DX12_DESCRIPTOR_RANGE srvRange;
-				srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, j, i + (desc.pushConstantSize > 0));
-				CD3DX12_ROOT_PARAMETER rootParam;
-				rootParam.InitAsDescriptorTable(1, &srvRange);
-				rootParameters.push_back(rootParam);
-			}
-		}
-	}
-
-	// Add static sampler if any textures are present
-	bool hasTextures = false;
-	for (int i = 0; i < 3; ++i)
-	{
-		for (const auto& slot : desc.bindingSetLayouts[i].allSlots)
-		{
-			if (slot.resourceType == ShaderResourceType::SampledImage2D)
-			{
-				hasTextures = true;
-				break;
-			}
-		}
-		if (hasTextures) break;
-	}
-	if (hasTextures)
-	{
-		auto& sdesc = staticSamplers.emplace_back();
-		sdesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sdesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sdesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sdesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sdesc.MipLODBias = 0.0f;
-		sdesc.MaxAnisotropy = 1;
-		sdesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		sdesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-		sdesc.MinLOD = 0.0f;
-		sdesc.MaxLOD = D3D12_FLOAT32_MAX;
-		sdesc.ShaderRegister = 0; // s0
-		sdesc.RegisterSpace = 2;
-		sdesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	}
-
-	rootSignatureDesc.Init(static_cast<UINT>(rootParameters.size()), rootParameters.data(), staticSamplers.size(), staticSamplers.data(), rootSignatureFlags);
-
-	ID3DBlob* signature = nullptr;
-	ID3DBlob* error = nullptr;
-	D3D_CALL(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-
-
-	D3D_CALL(gD3DDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&pso.rootSignature)));
-
-	// Release the blob as it's no longer needed
-	signature->Release();
-	if (error) error->Release();
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-
-
-	psoDesc.pRootSignature = pso.rootSignature;
-
-	if (desc.vertexShader.isValid())
-	{
-		psoDesc.VS = gAllShaders[desc.vertexShader.handle];
-	}
-
-	if (desc.tessControlShader.isValid())
-	{
-		psoDesc.HS = gAllShaders[desc.tessControlShader.handle];
-	}
-
-	if (desc.tessEvalShader.isValid())
-	{
-		psoDesc.DS = gAllShaders[desc.tessEvalShader.handle];
-	}
-
-	if (desc.geometryShader.isValid())
-	{
-		psoDesc.GS = gAllShaders[desc.geometryShader.handle];
-	}
-
-	if (desc.fragmentShader.isValid())
-	{
-		psoDesc.PS = gAllShaders[desc.fragmentShader.handle];
-	}
-
-
-	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	psoDesc.RasterizerState.FrontCounterClockwise = true;
-
-	psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	psoDesc.DepthStencilState.DepthEnable = false;
-	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	//psoDesc.DepthStencilState.DepthEnable = FALSE;
-	//psoDesc.DepthStencilState.StencilEnable = FALSE;
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.PrimitiveTopologyType = PrimitiveTopologyTypeFromMercuryTopology(desc.primitiveTopology);
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	psoDesc.SampleDesc.Count = 1;
-	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-
-	D3D_CALL(gD3DDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso.pso)));
-
-	pso.primitiveTopology = PrimitiveTopologyFromMercuryPrimitiveTopology(desc.primitiveTopology);
-	
-	return result;
-}
-
-void Device::UpdatePipelineState(PsoHandle psoID, const mercury::ll::graphics::RasterizePipelineDescriptor& desc)
-{
-	// TODO: Implement D3D12 pipeline state update
-}
-
-void Device::DestroyRasterizePipeline(PsoHandle psoID)
-{
-	gAllPSOs[psoID.handle].pso->Release();
-	gAllPSOs[psoID.handle].pso = nullptr;
-
-	gAllPSOs[psoID.handle].rootSignature->Release();
-	gAllPSOs[psoID.handle].rootSignature = nullptr;
-}
-
-CommandPool Device::CreateCommandPool(QueueType queue_type)
-{
-	CommandPool pool = {};
-	// In D3D12, command pools are managed per-frame, not explicitly created
-	return pool;
-}
-
-TimelineSemaphore Device::CreateTimelineSemaphore(mercury::u64 initial_value)
-{
-	TimelineSemaphore semaphore;
-	// D3D12 uses fences instead of timeline semaphores
-	ID3D12Fence* fence = nullptr;
-	D3D_CALL(gD3DDevice->CreateFence(initial_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-	semaphore.nativePtr = fence;
-	return semaphore;
-}
-
-void Device::WaitIdle()
-{
-	for (auto& frame : gFrames)
-	{
-		Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
-	}
-}
-
-void Device::WaitQueueIdle(QueueType queue_type)
-{
-	WaitIdle();
-}
-
-void Device::SetDebugName(const char* utf8_name)
-{
-	if (gD3DDevice)
-	{
-		wchar_t wideName[256] = {};
-		MultiByteToWideChar(CP_UTF8, 0, utf8_name, -1, wideName, 256);
-		gD3DDevice->SetName(wideName);
-	}
-}
-
-void CommandList::PushConstants(const void* data, size_t size)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	cmdListD3D12->SetGraphicsRoot32BitConstants(gAllPSOs[currentPsoID.handle].rootParameterRootConstantIndex, static_cast<UINT>(size / 4), data, 0);
-}
-
-BufferHandle Device::CreateBuffer(const BufferDescriptor& desc)
-{
-	BufferHandle result;
-	result.handle = static_cast<u32>(gAllBuffers.size());
-
-	auto size = mercury::utils::math::alignUp(desc.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-
-	// Validate allocator is initialized
-	if (!gAllocator)
-	{
-		MLOG_ERROR(u8"D3D12MA::Allocator is not initialized!");
-		result.handle = BufferHandle::InvalidValue;
-		gAllBuffersMeta.push_back(BufferInfo{});
-		gAllBuffers.push_back(nullptr);
-		return result;
-	}
-
-	// Validate size
-	if (size == 0)
-	{
-		MLOG_ERROR(u8"Cannot create buffer with size 0");
-		result.handle = BufferHandle::InvalidValue;
-		gAllBuffersMeta.push_back(BufferInfo{});
-		gAllBuffers.push_back(nullptr);
-		return result;
-	}
-
-	D3D12_RESOURCE_DESC bufferDesc = {};
-	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	bufferDesc.Alignment = 0;
-	bufferDesc.Width = size;
-	bufferDesc.Height = 1;
-	bufferDesc.DepthOrArraySize = 1;
-	bufferDesc.MipLevels = 1;
-	bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-	bufferDesc.SampleDesc.Count = 1;
-	bufferDesc.SampleDesc.Quality = 0;
-	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-	D3D12MA::ALLOCATION_DESC allocDesc = {};
-	allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-	allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
-
-	BufferInfo bufferInfo = {};
-	ID3D12Resource* bufferResource = nullptr;
-	bufferInfo.size = size;
-
-	HRESULT hr = gAllocator->CreateResource(
-		&allocDesc,
-		&bufferDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_COPY_SOURCE,
-		nullptr,
-		&bufferInfo.allocation,
-		IID_PPV_ARGS(&bufferResource)
-	);
-
-	if (FAILED(hr))
-	{
-		MLOG_ERROR(u8"Failed to create D3D12 buffer of size %zu bytes: HRESULT=0x%08X", size, hr);
-		result.handle = BufferHandle::InvalidValue;
-		gAllBuffersMeta.push_back(BufferInfo{});
-		gAllBuffers.push_back(nullptr);
-		return result;
-	}
-
-	if (desc.initialData)
-	{
-		void* mappedData = nullptr;
-		D3D12_RANGE readRange = { 0, 0 };
-		hr = bufferResource->Map(0, &readRange, &mappedData);
-		memcpy(mappedData, desc.initialData, desc.size);
-		D3D12_RANGE writtenRange = { 0, desc.size };
-		bufferResource->Unmap(0, &writtenRange);
-	}
-
-	MLOG_DEBUG(u8"Created D3D12 buffer: handle=%u, size=%zu bytes", result.handle, size);
-
-	gAllBuffersMeta.push_back(bufferInfo);
-	gAllBuffers.push_back(bufferResource);
-
-	return result;
-}
-
-void Device::DestroyBuffer(BufferHandle bufferID)
-{
-	if (!bufferID.isValid() || bufferID.handle >= gAllBuffers.size())
-	{
-		MLOG_WARNING(u8"Attempting to destroy invalid buffer handle: %u", bufferID.handle);
-		return;
-	}
-
-	BufferInfo& bufferInfo = gAllBuffersMeta[bufferID.handle];
-	ID3D12Resource* bufferResource = gAllBuffers[bufferID.handle];
-
-	if (bufferResource)
-	{
-		bufferResource->Release();
-	}
-
-	if (bufferInfo.allocation)
-	{
-		bufferInfo.allocation->Release();
-		bufferInfo.allocation = nullptr;
-	}
-
-	bufferInfo.size = 0;
-
-	MLOG_DEBUG(u8"Destroyed D3D12 buffer: handle=%u", bufferID.handle);
-}
-
-void Device::UpdateBuffer(BufferHandle bufferID, const void* data, size_t size, size_t offset)
-{
-	if (!bufferID.isValid() || bufferID.handle >= gAllBuffers.size())
-	{
-		MLOG_ERROR(u8"Attempting to update invalid buffer handle: %u", bufferID.handle);
-		return;
-	}
-
-	BufferInfo& bufferInfo = gAllBuffersMeta[bufferID.handle];
-	ID3D12Resource* bufferResource = gAllBuffers[bufferID.handle];
-
-	if (!bufferResource)
-	{
-		MLOG_ERROR(u8"Buffer resource is null for handle: %u", bufferID.handle);
-		return;
-	}
-
-	// Validate bounds
-	if (offset + size > bufferInfo.size)
-	{
-		MLOG_ERROR(u8"Buffer update out of bounds: handle=%u, offset=%zu, size=%zu, buffer_size=%zu",
-			bufferID.handle, offset, size, bufferInfo.size);
-		return;
-	}
-
-	void* mappedData = nullptr;
-	D3D12_RANGE readRange = { 0, 0 };
-	HRESULT hr = bufferResource->Map(0, &readRange, &mappedData);
-	memcpy(static_cast<u8*>(mappedData) + offset, data, size);
-	D3D12_RANGE writtenRange = { offset, offset + size };
-	bufferResource->Unmap(0, &writtenRange);
-}
-
-ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLayoutDescriptor& layoutDesc, int setIndex)
-{
-	std::vector<CD3DX12_ROOT_PARAMETER> rootParameters;
-
-	for (int i = 0; i < layoutDesc.allSlots.size(); ++i)
-	{
-		CD3DX12_ROOT_PARAMETER rootParam2;
-		rootParam2.InitAsConstantBufferView(i, setIndex, D3D12_SHADER_VISIBILITY_ALL);
-		rootParameters.push_back(rootParam2);
-	}
-
-	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-
-	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init(rootParameters.size(), rootParameters.data(), 0, nullptr, rootSignatureFlags);
-
-	ID3DBlob* signature = nullptr;
-	ID3DBlob* error = nullptr;
-	D3D_CALL(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-
-	// Create the actual root signature from the blob
-	ID3D12RootSignature* rootSignature = nullptr;
-	D3D_CALL(gD3DDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
-
-	// Release the blob as it's no longer needed
-	signature->Release();
-	if (error) error->Release();
-
-	auto &pso = gAllPSOs.emplace_back();
-	pso.rootSignature = rootSignature;
-
-	ParameterBlockLayoutHandle result;
-	result.handle = static_cast<u32>(gAllPSOs.size() - 1);
-	return result;
-}
-
-void Device::DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID)
-{
-	gAllPSOs[layoutID.handle].rootSignature->Release();	
-}
-
-void  CommandList::SetParameterBlockLayout(u8 set_index, ParameterBlockLayoutHandle layoutID)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	cmdListD3D12->SetGraphicsRootSignature(gAllPSOs[layoutID.handle].rootSignature);
-}
-
-//void CommandList::SetUniformBuffer(u8 binding_slot, BufferHandle bufferID, size_t offset, size_t size)
-//{
-//	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-//	auto bufferResource = gAllBuffers[bufferID.handle];
-//	cmdListD3D12->SetGraphicsRootConstantBufferView(binding_slot, bufferResource->GetGPUVirtualAddress());
-//}
-
-void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID)
-{
-	u32 slotIndex = 0;
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	const auto& pbDesc = gAllParameterBlocks[parameterBlockID.handle];
-	int slotStartIndex = gAllPSOs[currentPsoID.handle].setOffsets[setIndex];
-
-	// Set descriptor heap if there are textures
-	bool hasTextures = false;
-	for (const auto& res : pbDesc.resources)
-	{
-		if (std::holds_alternative<ParameterResourceTexture>(res))
-		{
-			hasTextures = true;
-			break;
-		}
-	}
-	if (hasTextures)
-	{
-		cmdListD3D12->SetDescriptorHeaps(1, &gDescriptorsHeapSRV);
-	}
-
-	for (const auto& res : pbDesc.resources)
-	{
-		std::visit([&](auto&& arg)
-			{
-				using T = std::decay_t<decltype(arg)>;
-
-				if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
-				{
-					cmdListD3D12->SetGraphicsRootConstantBufferView(slotStartIndex + slotIndex, gAllBuffers[arg.buffer.handle]->GetGPUVirtualAddress());
-				}
-				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
-				{
-					cmdListD3D12->SetGraphicsRootDescriptorTable(slotStartIndex + slotIndex, gAllTextures[arg.texture.handle].srvGpuHandle);
-				}
-				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
-				{
-					// TODO: Fill VkDescriptorImageInfo for storage image
-					MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
-				}
-				else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
-				{
-					// Intentionally empty slot – skip writing
-				}
-			}, res);
-
-		slotIndex++;
-	}
-}
-
-ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID)
-{
-	auto& ds = gAllParameterBlocks.emplace_back();
-
-	return ParameterBlockHandle{ static_cast<u32>(gAllParameterBlocks.size() - 1) };
-}
-
-void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc)
-{
-	gAllParameterBlocks[parameterBlockID.handle] = pbDesc;
-
-	//std::vector<VkWriteDescriptorSet> writes;
-	//std::vector<VkDescriptorBufferInfo> bufferInfos;
-	//std::vector<VkDescriptorImageInfo>  imageInfos;
-
-	//u32 slotIndex = 0;
-	//writes.reserve(pbDesc.resources.size());
-	//bufferInfos.reserve(pbDesc.resources.size());
-
-	//for (const auto& res : pbDesc.resources)
-	//{
-	//	std::visit([&](auto&& arg)
-	//		{
-	//			using T = std::decay_t<decltype(arg)>;
-
-	//			if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
-	//			{
-	//				VkDescriptorBufferInfo bi{};
-	//				bi.buffer = gAllBuffers[arg.buffer.handle];
-	//				bi.offset = static_cast<VkDeviceSize>(arg.offset);
-	//				bi.range = (arg.size == SIZE_MAX) ? VK_WHOLE_SIZE : static_cast<VkDeviceSize>(arg.size);
-
-	//				bufferInfos.push_back(bi);
-
-	//				VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-	//				w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
-	//				w.dstBinding = slotIndex;
-	//				w.descriptorCount = 1;
-	//				// If you cached per-slot descriptor types when creating the layout, use that here.
-	//				// Without that metadata, default to UNIFORM_BUFFER for buffer resources:
-	//				w.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	//				w.pBufferInfo = &bufferInfos.back();
-
-	//				writes.push_back(w);
-	//			}
-	//			else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
-	//			{
-	//				// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
-	//				// imageInfos.push_back(imgInfo);
-	//				// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
-	//				// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
-	//				MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
-	//			}
-	//			else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
-	//			{
-	//				// TODO: Fill VkDescriptorImageInfo for storage image
-	//				MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
-	//			}
-	//			else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
-	//			{
-	//				// Intentionally empty slot – skip writing
-	//			}
-	//		}, res);
-
-	//	slotIndex++;
-	//}
-
-	//if (!writes.empty())
-	//{
-	//	vkUpdateDescriptorSets(gVKDevice, static_cast<u32>(writes.size()), writes.data(), 0, nullptr);
-	//}
-}
-
-TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
-{
-	TextureInfo texInfo = {};
-
-	D3D12_RESOURCE_DESC textureDesc = {};
-	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	textureDesc.Alignment = 0;
-	textureDesc.Width = desc.width;
-	textureDesc.Height = desc.height;
-	textureDesc.DepthOrArraySize = desc.depth;
-	textureDesc.MipLevels = desc.mipLevels;
-	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	textureDesc.SampleDesc.Count = 1;
-	textureDesc.SampleDesc.Quality = 0;
-	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-	D3D12MA::ALLOCATION_DESC allocDesc = {};
-	allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-	allocDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
-
-
-	HRESULT hr = gAllocator->CreateResource(
-		&allocDesc,
-		&textureDesc,
-		D3D12_RESOURCE_STATE_COMMON,
-		nullptr,
-		&texInfo.allocation,
-		IID_PPV_ARGS(&texInfo.resource)
-	);
-
-	if (desc.initialData)
-	{
-		// Calculate data size (assuming RGBA8)
-		size_t dataSize = desc.width * desc.height * 4;
-
-		// Create staging buffer
-		D3D12_RESOURCE_DESC stagingDesc = {};
-		stagingDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		stagingDesc.Alignment = 0;
-		stagingDesc.Width = dataSize;
-		stagingDesc.Height = 1;
-		stagingDesc.DepthOrArraySize = 1;
-		stagingDesc.MipLevels = 1;
-		stagingDesc.Format = DXGI_FORMAT_UNKNOWN;
-		stagingDesc.SampleDesc.Count = 1;
-		stagingDesc.SampleDesc.Quality = 0;
-		stagingDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		stagingDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-		D3D12MA::ALLOCATION_DESC stagingAllocDesc = {};
-		stagingAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-		stagingAllocDesc.Flags = D3D12MA::ALLOCATION_FLAG_NONE;
-
-		D3D12MA::Allocation* stagingAllocation = nullptr;
-		ID3D12Resource* stagingBuffer = nullptr;
-		HRESULT hr = gAllocator->CreateResource(
-			&stagingAllocDesc,
-			&stagingDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			&stagingAllocation,
-			IID_PPV_ARGS(&stagingBuffer)
-		);
-		if (FAILED(hr))
-		{
-			MLOG_ERROR(u8"Failed to create staging buffer for texture upload: HRESULT=0x%08X", hr);
-		}
-		else
-		{
-			// Map and copy data
-			void* mappedData = nullptr;
-			D3D12_RANGE readRange = { 0, 0 };
-			hr = stagingBuffer->Map(0, &readRange, &mappedData);
-			if (SUCCEEDED(hr))
-			{
-				memcpy(mappedData, desc.initialData, dataSize);
-				D3D12_RANGE writtenRange = { 0, dataSize };
-				stagingBuffer->Unmap(0, &writtenRange);
-
-				// Create temporary command list for copy
-				ID3D12CommandAllocator* tempAllocator = nullptr;
-				ID3D12GraphicsCommandList* tempCmdList = nullptr;
-				hr = gD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&tempAllocator));
-				if (SUCCEEDED(hr))
-				{
-					hr = gD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, tempAllocator, nullptr, IID_PPV_ARGS(&tempCmdList));
-					if (SUCCEEDED(hr))
-					{
-						tempCmdList->Close(); // Reset to open
-						tempCmdList->Reset(tempAllocator, nullptr);
-
-						// Transition texture to copy dest
-						D3D12_RESOURCE_BARRIER barrier = {};
-						barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-						barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-						barrier.Transition.pResource = texInfo.resource;
-						barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-						barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-						barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-						tempCmdList->ResourceBarrier(1, &barrier);
-
-						// Copy buffer to texture
-						D3D12_TEXTURE_COPY_LOCATION src = {};
-						src.pResource = stagingBuffer;
-						src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-						src.PlacedFootprint.Offset = 0;
-						src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-						src.PlacedFootprint.Footprint.Width = desc.width;
-						src.PlacedFootprint.Footprint.Height = desc.height;
-						src.PlacedFootprint.Footprint.Depth = 1;
-						src.PlacedFootprint.Footprint.RowPitch = desc.width * 4;
-
-						D3D12_TEXTURE_COPY_LOCATION dst = {};
-						dst.pResource = texInfo.resource;
-						dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-						dst.SubresourceIndex = 0;
-
-						tempCmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-						// Transition back to generic read
-						barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-						barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-						tempCmdList->ResourceBarrier(1, &barrier);
-
-						// Close and execute
-						tempCmdList->Close();
-						ID3D12CommandList* cmdLists[] = { tempCmdList };
-						gD3DCommandQueue->ExecuteCommandLists(1, cmdLists);
-
-						// Wait for completion
-						ID3D12Fence* tempFence = nullptr;
-						gD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&tempFence));
-						gD3DCommandQueue->Signal(tempFence, 1);
-						if (tempFence->GetCompletedValue() < 1)
-						{
-							HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
-							tempFence->SetEventOnCompletion(1, event);
-							WaitForSingleObject(event, INFINITE);
-							CloseHandle(event);
-						}
-						tempFence->Release();
-
-						tempCmdList->Release();
-					}
-					tempAllocator->Release();
-				}
-			}
-			stagingBuffer->Release();
-			stagingAllocation->Release();
-		}
-	}
-
-	auto descriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	auto srvCpuHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
-		gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart(),
-		currentSRVOffset,
-		descriptorSize);
-	auto srvGpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-		gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart(),
-		currentSRVOffset,
-		descriptorSize);
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Texture2D.MipLevels = desc.mipLevels;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-	gD3DDevice->CreateShaderResourceView(texInfo.resource, &srvDesc, srvCpuHandle);
-
-	texInfo.srvHandle = srvCpuHandle;
-	texInfo.srvGpuHandle = srvGpuHandle;
-
-	gAllTextures.push_back(texInfo);
-
-	currentSRVOffset++;
-
-	TextureHandle result;
-	result.handle = static_cast<u32>(gAllTextures.size() - 1);
-	return result;
-}
-
-
-void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
-{
-
-}
-
-u64 TextureHandle::CreateImguiTextureOpaqueHandle() const
-{
-	const auto& tex_data = &gAllTextures[handle];
-
-	return (u64)(tex_data->srvGpuHandle.ptr);
-}
-
 #endif
+}
+#endif////////////////////////////////////////////////////////////////////////////

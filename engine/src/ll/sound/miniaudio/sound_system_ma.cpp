@@ -89,6 +89,12 @@ void mercury::ll::sound::SoundStop(SoundHandle sound)
 
 void mercury::ll::sound::SoundSetVolume(SoundHandle sound, float volume)
 {
+	if (!sound.isValid() || sound.handle >= gAllMASounds.size())
+	{
+		MLOG_ERROR(u8"SoundPlay: Invalid sound handle %d", sound.handle);
+		return;
+	}
+
 	ma_sound_set_volume(&gAllMASounds[sound.handle].sound, volume);
 }
 

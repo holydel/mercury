@@ -2,11 +2,16 @@ module dedicated_sprite;
 
 import mercury_base;
 
-[[vk::binding(0, 0)]]
-ParameterBlock<MercuryScene> perFrame : register(b0, space0);
+#define MERCURY_DECLARE_TEXTURE2D(type, name) Texture2D<type> name##Map; SamplerState name##Sampler; type sample##name(float2 uv) { return name##Map.Sample(name##Sampler, uv); }
 
-[[vk::binding(0, 1)]]
-Sampler2D textureMap : register(t0, space2) : register(s0, space2);
+struct SpriteParameter
+{
+    MERCURY_DECLARE_TEXTURE2D(float4, Diffuse)
+};
+
+ParameterBlock<MercuryScene> perFrame;
+
+ParameterBlock<SpriteParameter> spriteParams;
 
 [shader("vertex")]
 BaseVertexOutput DedicatedSpriteVS(uniform DedicatedSpriteParameters perObject, uint vertexID: SV_VertexID)
@@ -44,5 +49,5 @@ float4 DedicatedSpriteColorPS(BaseVertexOutput input) : SV_Target
 [shader("fragment")]
 float4 DedicatedSpritePS(BaseVertexOutput input) : SV_Target
 {
-    return input.color * textureMap.Sample(input.texcoord);
+    return input.color * spriteParams.sampleDiffuse(input.texcoord);
 }

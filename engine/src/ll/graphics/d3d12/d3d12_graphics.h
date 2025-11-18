@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ll/graphics.h"
 
 #if defined(MERCURY_LL_GRAPHICS_D3D12)
@@ -14,6 +16,7 @@ struct BufferInfo
 {
 	D3D12MA::Allocation* allocation = nullptr;
 	size_t size = 0;
+	D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = 0;
 };
 
 extern IDXGIFactory4* gD3DFactory;

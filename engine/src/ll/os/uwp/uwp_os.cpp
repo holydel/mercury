@@ -27,6 +27,10 @@
 #pragma comment(lib, "xinput.lib")
 #pragma comment(lib, "Winmm.lib")
 
+#ifdef MERCURY_LL_SOUND_MINIAUDIO
+#pragma comment(lib, "mmdevapi.lib")
+#endif
+
 HINSTANCE gWinSystemInstance = nullptr;
 void* gMainWindow = nullptr;
 SYSTEM_INFO gSysInfo;

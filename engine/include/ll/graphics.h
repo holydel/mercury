@@ -12,7 +12,7 @@ namespace mercury {
 namespace ll {
 namespace graphics {
 
-    bool IsYFlipped();
+bool IsYFlipped();
 
 struct ShaderHandle : public Handle<u32>
 {
@@ -47,6 +47,7 @@ enum class Format : u8 {
   BGRA8_UNORM,
   RGBA16_FLOAT,
   RGBA32_FLOAT,
+  RGB32_FLOAT,
   R8_UNORM,
   RG8_UNORM,
   R16_FLOAT,
@@ -195,6 +196,19 @@ enum class Format : u8 {
   WGPU_DEPTH24PLUS,
   WGPU_DEPTH24PLUS_STENCIL8,
 };
+
+struct FormatInfo
+{
+    u8 numComponents = 0;
+    u8 blockSize = 0;
+    u8 blockWidth = 1;
+    u8 blockHeight = 1;
+    bool isCompressed = false;
+	bool isSRGB = false;
+    bool isDepthFormat = false;
+};
+
+const FormatInfo& GetFormatInfo(Format format);
 
 struct ShaderBytecodeView
 {
@@ -348,6 +362,14 @@ struct ParameterBlockHandle : public Handle<u32>
     void Update(ParameterBlockDescriptor& desc);
 };
 
+struct RasterizeVertexInfo
+{
+	std::string semanticName = "SV_Position";
+	Format format = Format::RGBA32_FLOAT;
+	u32 inputSlot = 0;
+	u8 semanticIndex = 0;
+};
+
 struct RasterizePipelineDescriptor : public PipelineBindingLayoutDescriptor
 {
 	Handle<u32> vertexShader;
@@ -357,8 +379,21 @@ struct RasterizePipelineDescriptor : public PipelineBindingLayoutDescriptor
 	Handle<u32> fragmentShader;
 
     PolygonMode polygonMode = PolygonMode::Fill;
-    CullMode cullMode = CullMode::Back;
+    CullMode cullMode = CullMode::None;
 	PrimitiveTopology primitiveTopology = PrimitiveTopology::TriangleList;
+
+	bool writeDepth = false;
+	bool testDepth = false;
+
+	std::vector<RasterizeVertexInfo> verticesInputInfo;
+    void AddVertexAttribute(const std::string& name, Format format, u32 semanticIndex = 0)
+    {
+		RasterizeVertexInfo info;
+        info.semanticName = name;
+        info.format = format;
+		info.semanticIndex = semanticIndex;
+		verticesInputInfo.push_back(info);
+    }
 };
 
 struct TimelineSemaphore
@@ -395,6 +430,7 @@ struct CommandList
 
   void SetPSO(PsoHandle psoID);
   void Draw(u32 vertexCount, u32 instanceCount = 1, u32 firstVertex = 0, u32 firstInstance = 0);
+  void DrawIndexed(u32 indexCount, u32 instanceCount = 1, u32 firstIndex = 0, u32 firstVertex = 0, u32 firstInstance = 0);
 
   void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f);
   void SetScissor(i32 x, i32 y, u32 width, u32 height);
@@ -410,6 +446,9 @@ struct CommandList
   void SetParameterBlockLayout(u8 setIndex, ParameterBlockLayoutHandle layoutID);
 
   void SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID);
+
+  void SetIndexBuffer(BufferHandle bufferID); //only 16bit buffers supports
+  void SetVertexBuffer(BufferHandle bufferID, u8 stride, u8 slot = 0, size_t offset = 0);
 };
 
 struct CommandPool
@@ -517,10 +556,21 @@ public:
   void SetDebugName(const char* utf8_name);
 };
 
+enum class BufferType
+{
+    VertexBuffer,
+    IndexBuffer,
+    UniformBuffer,
+    StorageBuffer,
+	StagingBuffer
+};
+
 struct BufferDescriptor
 {
     size_t size = 0;
 	void* initialData = nullptr;
+
+	BufferType type = BufferType::StagingBuffer;
 };
 
 struct TextureDescriptor

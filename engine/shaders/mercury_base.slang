@@ -1,7 +1,5 @@
 module mercury_base;
 
-public static const uint32_t MERCURY_BASE_BINDING_SET = 0;
-
 public struct MercuryScene
 {
     public float4 prerptationMatrix;
@@ -46,3 +44,14 @@ public struct DedicatedSpriteParameters
     public float angle;
     public uint32_t colorPacked;
 };
+
+public struct DedicatedStaticMeshVertex
+{
+    public float3 position : POSITION;
+    public float3 normal : NORMAL;
+    public float3 binormal : BINORMAL;
+    public float3 tangent : TANGENT;
+    public float2 uv0 : TEXCOORD0;
+    public float2 uv1 : TEXCOORD1;
+    public float4 color : COLOR0;
+}

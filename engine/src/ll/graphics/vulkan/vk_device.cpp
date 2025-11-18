@@ -1043,6 +1043,7 @@ ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLa
 
 	VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	u32 additionalSlots = 0;
 
 	for (int s = 0; s < layoutDesc.allSlots.size(); ++s)
 	{
@@ -1051,7 +1052,7 @@ ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLa
 
 		if (slot.resourceType == ShaderResourceType::UniformBuffer)
 		{
-			bindingDesc.binding = s;
+			bindingDesc.binding = s + additionalSlots;
 			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; //TODO: other types
 			bindingDesc.descriptorCount = 1;
 			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
@@ -1060,8 +1061,16 @@ ParameterBlockLayoutHandle Device::CreateParameterBlockLayout(const BindingSetLa
 
 		if (slot.resourceType == ShaderResourceType::SampledImage2D)
 		{
-			bindingDesc.binding = s;
-			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; //TODO: other types
+			bindingDesc.binding = s + additionalSlots;
+			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE; //TODO: other types
+			bindingDesc.descriptorCount = 1;
+			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
+			bindingDesc.pImmutableSamplers = nullptr;
+			bindings.push_back(bindingDesc);
+
+			additionalSlots++;
+			bindingDesc.binding = s + additionalSlots;
+			bindingDesc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER; //TODO: other types
 			bindingDesc.descriptorCount = 1;
 			bindingDesc.stageFlags = VK_SHADER_STAGE_ALL; // TODO: specify stages
 			bindingDesc.pImmutableSamplers = &gVKDefaultLinearSampler;
@@ -1164,7 +1173,7 @@ void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const P
 					w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
 					w.dstBinding = slotIndex;
 					w.descriptorCount = 1;
-					w.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 					w.pImageInfo = &imageInfos.back();
 
 					writes.push_back(w);

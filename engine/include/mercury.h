@@ -8,5 +8,6 @@
 #include "mercury_log.h"
 #include "mercury_memory.h"
 #include "mercury_sound.h"
+#include "mercury_geometry.h"
 
 namespace mercury {};

@@ -23,7 +23,10 @@
   <Project Path="D:/Projects/mercury/solutions/VisualStudio2026/SimdJsonPlatground/SimdJsonPlatground.vcxproj" Id="64e221a0-686d-4f1e-80da-a37cfcadd069">
     <BuildType Solution="Debug|ARM64" Project="Release" />
     <BuildType Solution="Dev|*" Project="Release" />
-    <BuildType Solution="Retail|*" Project="Debug" />
+    <BuildType Solution="Retail|Android-arm64-v8a" Project="Debug" />
+    <BuildType Solution="Retail|ARM64" Project="Debug" />
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <BuildType Solution="Retail|x64" Project="Release" />
     <Platform Solution="*|Android-arm64-v8a" Project="x64" />
     <Platform Solution="*|Emscripten" Project="x64" />
   </Project>
@@ -37,7 +40,10 @@
     <BuildDependency Project="D:/Projects/mercury/solutions/VisualStudio2026/mercury.vcxproj" />
     <BuildType Solution="Debug|ARM64" Project="Release" />
     <BuildType Solution="Dev|*" Project="Release" />
-    <BuildType Solution="Retail|*" Project="Debug" />
+    <BuildType Solution="Retail|Android-arm64-v8a" Project="Debug" />
+    <BuildType Solution="Retail|ARM64" Project="Debug" />
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <BuildType Solution="Retail|x64" Project="Release" />
     <Platform Solution="*|Android-arm64-v8a" Project="x64" />
     <Platform Solution="*|Emscripten" Project="x64" />
     <Deploy />
@@ -46,7 +52,10 @@
   <Project Path="mercury_uwp.vcxproj" Id="416fe869-41dc-49fc-a0d2-234cc6c45a2f">
     <BuildType Solution="Debug|ARM64" Project="Release" />
     <BuildType Solution="Dev|*" Project="Release" />
-    <BuildType Solution="Retail|*" Project="Debug" />
+    <BuildType Solution="Retail|Android-arm64-v8a" Project="Debug" />
+    <BuildType Solution="Retail|ARM64" Project="Debug" />
+    <BuildType Solution="Retail|Emscripten" Project="Debug" />
+    <BuildType Solution="Retail|x64" Project="Release" />
     <Platform Solution="*|Android-arm64-v8a" Project="x64" />
     <Platform Solution="*|Emscripten" Project="x64" />
   </Project>

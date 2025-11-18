@@ -14,7 +14,7 @@ mercury::ll::graphics::ShaderBytecodeView DedicatedSpriteVS()
     @align(4) deltaTime_0 : f32,
 };
 
-@binding(0) @group(0) var<uniform> perFrame_0 : MercuryScene_std140_0;
+@binding(0) @group(1) var<uniform> perFrame_0 : MercuryScene_std140_0;
 struct DedicatedSpriteParameters_std140_0
 {
     @align(16) position_0 : vec2<f32>,
@@ -104,9 +104,14 @@ fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixel
 
 mercury::ll::graphics::ShaderBytecodeView DedicatedSpritePS()
 {
-	static const char data[] = R"(@binding(0) @group(1) var textureMap_texture_0 : texture_2d<f32>;
+	static const char data[] = R"(@binding(0) @group(2) var spriteParams_DiffuseMap_0 : texture_2d<f32>;
 
-@binding(1) @group(1) var textureMap_sampler_0 : sampler;
+@binding(1) @group(2) var spriteParams_DiffuseSampler_0 : sampler;
+
+fn SpriteParameter_sampleDiffuse_0( this_DiffuseMap_0 : texture_2d<f32>,  this_DiffuseSampler_0 : sampler,  uv_0 : vec2<f32>) -> vec4<f32>
+{
+    return (textureSample((this_DiffuseMap_0), (this_DiffuseSampler_0), (uv_0)));
+}
 
 struct pixelOutput_0
 {
@@ -122,8 +127,100 @@ struct pixelInput_0
 @fragment
 fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixelOutput_0
 {
-    ;
-    var _S2 : pixelOutput_0 = pixelOutput_0( _S1.color_0 * (textureSample((textureMap_texture_0), (textureMap_sampler_0), (_S1.texcoord_0))) );
+    var _S2 : pixelOutput_0 = pixelOutput_0( _S1.color_0 * SpriteParameter_sampleDiffuse_0(spriteParams_DiffuseMap_0, spriteParams_DiffuseSampler_0, _S1.texcoord_0) );
+    return _S2;
+}
+
+)";
+	return { data, sizeof(data) };
+}
+
+mercury::ll::graphics::ShaderBytecodeView DedicatedStaticMeshVS()
+{
+	static const char data[] = R"(struct _MatrixStorage_float4x4std140_0
+{
+    @align(16) data_0 : array<vec4<f32>, i32(4)>,
+};
+
+struct EntryPointParams_std140_0
+{
+    @align(16) MVP_0 : _MatrixStorage_float4x4std140_0,
+};
+
+@binding(0) @group(0) var<uniform> entryPointParams_0 : EntryPointParams_std140_0;
+struct BaseVertexOutput_0
+{
+    @builtin(position) position_0 : vec4<f32>,
+    @location(0) texcoord_0 : vec2<f32>,
+    @location(1) color_0 : vec4<f32>,
+};
+
+struct vertexInput_0
+{
+    @location(0) position_1 : vec3<f32>,
+    @location(2) normal_0 : vec3<f32>,
+    @location(3) binormal_0 : vec3<f32>,
+    @location(4) tangent_0 : vec3<f32>,
+    @location(5) uv0_0 : vec2<f32>,
+    @location(1) uv1_0 : vec2<f32>,
+    @location(6) color_1 : vec4<f32>,
+};
+
+@vertex
+fn main( _S1 : vertexInput_0) -> BaseVertexOutput_0
+{
+    var output_0 : BaseVertexOutput_0;
+    output_0.color_0 = _S1.color_1;
+    output_0.texcoord_0 = _S1.uv0_0;
+    output_0.position_0 = (((mat4x4<f32>(entryPointParams_0.MVP_0.data_0[i32(0)][i32(0)], entryPointParams_0.MVP_0.data_0[i32(0)][i32(1)], entryPointParams_0.MVP_0.data_0[i32(0)][i32(2)], entryPointParams_0.MVP_0.data_0[i32(0)][i32(3)], entryPointParams_0.MVP_0.data_0[i32(1)][i32(0)], entryPointParams_0.MVP_0.data_0[i32(1)][i32(1)], entryPointParams_0.MVP_0.data_0[i32(1)][i32(2)], entryPointParams_0.MVP_0.data_0[i32(1)][i32(3)], entryPointParams_0.MVP_0.data_0[i32(2)][i32(0)], entryPointParams_0.MVP_0.data_0[i32(2)][i32(1)], entryPointParams_0.MVP_0.data_0[i32(2)][i32(2)], entryPointParams_0.MVP_0.data_0[i32(2)][i32(3)], entryPointParams_0.MVP_0.data_0[i32(3)][i32(0)], entryPointParams_0.MVP_0.data_0[i32(3)][i32(1)], entryPointParams_0.MVP_0.data_0[i32(3)][i32(2)], entryPointParams_0.MVP_0.data_0[i32(3)][i32(3)])) * (vec4<f32>(_S1.position_1, 1.0f))));
+    return output_0;
+}
+
+)";
+	return { data, sizeof(data) };
+}
+
+mercury::ll::graphics::ShaderBytecodeView DedicatedStaticMeshColorPS()
+{
+	static const char data[] = R"(struct pixelOutput_0
+{
+    @location(0) output_0 : vec4<f32>,
+};
+
+struct pixelInput_0
+{
+    @location(0) texcoord_0 : vec2<f32>,
+    @location(1) color_0 : vec4<f32>,
+};
+
+@fragment
+fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixelOutput_0
+{
+    var _S2 : pixelOutput_0 = pixelOutput_0( _S1.color_0 );
+    return _S2;
+}
+
+)";
+	return { data, sizeof(data) };
+}
+
+mercury::ll::graphics::ShaderBytecodeView DedicatedStaticMeshPS()
+{
+	static const char data[] = R"(struct pixelOutput_0
+{
+    @location(0) output_0 : vec4<f32>,
+};
+
+struct pixelInput_0
+{
+    @location(0) texcoord_0 : vec2<f32>,
+    @location(1) color_0 : vec4<f32>,
+};
+
+@fragment
+fn main( _S1 : pixelInput_0, @builtin(position) position_0 : vec4<f32>) -> pixelOutput_0
+{
+    var _S2 : pixelOutput_0 = pixelOutput_0( _S1.color_0 );
     return _S2;
 }
 

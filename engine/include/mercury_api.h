@@ -59,11 +59,13 @@
 
 // Graphics API selection
 //#define MERCURY_LL_GRAPHICS_NULL
+
 //#define MERCURY_LL_GRAPHICS_VULKAN
 #define MERCURY_LL_GRAPHICS_D3D12
-//#define MERCURY_LL_GRAPHICS_METAL
 //#define MERCURY_LL_GRAPHICS_WEBGPU
+//#define MERCURY_LL_GRAPHICS_METAL
 
+// Low-level sound API selection
 //#define MERCURY_LL_SOUND_NULL
  #define MERCURY_LL_SOUND_MINIAUDIO
 
@@ -214,6 +216,11 @@ namespace mercury
         {
             handle = static_cast<T>(value);
             return *this;
+        }
+
+        bool operator==(const Handle<T>& other) const
+        {
+            return handle == other.handle;
         }
     };
 #endif

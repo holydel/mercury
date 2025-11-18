@@ -9,7 +9,8 @@
 #include "mercury_shader.h"
 
 #include <mercury_canvas.h>
-
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 using namespace mercury;
 
 //void test_simd() {
@@ -216,6 +217,15 @@ class TestBedApplication : public Application {
        mercury::ll::graphics::ShaderHandle testTriangleFS;
 
        ll::graphics::TextureHandle testTexture;
+
+
+       mercury::ll::graphics::PsoHandle testDedicatedMeshPSO;
+       mercury::ll::graphics::ShaderHandle testDedicatedMeshVS;
+       mercury::ll::graphics::ShaderHandle testDedicatedMeshFS;
+
+       mercury::geometry::StaticMeshData testCubeMeshData;
+	   mercury::ll::graphics::BufferHandle testCubeVertexBuffer;
+	   mercury::ll::graphics::BufferHandle testCubeIndexBuffer;
 public:
        void Configure() override
        {
@@ -291,6 +301,51 @@ void TestBedApplication::Initialize() {
 	   texDesc.initialData = textureData;
 
        testTexture = ll::graphics::gDevice->CreateTexture(texDesc);
+
+       testDedicatedMeshVS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::DedicatedStaticMeshVS());
+       testDedicatedMeshFS = ll::graphics::gDevice->CreateShaderModule(ll::graphics::embedded_shaders::DedicatedStaticMeshPS());
+
+	   ll::graphics::RasterizePipelineDescriptor dedicatedMeshPsoDesc = {};
+	   dedicatedMeshPsoDesc.vertexShader = testDedicatedMeshVS;
+       dedicatedMeshPsoDesc.fragmentShader = testDedicatedMeshFS;
+	   dedicatedMeshPsoDesc.pushConstantSize = 64;
+
+       dedicatedMeshPsoDesc.AddVertexAttribute("POSITION", ll::graphics::Format::RGB32_FLOAT);
+       dedicatedMeshPsoDesc.AddVertexAttribute("NORMAL", ll::graphics::Format::RGB32_FLOAT);
+       dedicatedMeshPsoDesc.AddVertexAttribute("BINORMAL", ll::graphics::Format::RGB32_FLOAT);
+       dedicatedMeshPsoDesc.AddVertexAttribute("TANGENT", ll::graphics::Format::RGB32_FLOAT);
+       dedicatedMeshPsoDesc.AddVertexAttribute("TEXCOORD", ll::graphics::Format::RG32_FLOAT);
+       dedicatedMeshPsoDesc.AddVertexAttribute("TEXCOORD", ll::graphics::Format::RG32_FLOAT,1);
+       dedicatedMeshPsoDesc.AddVertexAttribute("COLOR", ll::graphics::Format::RGBA32_FLOAT);
+
+       testDedicatedMeshPSO = ll::graphics::gDevice->CreateRasterizePipeline(dedicatedMeshPsoDesc);
+
+	   testCubeMeshData = mercury::geometry::CreateCubeMesh(1.0f);
+	   for (auto& v : testCubeMeshData.vertices)
+       {
+           v.color.r = rand() % 256 / 255.0f;
+		   v.color.g = rand() % 256 / 255.0f;
+		   v.color.b = rand() % 256 / 255.0f;
+		   v.color.a = 1.0f;
+       }
+
+       {
+		   ll::graphics::BufferDescriptor vertexBufferDesc = {};
+		   vertexBufferDesc.size = sizeof(geometry::DedicatedStaticMeshVertex) * testCubeMeshData.vertices.size();
+           vertexBufferDesc.type = ll::graphics::BufferType::VertexBuffer; // Fix: correct buffer type for vertex data
+		   vertexBufferDesc.initialData = testCubeMeshData.vertices.data();
+
+           testCubeVertexBuffer = ll::graphics::gDevice->CreateBuffer(vertexBufferDesc);
+       }
+
+	   {
+		   ll::graphics::BufferDescriptor indexBufferDesc = {};
+		   indexBufferDesc.size = sizeof(u32) * testCubeMeshData.indices.size();
+		   indexBufferDesc.type = ll::graphics::BufferType::IndexBuffer;
+		   indexBufferDesc.initialData = testCubeMeshData.indices.data();
+
+		   testCubeIndexBuffer = ll::graphics::gDevice->CreateBuffer(indexBufferDesc);
+       }
 }
 
 void TestBedApplication::Tick() {
@@ -346,9 +401,24 @@ void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL
 
     pc.angle = t * 0.1f;
 
-    finalCL.SetPSO(testTrianglePSO);
-	finalCL.PushConstants(pc);    
-	finalCL.Draw(3, 1, 0, 0);
+ //   finalCL.SetPSO(testTrianglePSO);
+	//finalCL.PushConstants(pc);    
+	//finalCL.Draw(3, 1, 0, 0);
+
+
+	finalCL.SetPSO(testDedicatedMeshPSO);
+	finalCL.SetVertexBuffer(testCubeVertexBuffer, sizeof(mercury::geometry::DedicatedStaticMeshVertex), 0, 0);
+	finalCL.SetIndexBuffer(testCubeIndexBuffer);
+
+
+    glm::mat4  model = glm::rotate(glm::mat4(1.0f), t * 0.1f, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4  view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f));
+    glm::mat4  projection = glm::perspectiveRH_ZO(glm::radians(80.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+
+    glm::mat4 MVP = projection * view * model;
+	finalCL.PushConstants(MVP);
+
+	finalCL.DrawIndexed(36);
 
 	//finalCL.SetPSO(testDedicatedSpritePSO);
 	//DedicatedSpriteParameters spriteParams;

@@ -43,4 +43,9 @@
       <Filter>Content</Filter>
     </AppxManifest>
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="Assets\Nightwish_-_Ghost_Love_Score_Remastered.mp3">
+      <Filter>Assets</Filter>
+    </Media>
+  </ItemGroup>
 </Project>

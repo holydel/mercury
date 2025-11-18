@@ -55,6 +55,9 @@
     <Filter Include="src\ll\sound\miniaudio">
       <UniqueIdentifier>{0b9c1808-6cc4-4ac2-88d0-8276e0474e8d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{a1b958d1-8357-49d9-aad0-e30619a30a2a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\ll\graphics.h">
@@ -162,6 +165,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\sound\mercury_ll_sound.h">
       <Filter>src\ll\sound</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_geometry.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_utils.h">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp">
@@ -263,5 +272,28 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\sound\miniaudio\sound_system_ma.cpp">
       <Filter>src\ll\sound\miniaudio</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\geometry.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics_format_utils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\dedicated_sprite.slang">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\dedicated_static_mesh.slang">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\mercury.slang">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\mercury_base.slang">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\mercury_shared.slang">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

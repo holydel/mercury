@@ -25,6 +25,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_canvas.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_embedded_shaders.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_framegraph.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_geometry.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_input.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_log.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\include\mercury_material.h" />
@@ -40,6 +41,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\input.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_graphics.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_utils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\mercury_swapchain.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\mercury_vulkan.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\vulkan\vk_device.h" />
@@ -53,7 +55,9 @@
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\canvas.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\geometry.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics_format_utils.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl_graphics.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\imgui_impl_os.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\imgui\mercury_imgui.cpp" />
@@ -84,5 +88,12 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_draw.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_tables.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\third_party\imgui\imgui_widgets.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\dedicated_sprite.slang" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\dedicated_static_mesh.slang" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\mercury.slang" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\mercury_base.slang" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\engine\shaders\mercury_shared.slang" />
   </ItemGroup>
 </Project>
