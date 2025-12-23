@@ -411,7 +411,7 @@ void TestBedApplication::OnFinalPass(mercury::ll::graphics::CommandList& finalCL
 	finalCL.SetIndexBuffer(testCubeIndexBuffer);
 
 
-    glm::mat4  model = glm::rotate(glm::mat4(1.0f), t * 0.1f, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4  model = glm::rotate(glm::mat4(1.0f), t * 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4  view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f));
     glm::mat4  projection = glm::perspectiveRH_ZO(glm::radians(80.0f), 16.0f / 9.0f, 0.1f, 100.0f);
 

@@ -171,6 +171,15 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_utils.h">
       <Filter>src\ll\graphics\d3d12</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_command_list.h">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_swapchain.h">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_render_target.h">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\application.cpp">
@@ -277,6 +286,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\graphics_format_utils.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_command_list.cpp">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_swapchain.cpp">
+      <Filter>src\ll\graphics\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\engine\src\ll\graphics\d3d12\d3d12_render_target.cpp">
+      <Filter>src\ll\graphics\d3d12</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

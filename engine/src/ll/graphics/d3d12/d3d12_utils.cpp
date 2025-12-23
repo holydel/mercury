@@ -2,6 +2,19 @@
 
 #if defined(MERCURY_LL_GRAPHICS_D3D12)
 
+#include "mercury_log.h"
+using namespace mercury;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#pragma comment(lib, "d3dcompiler.lib")  // For D3DReflect
+#pragma comment(lib, "dxguid.lib")  
+#pragma comment(lib, "dxcompiler.lib")
+#include <d3dcompiler.h>
+#include <dxcapi.h>
+#include <d3d12shader.h>
+#include <wrl/client.h>
+#endif
+
 using mercury::ll::graphics::Format;
 
 static Format FallbackFormat()
@@ -184,5 +197,159 @@ DXGI_FORMAT ToDXGIFormat(mercury::ll::graphics::Format format)
     }
 }
 
+D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyTypeFromMercuryTopology(mercury::ll::graphics::PrimitiveTopology topology)
+{
+    switch (topology)
+    {
+    case mercury::ll::graphics::PrimitiveTopology::TriangleList:
+    case mercury::ll::graphics::PrimitiveTopology::TriangleStrip:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    case mercury::ll::graphics::PrimitiveTopology::LineList:
+    case mercury::ll::graphics::PrimitiveTopology::LineStrip:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+    case mercury::ll::graphics::PrimitiveTopology::PointList:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+    default:
+        return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+    }
+}
+D3D_PRIMITIVE_TOPOLOGY PrimitiveTopologyFromMercuryPrimitiveTopology(mercury::ll::graphics::PrimitiveTopology topology)
+{
+    switch (topology)
+    {
+    case mercury::ll::graphics::PrimitiveTopology::TriangleList:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    case mercury::ll::graphics::PrimitiveTopology::TriangleStrip:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+    case mercury::ll::graphics::PrimitiveTopology::LineList:
+        return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+    case mercury::ll::graphics::PrimitiveTopology::LineStrip:
+        return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+    case mercury::ll::graphics::PrimitiveTopology::PointList:
+        return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+    default:
+        return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    }
+}
+
+// Helper functions for fence synchronization
+u64 Signal(ID3D12CommandQueue* commandQueue, ID3D12Fence* fence, u64& fenceValue)
+{
+    u64 fenceValueForSignal = ++fenceValue;
+    commandQueue->Signal(fence, fenceValueForSignal);
+    return fenceValueForSignal;
+}
+
+void WaitForFenceValue(ID3D12Fence* fence, u64 fenceValue, HANDLE fenceEvent)
+{
+    if (fence->GetCompletedValue() < fenceValue)
+    {
+        fence->SetEventOnCompletion(fenceValue, fenceEvent);
+        WaitForSingleObject(fenceEvent, INFINITE);
+    }
+}
+
+void Flush(ID3D12CommandQueue* commandQueue, ID3D12Fence* fence, u64& fenceValue, HANDLE fenceEvent)
+{
+    u64 fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
+    WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
+}
+
+void PrintShaderBytecodeInputs(CD3DX12_SHADER_BYTECODE& bytecode)
+{
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    using Microsoft::WRL::ComPtr;
+
+    // Validate bytecode before reflection
+    if (bytecode.pShaderBytecode == nullptr || bytecode.BytecodeLength == 0)
+    {
+        MLOG_ERROR(u8"Shader bytecode is null or empty!");
+    }
+    else
+    {
+        MLOG_DEBUG(u8"Reflecting DXIL shader: %zu bytes at %p",
+            bytecode.BytecodeLength, bytecode.pShaderBytecode);
+
+        ComPtr<IDxcUtils> dxcUtils;
+        HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+
+        if (SUCCEEDED(hr))
+        {
+            // Create a blob wrapper around the shader bytecode
+            ComPtr<IDxcBlobEncoding> shaderBlob;
+            hr = dxcUtils->CreateBlob(
+                bytecode.pShaderBytecode,
+                static_cast<UINT32>(bytecode.BytecodeLength),
+                CP_ACP,
+                &shaderBlob
+            );
+
+            if (SUCCEEDED(hr))
+            {
+                ComPtr<IDxcContainerReflection> containerReflection;
+                hr = DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection));
+
+                if (SUCCEEDED(hr))
+                {
+                    hr = containerReflection->Load(shaderBlob.Get());
+
+                    if (SUCCEEDED(hr))
+                    {
+                        UINT32 partIndex;
+                        hr = containerReflection->FindFirstPartKind(DXC_PART_DXIL, &partIndex);
+
+                        if (SUCCEEDED(hr))
+                        {
+                            ComPtr<ID3D12ShaderReflection> reflection;
+                            hr = containerReflection->GetPartReflection(partIndex, IID_PPV_ARGS(&reflection));
+
+                            if (SUCCEEDED(hr))
+                            {
+                                D3D12_SHADER_DESC shaderDesc;
+                                reflection->GetDesc(&shaderDesc);
+
+                                MLOG_DEBUG(u8"DXIL Shader has %u bound resources:", shaderDesc.BoundResources);
+
+                                for (UINT i = 0; i < shaderDesc.BoundResources; ++i)
+                                {
+                                    D3D12_SHADER_INPUT_BIND_DESC bindDesc;
+                                    reflection->GetResourceBindingDesc(i, &bindDesc);
+
+                                    MLOG_DEBUG(u8"  Resource '%s': Type=%d, BindPoint=%u, Space=%u, BindCount=%u",
+                                        bindDesc.Name,
+                                        bindDesc.Type,
+                                        bindDesc.BindPoint,
+                                        bindDesc.Space,
+                                        bindDesc.BindCount);
+                                }
+                            }
+                            else
+                            {
+                                MLOG_ERROR(u8"Failed to get part reflection: 0x%08X", hr);
+                            }
+                        }
+                        else
+                        {
+                            MLOG_ERROR(u8"Failed to find DXIL part: 0x%08X", hr);
+                        }
+                    }
+                    else
+                    {
+                        MLOG_ERROR(u8"Failed to load container reflection: 0x%08X", hr);
+                    }
+                }
+            }
+            else
+            {
+                MLOG_ERROR(u8"Failed to create DXC blob: 0x%08X", hr);
+            }
+        }
+        else
+        {
+            MLOG_ERROR(u8"Failed to create DxcUtils: 0x%08X", hr);
+        }
+    }
+#endif
+}
 
 #endif

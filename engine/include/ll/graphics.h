@@ -41,6 +41,7 @@ struct ParameterBlockLayoutHandle : public Handle<u32>
 };
 
 enum class Format : u8 {
+  NONE,
   // Common formats
   RGBA8_UNORM,
   RGBA8_UNORM_SRGB,
@@ -195,6 +196,47 @@ enum class Format : u8 {
   WGPU_BGRA8_UNORM_SRGB,
   WGPU_DEPTH24PLUS,
   WGPU_DEPTH24PLUS_STENCIL8,
+};
+
+struct TargetInfo
+{
+    u16 width = 1;
+    u16 height = 1;
+    u8 layers = 1;
+    u8 numSamples = 1;
+
+    Format colorFormat[8] = { Format::NONE,Format::NONE,Format::NONE,Format::NONE,Format::NONE,Format::NONE,Format::NONE,Format::NONE };
+	Format depthStencilFormat = Format::NONE;
+
+    u8 numViews = 1;
+	u8 numExternalFramebuffers = 0;
+    bool resizable = false;
+};
+
+struct RenderTargetClearInfo
+{
+    glm::vec4 color[8];
+	float depth = 1.0f;
+    u8 stencil = 0;
+};
+
+
+struct RenderTargetHandle : public Handle<u16>
+{
+	TargetInfo GetTargetInfo();
+
+    void BeginPass();
+	void EndPass();
+
+	void SetDebugName(const char* utf8_name);
+	void SetFramebuffers(void** nativeFramebuffersPtr, u8 numFramebuffers);
+	void SetFramebufferIndex(u32 imageIndex);
+	void ResizeIfNeeded(u16 newWidth, u16 newHeight);
+};
+
+struct RenderTargetCreateDescriptor : public TargetInfo
+{
+    const RenderTargetClearInfo* staticClear;
 };
 
 struct FormatInfo
@@ -648,6 +690,8 @@ public:
 
   //onFinish is called in the Device::Tick function after the commands have finished executing
   void SubmitOneTimeCommandsList(std::function<void(CommandList& cmdList)> recordCommands, std::function<void()> onFinish = nullptr);
+
+  RenderTargetHandle CreateRenderTarget(const RenderTargetCreateDescriptor& desc);
 };
 
 class Swapchain {

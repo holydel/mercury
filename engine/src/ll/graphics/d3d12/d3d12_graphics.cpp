@@ -25,15 +25,7 @@ bool mercury::ll::graphics::IsYFlipped()
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#pragma comment(lib, "d3dcompiler.lib")  // For D3DReflect
-#pragma comment(lib, "dxguid.lib")  
-#pragma comment(lib, "dxcompiler.lib")
-#include <d3dcompiler.h>
-#endif
-
 #include <d3d12shader.h>
-
 
 #include <dxcapi.h>
 
@@ -41,7 +33,7 @@ bool mercury::ll::graphics::IsYFlipped()
 
 #include <wrl/client.h>
 #include "d3d12_graphics.h"
-
+#include "d3d12_render_target.h"
 // Include D3D12 Memory Allocator implementation in this translation unit
 #include "../../../../engine/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp"
 
@@ -55,9 +47,11 @@ ID3D12CommandAllocator* gD3DCommandAllocator = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapRTV = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapDSV = nullptr;
 ID3D12DescriptorHeap* gDescriptorsHeapSRV = nullptr;
+UINT gCurrentSRVOffset = 0;
 
 D3D12MA::Allocator* gAllocator = nullptr;
 DXGI_FORMAT gD3DSwapChainFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+DXGI_FORMAT gD3DSwapChainDepthFormat = DXGI_FORMAT_D32_FLOAT;
 
 // Global storage for shaders, signatures, and PSOs
 std::vector<CD3DX12_SHADER_BYTECODE> gAllShaders;
@@ -69,14 +63,6 @@ std::vector<BufferInfo> gAllBuffersMeta;
 
 std::vector<ParameterBlockDescriptor> gAllParameterBlocks;
 
-struct TextureInfo
-{
-	ID3D12Resource* resource = nullptr;
-	D3D12MA::Allocation* allocation = nullptr;
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE srvGpuHandle = {};
-};
-
 std::vector<TextureInfo> gAllTextures;
 
 Device* gDevice = nullptr;
@@ -86,6 +72,14 @@ Swapchain* gSwapchain = nullptr;
 
 mercury::memory::ReservedAllocator* memory::gGraphicsMemoryAllocator = nullptr;
 
+std::vector<FrameData> gFrames;
+
+u32 gFrameRingCurrent = 0;
+
+// Add after the global swapchain variables (around line 58)
+UINT gMSAASampleCount = 4; // Default to 4x MSAA
+UINT gMSAAQuality = 0;
+
 const char* ll::graphics::GetBackendName()
 {
 	static const char* backendName = "D3D12";
@@ -93,29 +87,6 @@ const char* ll::graphics::GetBackendName()
 }
 
 #define RPC_NO_WINDOWS_H
-
-// Helper functions for fence synchronization
-static u64 Signal(ID3D12CommandQueue* commandQueue, ID3D12Fence* fence, u64& fenceValue)
-{
-	u64 fenceValueForSignal = ++fenceValue;
-	commandQueue->Signal(fence, fenceValueForSignal);
-	return fenceValueForSignal;
-}
-
-static void WaitForFenceValue(ID3D12Fence* fence, u64 fenceValue, HANDLE fenceEvent)
-{
-	if (fence->GetCompletedValue() < fenceValue)
-	{
-		fence->SetEventOnCompletion(fenceValue, fenceEvent);
-		WaitForSingleObject(fenceEvent, INFINITE);
-	}
-}
-
-static void Flush(ID3D12CommandQueue* commandQueue, ID3D12Fence* fence, u64& fenceValue, HANDLE fenceEvent)
-{
-	u64 fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
-	WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
-}
 
 void Instance::Initialize()
 {
@@ -133,6 +104,7 @@ void Instance::Initialize()
 		gDebugController->EnableDebugLayer();
 		gDebugController->SetEnableGPUBasedValidation(true);
 		gDebugController->SetEnableSynchronizedCommandQueueValidation(true);
+		
 		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 
 		dc->Release();
@@ -236,30 +208,15 @@ void Device::Initialize()
 
 	D3D_CALL(gD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&gD3DCommandAllocator)));
 
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.NumDescriptors = 64;
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		D3D_CALL(gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gDescriptorsHeapRTV)));
-		gDescriptorsHeapRTV->SetName(L"RTV Heap");
-	}
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.NumDescriptors = 4096;
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	D3D_CALL(gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gDescriptorsHeapSRV)));
+	gDescriptorsHeapSRV->SetName(L"SRV Heap");
+	
+	InitRenderTargetHeaps();
 
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.NumDescriptors = 64;
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-		D3D_CALL(gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gDescriptorsHeapDSV)));
-		gDescriptorsHeapDSV->SetName(L"DSV Heap");
-	}
-
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.NumDescriptors = 4096;
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		D3D_CALL(gD3DDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&gDescriptorsHeapSRV)));
-		gDescriptorsHeapSRV->SetName(L"SRV Heap");
-	}
 	// Initialize D3D12 Memory Allocator
 	D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 	allocatorDesc.pDevice = gD3DDevice;
@@ -303,41 +260,50 @@ void Device::InitializeSwapchain()
 	gSwapchain->Initialize();
 }
 
-static UINT currentSRVOffset = 0;
 
-void AllocateSrvDescriptor(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
+void AllocateSrvDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
 {
 	static UINT descriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	*out_cpu_desc_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
-		info->SrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-		currentSRVOffset,
+		gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart(),
+		gCurrentSRVOffset,
 		descriptorSize);
 	*out_gpu_desc_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-		info->SrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart(),
-		currentSRVOffset,
+		gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart(),
+		gCurrentSRVOffset,
 		descriptorSize);
-	currentSRVOffset++;
+	gCurrentSRVOffset++;
 }
 
-void FreeSrvDescriptor(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_desc_handle)
+void FreeSrvDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_desc_handle)
+{
+	// No-op for now
+}
+
+void AllocateSrvDescriptorImgui(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
+{
+	AllocateSrvDescriptor(out_cpu_desc_handle, out_gpu_desc_handle);
+}
+
+void FreeSrvDescriptorImgui(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_desc_handle)
 {
 	// No-op for now
 }
 
 void Device::ImguiInitialize()
 {
-
-
 	ImGui_ImplDX12_InitInfo init_info = {};
 	init_info.CommandQueue = gD3DCommandQueue;
 	init_info.Device = gD3DDevice;
 	init_info.SrvDescriptorHeap = gDescriptorsHeapSRV;
 	init_info.NumFramesInFlight = 3;
 	init_info.RTVFormat = gD3DSwapChainFormat;
-	init_info.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	init_info.SrvDescriptorAllocFn = &AllocateSrvDescriptor;
-	init_info.SrvDescriptorFreeFn = &FreeSrvDescriptor;
+	init_info.DSVFormat = gD3DSwapChainDepthFormat;
+	init_info.SrvDescriptorAllocFn = &AllocateSrvDescriptorImgui;
+	init_info.SrvDescriptorFreeFn = &FreeSrvDescriptorImgui;
+	init_info.MSAASampleCount = gMSAASampleCount;
+	init_info.MSAAQuality = gMSAAQuality;
 	//init_info.SrvDescriptorAllocFn
 	ImGui_ImplDX12_Init(&init_info);
 
@@ -374,406 +340,6 @@ void* Device::GetNativeHandle()
 	return gD3DDevice;
 }
 
-void* Swapchain::GetNativeHandle()
-{
-	return nullptr;
-}
-
-// Swapchain implementation with frame management
-struct BackbufferResourceInfo
-{
-	CD3DX12_CPU_DESCRIPTOR_HANDLE bbRTV;
-	ID3D12Resource* bbResource = nullptr;
-	int frameIndex = 0;
-};
-
-struct FrameData
-{
-	HANDLE fenceEvent = nullptr;
-	ID3D12Fence* fence = nullptr;
-	UINT64 fenceValue = 0;
-	ID3D12GraphicsCommandList* commandList = nullptr;
-	ID3D12CommandAllocator* commandAllocator = nullptr;
-	u64 frameIndex = 0;
-};
-
-// Depth buffer resources
-ID3D12Resource* gDepthStencilBuffer = nullptr;
-D3D12MA::Allocation* gDepthStencilAllocation = nullptr;
-CD3DX12_CPU_DESCRIPTOR_HANDLE gDepthStencilView;
-
-int gNumFrames = 3;
-std::vector<BackbufferResourceInfo> gBBFrames;
-std::vector<FrameData> gFrames;
-IDXGISwapChain3* gSwapChain = nullptr;
-u64 gCurrentBBResourceIndex = 0;
-u32 gFrameRingCurrent = 0;
-u64 gFrameID = 0;
-u32 gNewWidth = 0;
-u32 gCurWidth = 0;
-u32 gNewHeight = 0;
-u32 gCurHeight = 0;
-
-static BackbufferResourceInfo& GetCurrentBackbufferResourceInfo()
-{
-	return gBBFrames[gCurrentBBResourceIndex];
-}
-
-void Swapchain::Initialize()
-{
-	void* windowHandle = os::gOS->GetCurrentNativeWindowHandle();
-
-	ll::os::gOS->GetActualWindowSize((unsigned int&)gNewWidth, (unsigned int&)gNewHeight);
-	gCurWidth = gNewWidth;
-	gCurHeight = gNewHeight;
-
-	IDXGISwapChain1* swapchain1 = nullptr;
-
-	// Create swapchain
-	DXGI_SWAP_CHAIN_DESC1 sdesc = {};
-	sdesc.Width = gCurWidth;
-	sdesc.Height = gCurHeight;
-	sdesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	sdesc.BufferCount = gNumFrames;
-	sdesc.Format = gD3DSwapChainFormat;
-	sdesc.SampleDesc.Count = 1;
-	sdesc.SampleDesc.Quality = 0;
-	sdesc.Scaling = DXGI_SCALING_NONE;
-	sdesc.Stereo = false;
-	sdesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	sdesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	
-	ll::os::gOS->CreateSwapchainForD3D12(&sdesc, &swapchain1);
-
-	D3D_CALL(swapchain1->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&gSwapChain));
-	swapchain1->Release();
-
-	// Create backbuffer resources
-	gBBFrames.resize(gNumFrames);
-	auto rtvDescriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(gDescriptorsHeapRTV->GetCPUDescriptorHandleForHeapStart());
-
-	for (uint32_t i = 0; i < gNumFrames; ++i)
-	{
-		BackbufferResourceInfo& bb = gBBFrames[i];
-		gSwapChain->GetBuffer(i, IID_PPV_ARGS(&bb.bbResource));
-
-		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-		rtvDesc.Format = gD3DSwapChainFormat;
-		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-		gD3DDevice->CreateRenderTargetView(bb.bbResource, &rtvDesc, rtvHandle);
-		bb.bbRTV = rtvHandle;
-		bb.frameIndex = i;
-		rtvHandle.Offset(rtvDescriptorSize);
-	}
-
-	// Create depth-stencil buffer
-	D3D12_RESOURCE_DESC depthDesc = {};
-	depthDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthDesc.Alignment = 0;
-	depthDesc.Width = gCurWidth;
-	depthDesc.Height = gCurHeight;
-	depthDesc.DepthOrArraySize = 1;
-	depthDesc.MipLevels = 1;
-	depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
-	depthDesc.SampleDesc.Count = 1;
-	depthDesc.SampleDesc.Quality = 0;
-	depthDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE depthClearValue = {};
-	depthClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	depthClearValue.DepthStencil.Depth = 1.0f;
-	depthClearValue.DepthStencil.Stencil = 0;
-
-	D3D12MA::ALLOCATION_DESC depthAllocDesc = {};
-	depthAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-	//depthAllocDesc.Flags = D3D12MA::ALLOCATOR_FLAG_COMMITTED;
-
-	HRESULT hr = gAllocator->CreateResource(
-		&depthAllocDesc,
-		&depthDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&depthClearValue,
-		&gDepthStencilAllocation,
-		IID_PPV_ARGS(&gDepthStencilBuffer)
-	);
-
-	if (FAILED(hr))
-	{
-		MLOG_ERROR(u8"Failed to create depth-stencil buffer: HRESULT=0x%08X", hr);
-	}
-	else
-	{
-		// Create depth-stencil view
-		gDepthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(gDescriptorsHeapDSV->GetCPUDescriptorHandleForHeapStart());
-		
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-		gD3DDevice->CreateDepthStencilView(gDepthStencilBuffer, &dsvDesc, gDepthStencilView);
-		
-		MLOG_DEBUG(u8"Created depth-stencil buffer: %ux%u", gCurWidth, gCurHeight);
-	}
-
-	// Initialize frame data for CPU-GPU synchronization
-	gFrames.resize(gNumFrames);
-	for (uint32_t i = 0; i < gNumFrames; ++i)
-	{
-		FrameData& frame = gFrames[i];
-		D3D_CALL(gD3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frame.fence)));
-		D3D_CALL(gD3DDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frame.commandAllocator)));
-		D3D_CALL(gD3DDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frame.commandAllocator, nullptr, IID_PPV_ARGS(&frame.commandList)));
-		D3D_CALL(frame.commandList->Close());
-
-		frame.fenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-		frame.fenceValue = 0;
-		frame.frameIndex = i;
-	}
-}
-
-void Swapchain::Shutdown()
-{
-	// Wait for all frames to complete
-	for (auto& frame : gFrames)
-	{
-		if (frame.fence)
-		{
-			Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
-			frame.fence->Release();
-			::CloseHandle(frame.fenceEvent);
-		}
-		if (frame.commandList) frame.commandList->Release();
-		if (frame.commandAllocator) frame.commandAllocator->Release();
-	}
-	gFrames.clear();
-
-	// Release depth-stencil resources
-	if (gDepthStencilBuffer)
-	{
-		gDepthStencilBuffer->Release();
-		gDepthStencilBuffer = nullptr;
-	}
-	if (gDepthStencilAllocation)
-	{
-		gDepthStencilAllocation->Release();
-		gDepthStencilAllocation = nullptr;
-	}
-
-	for (auto& bb : gBBFrames)
-	{
-		if (bb.bbResource) bb.bbResource->Release();
-	}
-	gBBFrames.clear();
-
-	if (gSwapChain)
-	{
-		gSwapChain->Release();
-		gSwapChain = nullptr;
-	}
-}
-
-CommandList Swapchain::AcquireNextImage()
-{
-	// Check if resize is needed
-	RECT clientRect = {};
-	HWND hwnd = static_cast<HWND>(os::gOS->GetCurrentNativeWindowHandle());
-
-ll:os::gOS->GetActualWindowSize((unsigned int&)gNewWidth, (unsigned int&)gNewHeight);
-
-	if (gNewWidth != gCurWidth || gCurHeight != gNewHeight && gNewWidth > 0 && gNewHeight > 0)
-	{
-		// Flush all frames before resize
-		for (auto& frame : gFrames)
-		{
-			Flush(gD3DCommandQueue, frame.fence, frame.fenceValue, frame.fenceEvent);
-		}
-
-		gCurWidth = gNewWidth;
-		gCurHeight = gNewHeight;
-
-		// Release old backbuffer resources
-		for (auto& bb : gBBFrames)
-		{
-			if (bb.bbResource)
-			{
-				bb.bbResource->Release();
-				bb.bbResource = nullptr;
-			}
-		}
-
-		// Resize swapchain
-		DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-		D3D_CALL(gSwapChain->GetDesc(&swapChainDesc));
-		D3D_CALL(gSwapChain->ResizeBuffers(swapChainDesc.BufferCount, gCurWidth, gCurHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-
-		// Recreate backbuffer RTVs
-		auto rtvDescriptorSize = gD3DDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(gDescriptorsHeapRTV->GetCPUDescriptorHandleForHeapStart());
-
-		for (uint32_t i = 0; i < gNumFrames; ++i)
-		{
-			BackbufferResourceInfo& bb = gBBFrames[i];
-			gSwapChain->GetBuffer(i, IID_PPV_ARGS(&bb.bbResource));
-
-			D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-			rtvDesc.Format = gD3DSwapChainFormat;
-			rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-			gD3DDevice->CreateRenderTargetView(bb.bbResource, &rtvDesc, rtvHandle);
-			bb.bbRTV = rtvHandle;
-			rtvHandle.Offset(rtvDescriptorSize);
-		}
-
-		// Resize depth stencil buffer
-		{
-			D3D_CALL(gDepthStencilBuffer->Release());
-			gDepthStencilBuffer = nullptr;
-
-			D3D12_RESOURCE_DESC depthDesc = {};
-			depthDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-			depthDesc.Width = gCurWidth;
-			depthDesc.Height = gCurHeight;
-			depthDesc.MipLevels = 1;
-			depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
-			depthDesc.SampleDesc.Count = 1;
-			depthDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-			depthDesc.DepthOrArraySize = 1;
-
-			D3D12MA::ALLOCATION_DESC depthAllocDesc = {};
-			depthAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-			depthAllocDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
-
-			D3D_CALL(gAllocator->CreateResource(
-				&depthAllocDesc,
-				&depthDesc,
-				D3D12_RESOURCE_STATE_DEPTH_WRITE,
-				nullptr,
-				&gDepthStencilAllocation,
-				IID_PPV_ARGS(&gDepthStencilBuffer)
-			));
-		
-			gDepthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(gDescriptorsHeapDSV->GetCPUDescriptorHandleForHeapStart());
-
-			D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-			dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-			dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-			dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-			gD3DDevice->CreateDepthStencilView(gDepthStencilBuffer, &dsvDesc, gDepthStencilView);
-		}
-	}
-
-	auto& frame = gFrames[gFrameRingCurrent];
-
-	// Wait for this frame's fence
-	WaitForFenceValue(frame.fence, frame.fenceValue, frame.fenceEvent);
-
-	// Reset command allocator and list
-	frame.commandAllocator->Reset();
-	frame.commandList->Reset(frame.commandAllocator, nullptr);
-
-	// Get current backbuffer index
-	gCurrentBBResourceIndex = gSwapChain->GetCurrentBackBufferIndex();
-	gFrameID++;
-
-	auto& bbResource = GetCurrentBackbufferResourceInfo();
-
-	// Transition to render target
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		bbResource.bbResource,
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET);
-	frame.commandList->ResourceBarrier(1, &barrier);
-
-	// Clear and set render target
-	auto clearColor = mercury::ll::graphics::gSwapchain->clearColor;
-
-	FLOAT clearColorD3D[] = { clearColor.x, clearColor.y, clearColor.z, clearColor.w };
-	frame.commandList->ClearRenderTargetView(bbResource.bbRTV, clearColorD3D, 0, nullptr);
-
-	frame.commandList->ClearDepthStencilView(
-		gDepthStencilView,
-		D3D12_CLEAR_FLAG_DEPTH,
-		1.0f,
-		0,
-		0,
-		nullptr);
-
-	frame.commandList->OMSetRenderTargets(1, &bbResource.bbRTV, FALSE, &gDepthStencilView);
-
-
-
-	// Set viewport and scissor
-	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (float)gCurWidth, (float)gCurHeight, 0.0f, 1.0f };
-	D3D12_RECT scissorRect = { 0, 0, (LONG)gCurWidth, (LONG)gCurHeight };
-	frame.commandList->RSSetViewports(1, &viewport);
-	frame.commandList->RSSetScissorRects(1, &scissorRect);
-
-	CommandList result;
-	result.nativePtr = frame.commandList;
-	return result;
-}
-
-void Swapchain::Present()
-{
-	auto& frame = gFrames[gFrameRingCurrent];
-	auto& bbResource = GetCurrentBackbufferResourceInfo();
-
-	// Transition back to present
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		bbResource.bbResource,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PRESENT);
-	frame.commandList->ResourceBarrier(1, &barrier);
-
-	// Close and execute command list
-	D3D_CALL(frame.commandList->Close());
-
-	ID3D12CommandList* const commandLists[] = { frame.commandList };
-	gD3DCommandQueue->ExecuteCommandLists(1, commandLists);
-
-	// Present
-	gSwapChain->Present(1, 0);
-
-	// Signal fence
-	frame.fenceValue = Signal(gD3DCommandQueue, frame.fence, frame.fenceValue);
-
-	// Move to next frame
-	gFrameRingCurrent = (gFrameRingCurrent + 1) % gNumFrames;
-}
-
-void Swapchain::SetFullscreen(bool fullscreen)
-{
-	if (gSwapChain)
-	{
-		gSwapChain->SetFullscreenState(fullscreen, nullptr);
-	}
-}
-
-int Swapchain::GetWidth() const
-{
-	return gCurWidth;
-}
-
-int Swapchain::GetHeight() const
-{
-	return gCurHeight;
-}
-
-u8 Swapchain::GetNumberOfFrames()
-{
-	return static_cast<u8>(gNumFrames);
-}
-
-u32 Swapchain::GetCurrentFrameIndex() const
-{
-	return gFrameRingCurrent;
-}
-
 void TimelineSemaphore::WaitUntil(mercury::u64 value, mercury::u64 timeout)
 {
 }
@@ -792,20 +358,6 @@ void RenderPass::SetDebugName(const char* utf8_name)
 }
 
 void RenderPass::Destroy()
-{
-	nativePtr = nullptr;
-}
-
-bool CommandList::IsExecuted()
-{
-	return false;
-}
-
-void CommandList::SetDebugName(const char* utf8_name)
-{
-}
-
-void CommandList::Destroy()
 {
 	nativePtr = nullptr;
 }
@@ -831,96 +383,6 @@ void CommandPool::Reset()
 {
 }
 
-void CommandList::RenderImgui()
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	cmdListD3D12->SetDescriptorHeaps(1, &gDescriptorsHeapSRV);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdListD3D12);
-}
-
-void CommandList::SetPSO(PsoHandle psoID)
-{
-	if (currentPsoID == psoID)
-		return;
-
-	currentPsoID = psoID;
-
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	auto const& p = gAllPSOs[psoID.handle];
-
-	cmdListD3D12->SetPipelineState(p.pso);
-	cmdListD3D12->SetGraphicsRootSignature(p.rootSignature);
-	cmdListD3D12->IASetPrimitiveTopology(p.primitiveTopology);
-}
-
-void CommandList::Draw(u32 vertexCount, u32 instanceCount, u32 firstVertex, u32 firstInstance)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	cmdListD3D12->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
-}
-
-void CommandList::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	D3D12_VIEWPORT viewport = {};
-	viewport.TopLeftX = x;
-	viewport.TopLeftY = y;
-	viewport.Width = width;
-	viewport.Height = height;
-	viewport.MinDepth = minDepth;
-	viewport.MaxDepth = maxDepth;
-
-	cmdListD3D12->RSSetViewports(1, &viewport);
-}
-
-void CommandList::SetScissor(i32 x, i32 y, u32 width, u32 height)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	D3D12_RECT scissorRect = {};
-	scissorRect.left = x;
-	scissorRect.top = y;
-	scissorRect.right = x + width;
-	scissorRect.bottom = y + height;
-
-	cmdListD3D12->RSSetScissorRects(1, &scissorRect);
-}
-
-void CommandList::SetIndexBuffer(BufferHandle bufferID)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	D3D12_INDEX_BUFFER_VIEW view = {};
-	const auto& bmeta = gAllBuffersMeta[bufferID.handle];
-	view.Format = DXGI_FORMAT_R16_UINT;
-	view.SizeInBytes = static_cast<UINT>(bmeta.size);
-	view.BufferLocation = bmeta.gpuAddress;
-
-	cmdListD3D12->IASetIndexBuffer(&view);
-}
-
-void CommandList::SetVertexBuffer(BufferHandle bufferID, u8 stride, u8 slot, size_t offset)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	D3D12_VERTEX_BUFFER_VIEW view = {};
-	const auto& bmeta = gAllBuffersMeta[bufferID.handle];
-
-	view.StrideInBytes = stride;
-	view.SizeInBytes = static_cast<UINT>(bmeta.size);
-	view.BufferLocation = bmeta.gpuAddress + offset;
-	
-	cmdListD3D12->IASetVertexBuffers(slot, 1, &view);
-}
-
-void CommandList::DrawIndexed(u32 indexCount, u32 instanceCount, u32 firstIndex, u32 firstVertex, u32 firstInstance)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	cmdListD3D12->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, firstVertex, firstInstance);
-}
-
 ShaderHandle Device::CreateShaderModule(const ShaderBytecodeView& bytecode)
 {
 	ShaderHandle result;
@@ -937,41 +399,6 @@ void Device::UpdateShaderModule(ShaderHandle shaderModuleID, const ShaderBytecod
 void Device::DestroyShaderModule(ShaderHandle shaderModuleID)
 {
 	// In D3D12, shader bytecode is just data, no explicit cleanup needed
-}
-
-D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyTypeFromMercuryTopology(mercury::ll::graphics::PrimitiveTopology topology)
-{
-	switch (topology)
-	{
-	case mercury::ll::graphics::PrimitiveTopology::TriangleList:
-	case mercury::ll::graphics::PrimitiveTopology::TriangleStrip:	
-		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case mercury::ll::graphics::PrimitiveTopology::LineList:
-	case mercury::ll::graphics::PrimitiveTopology::LineStrip:
-		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case mercury::ll::graphics::PrimitiveTopology::PointList:
-		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	default:
-		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-	}
-}
-D3D_PRIMITIVE_TOPOLOGY PrimitiveTopologyFromMercuryPrimitiveTopology(mercury::ll::graphics::PrimitiveTopology topology)
-{
-	switch (topology)
-	{
-	case mercury::ll::graphics::PrimitiveTopology::TriangleList:
-		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case mercury::ll::graphics::PrimitiveTopology::TriangleStrip:
-		return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-	case mercury::ll::graphics::PrimitiveTopology::LineList:
-		return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-	case mercury::ll::graphics::PrimitiveTopology::LineStrip:
-		return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-	case mercury::ll::graphics::PrimitiveTopology::PointList:
-		return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-	default:
-		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-	}
 }
 
 void DebugShaderReflection(const mercury::ll::graphics::RasterizePipelineDescriptor& desc);
@@ -991,7 +418,6 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 	{
 		rootSignatureFlags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 	}
-
 
 	if (desc.vertexShader.isValid())
 	{
@@ -1017,7 +443,6 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 	{
 		psoDesc.PS = gAllShaders[desc.fragmentShader.handle];
 	}
-
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 
@@ -1151,7 +576,10 @@ PsoHandle Device::CreateRasterizePipeline(const mercury::ll::graphics::Rasterize
 	psoDesc.NumRenderTargets = 1;
 	psoDesc.RTVFormats[0] = gD3DSwapChainFormat;
 	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	psoDesc.SampleDesc.Count = 1;
+	psoDesc.SampleDesc.Count = gMSAASampleCount;
+	psoDesc.SampleDesc.Quality = gMSAAQuality;
+
+	
 	//psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 
 	D3D_CALL(gD3DDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso.pso)));
@@ -1213,13 +641,6 @@ void Device::SetDebugName(const char* utf8_name)
 		MultiByteToWideChar(CP_UTF8, 0, utf8_name, -1, wideName, 256);
 		gD3DDevice->SetName(wideName);
 	}
-}
-
-void CommandList::PushConstants(const void* data, size_t size)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-
-	cmdListD3D12->SetGraphicsRoot32BitConstants(gAllPSOs[currentPsoID.handle].rootParameterRootConstantIndex, static_cast<UINT>(size / 4), data, 0);
 }
 
 BufferHandle Device::CreateBuffer(const BufferDescriptor& desc)
@@ -1430,69 +851,7 @@ void Device::DestroyParameterBlockLayout(ParameterBlockLayoutHandle layoutID)
 	gAllPSOs[layoutID.handle].rootSignature->Release();	
 }
 
-void  CommandList::SetParameterBlockLayout(u8 set_index, ParameterBlockLayoutHandle layoutID)
-{
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	cmdListD3D12->SetGraphicsRootSignature(gAllPSOs[layoutID.handle].rootSignature);
-}
 
-//void CommandList::SetUniformBuffer(u8 binding_slot, BufferHandle bufferID, size_t offset, size_t size)
-//{
-//	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-//	auto bufferResource = gAllBuffers[bufferID.handle];
-//	cmdListD3D12->SetGraphicsRootConstantBufferView(binding_slot, bufferResource->GetGPUVirtualAddress());
-//}
-
-void CommandList::SetParameterBlock(u8 setIndex, ParameterBlockHandle parameterBlockID)
-{
-	u32 slotIndex = 0;
-	auto cmdListD3D12 = static_cast<ID3D12GraphicsCommandList*>(nativePtr);
-	const auto& pbDesc = gAllParameterBlocks[parameterBlockID.handle];
-	int slotStartIndex = gAllPSOs[currentPsoID.handle].setOffsets[setIndex];
-
-	// Set descriptor heap if there are textures
-	bool hasTextures = false;
-	for (const auto& res : pbDesc.resources)
-	{
-		if (std::holds_alternative<ParameterResourceTexture>(res))
-		{
-			hasTextures = true;
-			break;
-		}
-	}
-	if (hasTextures)
-	{
-		cmdListD3D12->SetDescriptorHeaps(1, &gDescriptorsHeapSRV);
-	}
-
-	for (const auto& res : pbDesc.resources)
-	{
-		std::visit([&](auto&& arg)
-			{
-				using T = std::decay_t<decltype(arg)>;
-
-				if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
-				{
-					cmdListD3D12->SetGraphicsRootConstantBufferView(slotStartIndex + slotIndex, gAllBuffers[arg.buffer.handle]->GetGPUVirtualAddress());
-				}
-				else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
-				{
-					cmdListD3D12->SetGraphicsRootDescriptorTable(slotStartIndex + slotIndex, gAllTextures[arg.texture.handle].srvGpuHandle);
-				}
-				else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
-				{
-					// TODO: Fill VkDescriptorImageInfo for storage image
-					MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
-				}
-				else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
-				{
-					// Intentionally empty slot � skip writing
-				}
-			}, res);
-
-		slotIndex++;
-	}
-}
 
 ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHandle& layoutID)
 {
@@ -1504,67 +863,6 @@ ParameterBlockHandle Device::CreateParameterBlock(const ParameterBlockLayoutHand
 void Device::UpdateParameterBlock(ParameterBlockHandle parameterBlockID, const ParameterBlockDescriptor& pbDesc)
 {
 	gAllParameterBlocks[parameterBlockID.handle] = pbDesc;
-
-	//std::vector<VkWriteDescriptorSet> writes;
-	//std::vector<VkDescriptorBufferInfo> bufferInfos;
-	//std::vector<VkDescriptorImageInfo>  imageInfos;
-
-	//u32 slotIndex = 0;
-	//writes.reserve(pbDesc.resources.size());
-	//bufferInfos.reserve(pbDesc.resources.size());
-
-	//for (const auto& res : pbDesc.resources)
-	//{
-	//	std::visit([&](auto&& arg)
-	//		{
-	//			using T = std::decay_t<decltype(arg)>;
-
-	//			if constexpr (std::is_same_v<T, ParameterResourceBuffer>)
-	//			{
-	//				VkDescriptorBufferInfo bi{};
-	//				bi.buffer = gAllBuffers[arg.buffer.handle];
-	//				bi.offset = static_cast<VkDeviceSize>(arg.offset);
-	//				bi.range = (arg.size == SIZE_MAX) ? VK_WHOLE_SIZE : static_cast<VkDeviceSize>(arg.size);
-
-	//				bufferInfos.push_back(bi);
-
-	//				VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-	//				w.dstSet = gAllDescriptorSets[parameterBlockID.handle];
-	//				w.dstBinding = slotIndex;
-	//				w.descriptorCount = 1;
-	//				// If you cached per-slot descriptor types when creating the layout, use that here.
-	//				// Without that metadata, default to UNIFORM_BUFFER for buffer resources:
-	//				w.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	//				w.pBufferInfo = &bufferInfos.back();
-
-	//				writes.push_back(w);
-	//			}
-	//			else if constexpr (std::is_same_v<T, ParameterResourceTexture>)
-	//			{
-	//				// TODO: Fill VkDescriptorImageInfo (imageView, sampler if combined, layout)
-	//				// imageInfos.push_back(imgInfo);
-	//				// VkWriteDescriptorSet w{...}; w.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE (or COMBINED_IMAGE_SAMPLER)
-	//				// w.pImageInfo = &imageInfos.back(); writes.push_back(w);
-	//				MLOG_WARNING(u8"ParameterResourceTexture not yet implemented in UpdateParameterBlock");
-	//			}
-	//			else if constexpr (std::is_same_v<T, ParameterResourceRWImage>)
-	//			{
-	//				// TODO: Fill VkDescriptorImageInfo for storage image
-	//				MLOG_WARNING(u8"ParameterResourceRWImage not yet implemented in UpdateParameterBlock");
-	//			}
-	//			else if constexpr (std::is_same_v<T, ParameterResourceEmpty>)
-	//			{
-	//				// Intentionally empty slot � skip writing
-	//			}
-	//		}, res);
-
-	//	slotIndex++;
-	//}
-
-	//if (!writes.empty())
-	//{
-	//	vkUpdateDescriptorSets(gVKDevice, static_cast<u32>(writes.size()), writes.data(), 0, nullptr);
-	//}
 }
 
 TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
@@ -1725,11 +1023,11 @@ TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
 
 	auto srvCpuHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		gDescriptorsHeapSRV->GetCPUDescriptorHandleForHeapStart(),
-		currentSRVOffset,
+		gCurrentSRVOffset,
 		descriptorSize);
 	auto srvGpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
 		gDescriptorsHeapSRV->GetGPUDescriptorHandleForHeapStart(),
-		currentSRVOffset,
+		gCurrentSRVOffset,
 		descriptorSize);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -1747,13 +1045,12 @@ TextureHandle Device::CreateTexture(const TextureDescriptor& desc)
 
 	gAllTextures.push_back(texInfo);
 
-	currentSRVOffset++;
+	gCurrentSRVOffset++;
 
 	TextureHandle result;
 	result.handle = static_cast<u32>(gAllTextures.size() - 1);
 	return result;
 }
-
 
 void Device::DestroyParameterBlock(ParameterBlockHandle parameterBlockID)
 {
@@ -1769,199 +1066,15 @@ u64 TextureHandle::CreateImguiTextureOpaqueHandle() const
 
 void DebugShaderReflection(const mercury::ll::graphics::RasterizePipelineDescriptor& desc)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-	using Microsoft::WRL::ComPtr;
-
-
 	if (desc.vertexShader.isValid())
 	{
 		auto& vsBytecode = gAllShaders[desc.vertexShader.handle];
-
-		// Validate bytecode before reflection
-		if (vsBytecode.pShaderBytecode == nullptr || vsBytecode.BytecodeLength == 0)
-		{
-			MLOG_ERROR(u8"Vertex shader bytecode is null or empty!");
-		}
-		else
-		{
-			MLOG_DEBUG(u8"Reflecting DXIL vertex shader: %zu bytes at %p",
-				vsBytecode.BytecodeLength, vsBytecode.pShaderBytecode);
-
-			ComPtr<IDxcUtils> dxcUtils;
-			HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-
-			if (SUCCEEDED(hr))
-			{
-				// Create a blob wrapper around the shader bytecode
-				ComPtr<IDxcBlobEncoding> shaderBlob;
-				hr = dxcUtils->CreateBlob(
-					vsBytecode.pShaderBytecode,
-					static_cast<UINT32>(vsBytecode.BytecodeLength),
-					CP_ACP,
-					&shaderBlob
-				);
-
-				if (SUCCEEDED(hr))
-				{
-					ComPtr<IDxcContainerReflection> containerReflection;
-					hr = DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection));
-
-					if (SUCCEEDED(hr))
-					{
-						hr = containerReflection->Load(shaderBlob.Get());
-
-						if (SUCCEEDED(hr))
-						{
-							UINT32 partIndex;
-							hr = containerReflection->FindFirstPartKind(DXC_PART_DXIL, &partIndex);
-
-							if (SUCCEEDED(hr))
-							{
-								ComPtr<ID3D12ShaderReflection> reflection;
-								hr = containerReflection->GetPartReflection(partIndex, IID_PPV_ARGS(&reflection));
-
-								if (SUCCEEDED(hr))
-								{
-									D3D12_SHADER_DESC shaderDesc;
-									reflection->GetDesc(&shaderDesc);
-
-									MLOG_DEBUG(u8"DXIL Vertex Shader has %u bound resources:", shaderDesc.BoundResources);
-
-									for (UINT i = 0; i < shaderDesc.BoundResources; ++i)
-									{
-										D3D12_SHADER_INPUT_BIND_DESC bindDesc;
-										reflection->GetResourceBindingDesc(i, &bindDesc);
-
-										MLOG_DEBUG(u8"  Resource '%s': Type=%d, BindPoint=%u, Space=%u, BindCount=%u",
-											bindDesc.Name,
-											bindDesc.Type,
-											bindDesc.BindPoint,
-											bindDesc.Space,
-											bindDesc.BindCount);
-									}
-								}
-								else
-								{
-									MLOG_ERROR(u8"Failed to get part reflection: 0x%08X", hr);
-								}
-							}
-							else
-							{
-								MLOG_ERROR(u8"Failed to find DXIL part: 0x%08X", hr);
-							}
-						}
-						else
-						{
-							MLOG_ERROR(u8"Failed to load container reflection: 0x%08X", hr);
-						}
-					}
-				}
-				else
-				{
-					MLOG_ERROR(u8"Failed to create DXC blob: 0x%08X", hr);
-				}
-			}
-			else
-			{
-				MLOG_ERROR(u8"Failed to create DxcUtils: 0x%08X", hr);
-			}
-		}
+		PrintShaderBytecodeInputs(vsBytecode);
 	}
-
 	if (desc.fragmentShader.isValid())
 	{
 		auto& fsBytecode = gAllShaders[desc.fragmentShader.handle];
-
-		// Validate bytecode before reflection
-		if (fsBytecode.pShaderBytecode == nullptr || fsBytecode.BytecodeLength == 0)
-		{
-			MLOG_ERROR(u8"Vertex shader bytecode is null or empty!");
-		}
-		else
-		{
-			MLOG_DEBUG(u8"Reflecting DXIL vertex shader: %zu bytes at %p",
-				fsBytecode.BytecodeLength, fsBytecode.pShaderBytecode);
-
-			ComPtr<IDxcUtils> dxcUtils;
-			HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-
-			if (SUCCEEDED(hr))
-			{
-				// Create a blob wrapper around the shader bytecode
-				ComPtr<IDxcBlobEncoding> shaderBlob;
-				hr = dxcUtils->CreateBlob(
-					fsBytecode.pShaderBytecode,
-					static_cast<UINT32>(fsBytecode.BytecodeLength),
-					CP_ACP,
-					&shaderBlob
-				);
-
-				if (SUCCEEDED(hr))
-				{
-					ComPtr<IDxcContainerReflection> containerReflection;
-					hr = DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&containerReflection));
-
-					if (SUCCEEDED(hr))
-					{
-						hr = containerReflection->Load(shaderBlob.Get());
-
-						if (SUCCEEDED(hr))
-						{
-							UINT32 partIndex;
-							hr = containerReflection->FindFirstPartKind(DXC_PART_DXIL, &partIndex);
-
-							if (SUCCEEDED(hr))
-							{
-								ComPtr<ID3D12ShaderReflection> reflection;
-								hr = containerReflection->GetPartReflection(partIndex, IID_PPV_ARGS(&reflection));
-
-								if (SUCCEEDED(hr))
-								{
-									D3D12_SHADER_DESC shaderDesc;
-									reflection->GetDesc(&shaderDesc);
-
-									MLOG_DEBUG(u8"DXIL Fragment Shader has %u bound resources:", shaderDesc.BoundResources);
-
-									for (UINT i = 0; i < shaderDesc.BoundResources; ++i)
-									{
-										D3D12_SHADER_INPUT_BIND_DESC bindDesc;
-										reflection->GetResourceBindingDesc(i, &bindDesc);
-
-										MLOG_DEBUG(u8"  Resource '%s': Type=%d, BindPoint=%u, Space=%u, BindCount=%u",
-											bindDesc.Name,
-											bindDesc.Type,
-											bindDesc.BindPoint,
-											bindDesc.Space,
-											bindDesc.BindCount);
-									}
-								}
-								else
-								{
-									MLOG_ERROR(u8"Failed to get part reflection: 0x%08X", hr);
-								}
-							}
-							else
-							{
-								MLOG_ERROR(u8"Failed to find DXIL part: 0x%08X", hr);
-							}
-						}
-						else
-						{
-							MLOG_ERROR(u8"Failed to load container reflection: 0x%08X", hr);
-						}
-					}
-				}
-				else
-				{
-					MLOG_ERROR(u8"Failed to create DXC blob: 0x%08X", hr);
-				}
-			}
-			else
-			{
-				MLOG_ERROR(u8"Failed to create DxcUtils: 0x%08X", hr);
-			}
-		}
+		PrintShaderBytecodeInputs(fsBytecode);
 	}
-#endif
 }
 #endif////////////////////////////////////////////////////////////////////////////
